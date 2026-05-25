@@ -1,53 +1,87 @@
 /**
- * Race — a playable race such as Mensch or Zwerg.
+ * PropertyRange — optionales Min und/oder Max für eine Eigenschaft.
+ */
+export interface PropertyRange {
+  min?: number
+  max?: number
+}
+
+/**
+ * RacialAbility — eine angeborene Sonderfähigkeit einer Rasse.
+ */
+export interface RacialAbility {
+  /** Fertigkeit oder Fähigkeit (referenziert die ID aus skills.json) */
+  skill: string
+  /** Bonus auf die Fertigkeit */
+  bonus: number
+}
+
+/**
+ * Race — eine spielbare Rasse, z.B. Mensch, Elfen oder Zwerge.
  */
 export interface Race {
-  /** Unique identifier (e.g. "human", "dwarf") */
+  /** Eindeutige ID (z.B. "mensch", "elfen") */
   id: string
-  /** Display name */
+  /** Anzeigename */
   name: string
-  /** Human-readable description */
-  description: string
-  /** Adjustments applied to base properties during character creation */
-  propertyModifiers: Record<string, number>
-  /** Base movement range in meters */
-  baseMovement: number
-  /** Type IDs available to this race */
+  /** Beschränkungen für Basiseigenschaften (min/max) — fehlt bei Mensch */
+  propertyRestrictions?: Record<string, PropertyRange>
+  /** Beschränkungen für abgeleitete Eigenschaften (z.B. Au) — fehlt wenn keine */
+  derivedRestrictions?: Record<string, PropertyRange>
+  /** Bonus/Malus auf Lebenspunkte — fehlt wenn 0 */
+  lpModifier?: number
+  /** Würfelformel für die Bewegungsweite (z.B. "4W3+16") */
+  movementFormula: string
+  /** Erlaubte Typ-IDs — leer bedeutet alle Typen erlaubt */
   availableTypes: string[]
-  /** Languages the character knows at creation */
-  startingLanguages: string[]
-  /** IDs of special racial abilities */
-  specialAbilities: string[]
+  /** Resistenzboni auf Geist- und Körpermagie */
+  resistanceBonus: { geist: number; koerper: number }
+  /** Verbotene Fertigkeiten (IDs aus skills.json) — fehlt wenn keine */
+  forbiddenSkills?: string[]
+  /** Angeborene Sonderfähigkeiten */
+  specialAbilities: RacialAbility[]
+  /** Erzwungene Größe — fehlt wenn freie Wahl */
+  fixedSize?: string
+  /** Erzwungene Händigkeit — fehlt wenn freie Wahl */
+  fixedHandedness?: string
 }
 
 /**
- * Origin — where the character grew up (e.g. city, wilderness).
+ * Origin — Herkunft des Charakters (z.B. Stadt, Wildnis).
  */
 export interface Origin {
-  /** Unique identifier (e.g. "city") */
+  /** Eindeutige ID (z.B. "city") */
   id: string
-  /** Display name */
+  /** Anzeigename */
   name: string
-  /** Human-readable description */
+  /** Beschreibung */
   description: string
-  /** Skill IDs granted at creation */
+  /** Fertigkeits-IDs, die bei der Erschaffung gewährt werden */
   startingSkills: string[]
-  /** Languages granted at creation */
+  /** Sprachen, die bei der Erschaffung gewährt werden */
   startingLanguages: string[]
 }
 
 /**
- * SocialStatus — the character's position in society (Stand).
+ * SocialStatusSkills — Fertigkeitserwerb durch den Stand bei der Erschaffung.
+ */
+export interface SocialStatusSkills {
+  /** Anzahl der Lerneinheiten */
+  le: number
+  /** Fertigkeitsgruppe (referenziert groups-Schlüssel aus skills.json) */
+  group: string
+  /** Maximale Schwierigkeit der wählbaren Fertigkeiten — fehlt wenn keine Einschränkung */
+  maxDifficulty?: string
+}
+
+/**
+ * SocialStatus — der gesellschaftliche Stand des Charakters.
  */
 export interface SocialStatus {
-  /** Unique identifier (e.g. "free_citizen") */
+  /** Eindeutige ID (z.B. "volk", "adel") */
   id: string
-  /** Display name */
+  /** Anzeigename */
   name: string
-  /** Human-readable description */
-  description: string
-  /** Starting gold amount */
-  startingGold: number
-  /** Type IDs available for this social status */
-  availableTypes: string[]
+  /** Fertigkeitserwerb durch den Stand bei der Charaktererschaffung */
+  startingSkills: SocialStatusSkills
 }

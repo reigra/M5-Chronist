@@ -1,4 +1,4 @@
-# MagusM5 — Character System
+# Midgard M5 — Character System
 
 This document describes how a Midgard M5 character is structured, how it is created, and how it can be advanced. It forms the basis for all business logic in the app.
 
