@@ -9,34 +9,34 @@ export interface CharacterSkill {
 }
 
 /**
- * BaseProperties — the six core stats every character has.
+ * CharacterProperties — alle Eigenschaften des Charakters (Basis und abgeleitet).
  */
-export interface BaseProperties {
+export interface CharacterProperties {
   St: number  // Stärke
   Gs: number  // Geschicklichkeit
   Gw: number  // Gewandtheit
   Ko: number  // Konstitution
   In: number  // Intelligenz
   Zt: number  // Zaubertalent
+  pA: number  // Persönliche Ausstrahlung
+  Wk: number  // Willenskraft
+  Au: number  // Aussehen
+  LP: number  // Lebenspunkte
+  AP: number  // AP-Maximum
+  B:  number  // Bewegungsweite
 }
 
 /**
- * DerivedProperties — secondary values calculated or rolled during creation.
- * All fields are optional — they may be unknown or not yet calculated.
+ * CharacterBoni — abgeleitete Boni, die auf Würfe addiert werden.
  */
-export interface DerivedProperties {
-  pA: number   // Persönliche Ausstrahlung
-  Wk: number   // Willenskraft
-  Au: number   // Aussehen
-  AusB: number // Ausdauerbonus
-  LP: number   // Lebenspunkte
-  AP: number   // AP-Maximum
-  SchB: number // Schadensbonus
-  B: number    // Bewegungsweite
-  AnB: number  // Angriffsbonus
-  AbB: number  // Abwehrbonus
-  ZauB: number // Zauberbonus
-  ResB: number // Resistenzbonus
+export interface CharacterBoni {
+  AusB: number  // Ausdauerbonus
+  SchB: number  // Schadensbonus
+  AnB:  number  // Angriffsbonus
+  AbB:  number  // Abwehrbonus
+  ZauB: number  // Zauberbonus
+  ResBg: number // Resistenzbonus Geistmagie
+  ResBk: number // Resistenzbonus Körpermagie
 }
 
 /**
@@ -58,10 +58,10 @@ export interface Character {
   originId: string
   /** Social status ID — references SocialStatus.id in the rules data */
   socialStatusId: string
-  /** Six base properties */
-  baseProperties: BaseProperties
-  /** Derived / secondary properties */
-  derivedProperties: DerivedProperties
+  /** Eigenschaften (Basis und abgeleitet) */
+  properties: CharacterProperties
+  /** Abgeleitete Boni */
+  boni: CharacterBoni
   /** Total experience treasure (Erfahrungsschatz) — cumulative EP ever earned */
   totalEs: number
   /** Experience points currently available to spend */

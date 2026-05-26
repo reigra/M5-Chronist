@@ -92,9 +92,7 @@ function fertigkeitsbonus(v: number): number {
 function propertyValue(key: string): number {
   const c = character.value
   if (!c) return 0
-  const bp = c.baseProperties as Record<string, number>
-  const dp = c.derivedProperties as Record<string, number>
-  return bp[key] ?? dp[key] ?? 0
+  return (c.properties as Record<string, number>)[key] ?? 0
 }
 
 /** Known skills with their display name looked up from the rules. */
@@ -211,35 +209,36 @@ onMounted(async () => {
         </dl>
       </section>
 
-      <!-- ── Base Properties ── -->
+      <!-- ── Eigenschaften ── -->
       <section class="card">
-        <h2>{{ UI.secBaseProps }}</h2>
+        <h2>{{ UI.secProps }}</h2>
         <dl class="prop-list prop-list--wide">
-          <dt>{{ UI.propSt }}</dt>           <dd>{{ character.baseProperties.St }}</dd>
-          <dt>{{ UI.propGs }}</dt>           <dd>{{ character.baseProperties.Gs }}</dd>
-          <dt>{{ UI.propGw }}</dt>           <dd>{{ character.baseProperties.Gw }}</dd>
-          <dt>{{ UI.propKo }}</dt>           <dd>{{ character.baseProperties.Ko }}</dd>
-          <dt>{{ UI.propIn }}</dt>           <dd>{{ character.baseProperties.In }}</dd>
-          <dt>{{ UI.propZt }}</dt>           <dd>{{ character.baseProperties.Zt }}</dd>
+          <dt>{{ UI.propSt }}</dt>  <dd>{{ character.properties.St }}</dd>
+          <dt>{{ UI.propGs }}</dt>  <dd>{{ character.properties.Gs }}</dd>
+          <dt>{{ UI.propGw }}</dt>  <dd>{{ character.properties.Gw }}</dd>
+          <dt>{{ UI.propKo }}</dt>  <dd>{{ character.properties.Ko }}</dd>
+          <dt>{{ UI.propIn }}</dt>  <dd>{{ character.properties.In }}</dd>
+          <dt>{{ UI.propZt }}</dt>  <dd>{{ character.properties.Zt }}</dd>
+          <dt>{{ UI.propPa }}</dt>  <dd>{{ character.properties.pA }}</dd>
+          <dt>{{ UI.propWk }}</dt>  <dd>{{ character.properties.Wk }}</dd>
+          <dt>{{ UI.propAu }}</dt>  <dd>{{ character.properties.Au }}</dd>
+          <dt>{{ UI.propLp }}</dt>  <dd>{{ character.properties.LP }}</dd>
+          <dt>{{ UI.propAp }}</dt>  <dd>{{ character.properties.AP }}</dd>
+          <dt>{{ UI.propB }}</dt>   <dd>{{ character.properties.B }}</dd>
         </dl>
       </section>
 
-      <!-- ── Derived Properties ── -->
+      <!-- ── Boni ── -->
       <section class="card">
-        <h2>{{ UI.secDerivedProps }}</h2>
+        <h2>{{ UI.secBoni }}</h2>
         <dl class="prop-list prop-list--wide">
-          <dt>{{ UI.propPa }}</dt>    <dd>{{ character.derivedProperties.pA }}</dd>
-          <dt>{{ UI.propWk }}</dt>    <dd>{{ character.derivedProperties.Wk }}</dd>
-          <dt>{{ UI.propAu }}</dt>    <dd>{{ character.derivedProperties.Au }}</dd>
-          <dt>{{ UI.propAusb }}</dt>  <dd>{{ character.derivedProperties.AusB }}</dd>
-          <dt>{{ UI.propLp }}</dt>    <dd>{{ character.derivedProperties.LP }}</dd>
-          <dt>{{ UI.propAp }}</dt>    <dd>{{ character.derivedProperties.AP }}</dd>
-          <dt>{{ UI.propSchb }}</dt>  <dd>{{ character.derivedProperties.SchB }}</dd>
-          <dt>{{ UI.propB }}</dt>     <dd>{{ character.derivedProperties.B }}</dd>
-          <dt>{{ UI.propAnb }}</dt>   <dd>{{ character.derivedProperties.AnB }}</dd>
-          <dt>{{ UI.propAbb }}</dt>   <dd>{{ character.derivedProperties.AbB }}</dd>
-          <dt>{{ UI.propZaub }}</dt>  <dd>{{ character.derivedProperties.ZauB }}</dd>
-          <dt>{{ UI.propResb }}</dt>  <dd>{{ character.derivedProperties.ResB }}</dd>
+          <dt>{{ UI.propAusb }}</dt>  <dd>{{ character.boni.AusB }}</dd>
+          <dt>{{ UI.propSchb }}</dt>  <dd>{{ character.boni.SchB }}</dd>
+          <dt>{{ UI.propAnb }}</dt>   <dd>{{ character.boni.AnB }}</dd>
+          <dt>{{ UI.propAbb }}</dt>   <dd>{{ character.boni.AbB }}</dd>
+          <dt>{{ UI.propZaub }}</dt>  <dd>{{ character.boni.ZauB }}</dd>
+          <dt>{{ UI.propResbg }}</dt> <dd>{{ character.boni.ResBg }}</dd>
+          <dt>{{ UI.propResbk }}</dt> <dd>{{ character.boni.ResBk }}</dd>
         </dl>
       </section>
 

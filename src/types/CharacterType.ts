@@ -16,4 +16,6 @@ export interface CharacterType {
   groupCosts: Record<string, number>
   /** EP cost per TE for each spell group (magic types only) */
   spellCosts?: Record<string, number>
+  /** Flache Boni auf Eigenschaften/Resistenzen (z.B. ResBg, ResBk) */
+  propertyBonuses?: Array<{ id: string; value: number }>
 }

@@ -98,7 +98,7 @@ const learnableSkillRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.id !== 'Zaubersprüche')
+    .filter(s => !knownIds.has(s.id) && s.id !== 'Zaubersprüche' && Array.isArray(s.groups) && s.groups.length > 0)
     .map(skill => {
       const cost = advancementService.learnCost(skill, type)
       return {

@@ -25,7 +25,7 @@ export class AdvancementService {
    * @param type  - The character's type.
    */
   private cheapestGroupCost(skill: Skill, type: CharacterType): number {
-    const costs = skill.groups
+    const costs = (skill.groups ?? [])
       .map(group => type.groupCosts[group])
       .filter((cost): cost is number => cost !== undefined)
     return costs.length > 0 ? Math.min(...costs) : 999

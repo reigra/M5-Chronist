@@ -52,7 +52,8 @@ const B    = ref(0)
 const AnB  = ref(0)
 const AbB  = ref(0)
 const ZauB = ref(0)
-const ResB = ref(0)
+const ResBg = ref(0)
+const ResBk = ref(0)
 
 /** Skills currently on the character being edited. */
 const skills = ref<CharacterSkill[]>([])
@@ -136,25 +137,26 @@ function fillForm(c: Character): void {
   totalEs.value     = c.totalEs
   availableEp.value = c.availableEp
 
-  St.value = c.baseProperties.St
-  Gs.value = c.baseProperties.Gs
-  Gw.value = c.baseProperties.Gw
-  Ko.value = c.baseProperties.Ko
-  In.value = c.baseProperties.In
-  Zt.value = c.baseProperties.Zt
+  St.value  = c.properties.St
+  Gs.value  = c.properties.Gs
+  Gw.value  = c.properties.Gw
+  Ko.value  = c.properties.Ko
+  In.value  = c.properties.In
+  Zt.value  = c.properties.Zt
+  pA.value  = c.properties.pA
+  Wk.value  = c.properties.Wk
+  Au.value  = c.properties.Au
+  LP.value  = c.properties.LP
+  AP.value  = c.properties.AP
+  B.value   = c.properties.B
 
-  pA.value   = c.derivedProperties.pA
-  Wk.value   = c.derivedProperties.Wk
-  Au.value   = c.derivedProperties.Au
-  AusB.value = c.derivedProperties.AusB
-  LP.value   = c.derivedProperties.LP
-  AP.value   = c.derivedProperties.AP
-  SchB.value = c.derivedProperties.SchB
-  B.value    = c.derivedProperties.B
-  AnB.value  = c.derivedProperties.AnB
-  AbB.value  = c.derivedProperties.AbB
-  ZauB.value = c.derivedProperties.ZauB
-  ResB.value = c.derivedProperties.ResB
+  AusB.value  = c.boni.AusB
+  SchB.value  = c.boni.SchB
+  AnB.value   = c.boni.AnB
+  AbB.value   = c.boni.AbB
+  ZauB.value  = c.boni.ZauB
+  ResBg.value = c.boni.ResBg
+  ResBk.value = c.boni.ResBk
 
   skills.value = [...c.skills]
   spells.value = [...(c.spells ?? [])]
@@ -174,11 +176,13 @@ function buildCharacter(): Character {
     socialStatusId: statusId.value,
     totalEs:        totalEs.value,
     availableEp:    availableEp.value,
-    baseProperties: { St: St.value, Gs: Gs.value, Gw: Gw.value, Ko: Ko.value, In: In.value, Zt: Zt.value },
-    derivedProperties: {
-      pA: pA.value, Wk: Wk.value, Au: Au.value, AusB: AusB.value,
-      LP: LP.value, AP: AP.value, SchB: SchB.value, B: B.value,
-      AnB: AnB.value, AbB: AbB.value, ZauB: ZauB.value, ResB: ResB.value,
+    properties: {
+      St: St.value, Gs: Gs.value, Gw: Gw.value, Ko: Ko.value, In: In.value, Zt: Zt.value,
+      pA: pA.value, Wk: Wk.value, Au: Au.value, LP: LP.value, AP: AP.value, B: B.value,
+    },
+    boni: {
+      AusB: AusB.value, SchB: SchB.value, AnB: AnB.value, AbB: AbB.value,
+      ZauB: ZauB.value, ResBg: ResBg.value, ResBk: ResBk.value,
     },
     skills:    [...skills.value],
     spells:    [...spells.value],
@@ -335,35 +339,36 @@ onMounted(async () => {
         </label>
       </section>
 
-      <!-- ── Base Properties ── -->
+      <!-- ── Eigenschaften ── -->
       <section class="card">
-        <h2>{{ UI.secBaseProps }}</h2>
+        <h2>{{ UI.secProps }}</h2>
         <div class="prop-grid">
-          <label for="p-st">{{ UI.propAbbrSt }}</label><input id="p-st" v-model.number="St" type="number" min="1" max="100" />
-          <label for="p-gs">{{ UI.propAbbrGs }}</label><input id="p-gs" v-model.number="Gs" type="number" min="1" max="100" />
-          <label for="p-gw">{{ UI.propAbbrGw }}</label><input id="p-gw" v-model.number="Gw" type="number" min="1" max="100" />
-          <label for="p-ko">{{ UI.propAbbrKo }}</label><input id="p-ko" v-model.number="Ko" type="number" min="1" max="100" />
-          <label for="p-in">{{ UI.propAbbrIn }}</label><input id="p-in" v-model.number="In" type="number" min="1" max="100" />
-          <label for="p-zt">{{ UI.propAbbrZt }}</label><input id="p-zt" v-model.number="Zt" type="number" min="1" max="100" />
+          <label for="p-st">{{ UI.propAbbrSt }}</label>    <input id="p-st" v-model.number="St" type="number" min="1"  max="100" />
+          <label for="p-gs">{{ UI.propAbbrGs }}</label>    <input id="p-gs" v-model.number="Gs" type="number" min="1"  max="100" />
+          <label for="p-gw">{{ UI.propAbbrGw }}</label>    <input id="p-gw" v-model.number="Gw" type="number" min="1"  max="100" />
+          <label for="p-ko">{{ UI.propAbbrKo }}</label>    <input id="p-ko" v-model.number="Ko" type="number" min="1"  max="100" />
+          <label for="p-in">{{ UI.propAbbrIn }}</label>    <input id="p-in" v-model.number="In" type="number" min="1"  max="100" />
+          <label for="p-zt">{{ UI.propAbbrZt }}</label>    <input id="p-zt" v-model.number="Zt" type="number" min="1"  max="100" />
+          <label for="p-pa">{{ UI.propAbbrPa }}</label>    <input id="p-pa" v-model.number="pA" type="number" min="-2" max="100" />
+          <label for="p-wk">{{ UI.propAbbrWk }}</label>    <input id="p-wk" v-model.number="Wk" type="number" min="-2" max="100" />
+          <label for="p-au">{{ UI.propAbbrAu }}</label>    <input id="p-au" v-model.number="Au" type="number" min="-2" max="100" />
+          <label for="p-lp">{{ UI.propAbbrLp }}</label>    <input id="p-lp" v-model.number="LP" type="number" min="1"  max="100" />
+          <label for="p-ap">{{ UI.propAbbrAp }}</label>    <input id="p-ap" v-model.number="AP" type="number" min="1"  max="100" />
+          <label for="p-b">{{ UI.propAbbrB }}</label>      <input id="p-b"  v-model.number="B"  type="number" min="1"  max="100" />
         </div>
       </section>
 
-      <!-- ── Derived Properties ── -->
+      <!-- ── Boni ── -->
       <section class="card">
-        <h2>{{ UI.secDerivedProps }}</h2>
+        <h2>{{ UI.secBoni }}</h2>
         <div class="prop-grid">
-          <label for="p-pa">{{ UI.propAbbrPa }}</label>    <input id="p-pa"   v-model.number="pA"   type="number" min="-2" max="100" />
-          <label for="p-wk">{{ UI.propAbbrWk }}</label>    <input id="p-wk"   v-model.number="Wk"   type="number" min="-2" max="100" />
-          <label for="p-au">{{ UI.propAbbrAu }}</label>    <input id="p-au"   v-model.number="Au"   type="number" min="-2" max="100" />
-          <label for="p-ausb">{{ UI.propAbbrAusb }}</label><input id="p-ausb" v-model.number="AusB" type="number" min="-2" max="100" />
-          <label for="p-lp">{{ UI.propAbbrLp }}</label>    <input id="p-lp"   v-model.number="LP"   type="number" min="1"  max="100" />
-          <label for="p-ap">{{ UI.propAbbrAp }}</label>    <input id="p-ap"   v-model.number="AP"   type="number" min="1"  max="100" />
-          <label for="p-schb">{{ UI.propAbbrSchb }}</label><input id="p-schb" v-model.number="SchB" type="number" min="-2" max="100" />
-          <label for="p-b">{{ UI.propAbbrB }}</label>      <input id="p-b"    v-model.number="B"    type="number" min="1"  max="100" />
-          <label for="p-anb">{{ UI.propAbbrAnb }}</label>  <input id="p-anb"  v-model.number="AnB"  type="number" min="-2" max="100" />
-          <label for="p-abb">{{ UI.propAbbrAbb }}</label>  <input id="p-abb"  v-model.number="AbB"  type="number" min="-2" max="100" />
-          <label for="p-zaub">{{ UI.propAbbrZaub }}</label><input id="p-zaub" v-model.number="ZauB" type="number" min="-2" max="100" />
-          <label for="p-resb">{{ UI.propAbbrResb }}</label><input id="p-resb" v-model.number="ResB" type="number" min="-2" max="100" />
+          <label for="p-ausb">{{ UI.propAbbrAusb }}</label>  <input id="p-ausb"  v-model.number="AusB"  type="number" min="-2" max="100" />
+          <label for="p-schb">{{ UI.propAbbrSchb }}</label>  <input id="p-schb"  v-model.number="SchB"  type="number" min="-2" max="100" />
+          <label for="p-anb">{{ UI.propAbbrAnb }}</label>    <input id="p-anb"   v-model.number="AnB"   type="number" min="-2" max="100" />
+          <label for="p-abb">{{ UI.propAbbrAbb }}</label>    <input id="p-abb"   v-model.number="AbB"   type="number" min="-2" max="100" />
+          <label for="p-zaub">{{ UI.propAbbrZaub }}</label>  <input id="p-zaub"  v-model.number="ZauB"  type="number" min="-2" max="100" />
+          <label for="p-resbg">{{ UI.propAbbrResbg }}</label><input id="p-resbg" v-model.number="ResBg" type="number" min="-2" max="100" />
+          <label for="p-resbk">{{ UI.propAbbrResbk }}</label><input id="p-resbk" v-model.number="ResBk" type="number" min="-2" max="100" />
         </div>
       </section>
 

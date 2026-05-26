@@ -27,6 +27,14 @@ export interface SourceSummary {
 }
 
 /**
+ * A single downloadable asset from a GitHub release.
+ */
+export interface AssetLink {
+  name: string
+  downloadUrl: string
+}
+
+/**
  * RulesStorage — saves, loads, and manages rulebook source files in IndexedDB.
  *
  * Usage:
@@ -172,6 +180,113 @@ export class RulesStorage {
       tx.oncomplete = () => { db.close(); resolve() }
       tx.onerror    = () => { db.close(); reject(tx.error) }
     })
+  }
+
+  /**
+   * Fetch the list of JSON assets from a GitHub release without downloading them.
+   * Returns name + direct download URL for each .json asset.
+   *
+   * @param repo - GitHub repo in "owner/name" format.
+   * @param ref  - 'latest' or a specific release tag.
+   */
+  async fetchReleaseAssetLinks(repo: string, ref: string): Promise<AssetLink[]> {
+    const apiUrl = ref === 'latest'
+      ? `https://api.github.com/repos/${repo}/releases/latest`
+      : `https://api.github.com/repos/${repo}/releases/tags/${ref}`
+
+    const res = await fetch(apiUrl, {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+
+    if (!res.ok) {
+      throw new Error(`GitHub API-Fehler ${res.status}: ${res.statusText}`)
+    }
+
+    const release = await res.json() as {
+      assets: Array<{ name: string; browser_download_url: string }>
+    }
+
+    return release.assets
+      .filter(a => a.name.endsWith('.json'))
+      .map(a => ({ name: a.name, downloadUrl: a.browser_download_url }))
+  }
+
+  /**
+   * Fetch all JSON rule assets from a GitHub release and save them to IndexedDB.
+   *
+   * Uses the GitHub Releases API to discover available assets automatically —
+   * no hardcoded file list needed.
+   *
+   * @param repo - GitHub repo in "owner/name" format.
+   * @param ref  - 'latest' or a specific release tag (e.g. 'release-2026-05-26').
+   * @returns Summaries of all successfully imported sources.
+   * @throws If the release cannot be fetched or contains no JSON assets.
+   */
+  async fetchFromGithubRelease(repo: string, ref: string): Promise<SourceSummary[]> {
+    const apiUrl = ref === 'latest'
+      ? `https://api.github.com/repos/${repo}/releases/latest`
+      : `https://api.github.com/repos/${repo}/releases/tags/${ref}`
+
+    const releaseRes = await fetch(apiUrl, {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+
+    if (!releaseRes.ok) {
+      throw new Error(
+        `GitHub API-Fehler ${releaseRes.status}: ${releaseRes.statusText}`
+      )
+    }
+
+    const release = await releaseRes.json() as { assets: Array<{ name: string; url: string }> }
+    const jsonAssets = release.assets.filter(a => a.name.endsWith('.json'))
+
+    if (jsonAssets.length === 0) {
+      throw new Error('Dieses Release enthält keine JSON-Assets.')
+    }
+
+    const imported: SourceSummary[] = []
+
+    for (const asset of jsonAssets) {
+      // Über die API-URL herunterladen (CORS-kompatibel, im Gegensatz zu browser_download_url).
+      const dataRes = await fetch(asset.url, {
+        headers: {
+          Accept: 'application/octet-stream',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      })
+
+      if (!dataRes.ok) {
+        throw new Error(`Fehler beim Laden von "${asset.name}": ${dataRes.statusText}`)
+      }
+
+      const data = await dataRes.json() as RulebookData
+
+      if (!data.metadata?.id || !data.metadata?.title) {
+        throw new Error(
+          `"${asset.name}" ist keine gültige Regelwerk-Datei — metadata.id oder metadata.title fehlt.`
+        )
+      }
+
+      const entry: StoredSource = {
+        id:      data.metadata.id,
+        title:   data.metadata.title,
+        version: data.metadata.version ?? '?',
+        enabled: true,
+        data,
+      }
+
+      const db = await this.open()
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite')
+        tx.objectStore(STORE).put(entry)
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onerror    = () => { db.close(); reject(tx.error) }
+      })
+
+      imported.push({ id: entry.id, title: entry.title, version: entry.version, enabled: true })
+    }
+
+    return imported
   }
 
   /**

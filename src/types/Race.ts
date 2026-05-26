@@ -7,16 +7,6 @@ export interface PropertyRange {
 }
 
 /**
- * RacialAbility — eine angeborene Sonderfähigkeit einer Rasse.
- */
-export interface RacialAbility {
-  /** Fertigkeit oder Fähigkeit (referenziert die ID aus skills.json) */
-  skill: string
-  /** Bonus auf die Fertigkeit */
-  bonus: number
-}
-
-/**
  * Race — eine spielbare Rasse, z.B. Mensch, Elfen oder Zwerge.
  */
 export interface Race {
@@ -30,16 +20,16 @@ export interface Race {
   derivedRestrictions?: Record<string, PropertyRange>
   /** Bonus/Malus auf Lebenspunkte — fehlt wenn 0 */
   lpModifier?: number
-  /** Würfelformel für die Bewegungsweite (z.B. "4W3+16") */
-  movementFormula: string
   /** Erlaubte Typ-IDs — leer bedeutet alle Typen erlaubt */
   availableTypes: string[]
-  /** Resistenzboni auf Geist- und Körpermagie */
-  resistanceBonus: { geist: number; koerper: number }
+  /** Flache Boni auf Eigenschaften/Resistenzen (z.B. ResBg, ResBk) */
+  propertyBonuses?: Array<{ id: string; value: number }>
   /** Verbotene Fertigkeiten (IDs aus skills.json) — fehlt wenn keine */
   forbiddenSkills?: string[]
-  /** Angeborene Sonderfähigkeiten */
-  specialAbilities: RacialAbility[]
+  /** Flache Boni auf Fertigkeitswürfe */
+  skillBonuses?: Array<{ skillId: string; value: number }>
+  /** Fertigkeiten mit Startwert (angeboren) */
+  skills?: Array<{ skillId: string; value: number }>
   /** Erzwungene Größe — fehlt wenn freie Wahl */
   fixedSize?: string
   /** Erzwungene Händigkeit — fehlt wenn freie Wahl */

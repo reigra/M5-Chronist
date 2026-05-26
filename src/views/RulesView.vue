@@ -2,13 +2,16 @@
 import { ref, onMounted } from 'vue'
 import { rulesStorage } from '../services/RulesStorage'
 import { UI } from '../constants/ui'
-import type { SourceSummary } from '../services/RulesStorage'
+import { RULES_GITHUB_REPO, RULES_RELEASE_REF } from '../constants/rules'
+import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const sources      = ref<SourceSummary[]>([])
 const loading      = ref(true)
 const errorMessage = ref<string | null>(null)
+const githubLoading  = ref(false)
+const assetLinks     = ref<AssetLink[]>([])
 
 /** True if the current browser supports the File System Access API. */
 const browserSupported = 'showOpenFilePicker' in window
@@ -56,6 +59,23 @@ async function toggleEnabled(source: SourceSummary): Promise<void> {
     source.enabled = !source.enabled
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to update source.'
+  }
+}
+
+/**
+ * Fetch the list of downloadable JSON assets from the configured GitHub release.
+ * Does not download or import any files — just populates the asset link list.
+ */
+async function loadFromGithub(): Promise<void> {
+  githubLoading.value = true
+  assetLinks.value    = []
+  errorMessage.value  = null
+  try {
+    assetLinks.value = await rulesStorage.fetchReleaseAssetLinks(RULES_GITHUB_REPO, RULES_RELEASE_REF)
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Fehler beim Laden von Github.'
+  } finally {
+    githubLoading.value = false
   }
 }
 
@@ -123,13 +143,32 @@ onMounted(loadList)
 
       <p v-else class="empty-hint">{{ UI.rulesEmptyHint }}</p>
 
-      <button
-        class="btn-import"
-        :disabled="!browserSupported"
-        @click="importFiles"
-      >
-        {{ UI.rulesImportBtn }}
-      </button>
+      <div class="btn-row">
+        <button
+          class="btn-import"
+          :disabled="!browserSupported"
+          @click="importFiles"
+        >
+          {{ UI.rulesImportBtn }}
+        </button>
+        <button
+          class="btn-github"
+          :disabled="githubLoading"
+          @click="loadFromGithub"
+        >
+          {{ githubLoading ? UI.rulesGithubLoading : UI.rulesGithubBtn }}
+        </button>
+      </div>
+
+      <div v-if="assetLinks.length > 0" class="github-assets">
+        <p class="github-assets-title">{{ UI.rulesGithubAvailable }}</p>
+        <ul class="asset-list">
+          <li v-for="asset in assetLinks" :key="asset.name" class="asset-item">
+            <span class="asset-name">{{ asset.name }}</span>
+            <a :href="asset.downloadUrl" class="btn-download">{{ UI.rulesGithubDownloadBtn }}</a>
+          </li>
+        </ul>
+      </div>
     </template>
   </main>
 </template>
@@ -214,6 +253,78 @@ onMounted(loadList)
 .empty-hint {
   color: #666;
   margin: 1rem 0;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btn-github {
+  padding: 0.5rem 1rem;
+  background: #2d8a4e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-github:hover:not(:disabled) {
+  background: #236c3d;
+}
+.btn-github:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.github-message {
+  color: #2d8a4e;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.github-assets {
+  margin-top: 1rem;
+}
+
+.github-assets-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.asset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.asset-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.asset-name {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.btn-download {
+  padding: 0.3rem 0.75rem;
+  background: #2d8a4e;
+  color: #fff;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.btn-download:hover {
+  background: #236c3d;
 }
 
 .btn-import {

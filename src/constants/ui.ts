@@ -41,8 +41,8 @@ export const UI = {
   // ── Abschnitts-Überschriften ─────────────────────────────────────────────────
   secIdentity:    'Identität',
   secExperience:  'Erfahrung',
-  secBaseProps:   'Basis-Eigenschaften',
-  secDerivedProps: 'Abgeleitete Eigenschaften',
+  secProps:       'Eigenschaften',
+  secBoni:        'Boni',
   secSkills:      'Fertigkeiten',
 
   // ── Spalten- und Feldbezeichner ──────────────────────────────────────────────
@@ -93,7 +93,8 @@ export const UI = {
   propAnb:  'Angriffsbonus (AnB)',
   propAbb:  'Abwehrbonus (AbB)',
   propZaub: 'Zauberbonus (ZauB)',
-  propResb: 'Resistenzbonus (ResB)',
+  propResbg: 'Resistenzbonus Geist (ResBg)',
+  propResbk: 'Resistenzbonus Körper (ResBk)',
 
   // ── Eigenschafts-Abkürzungen (Formular) ──────────────────────────────────────
   propAbbrSt:   'St',
@@ -113,7 +114,8 @@ export const UI = {
   propAbbrAnb:  'AnB',
   propAbbrAbb:  'AbB',
   propAbbrZaub: 'ZauB',
-  propAbbrResb: 'ResB',
+  propAbbrResbg: 'ResBg',
+  propAbbrResbk: 'ResBk',
 
   // ── EP/ES-Anzeige (Fortschritt, Zaubersprüche) ────────────────────────────────
   epAvailable: 'EP verfügbar:',
@@ -164,8 +166,14 @@ export const UI = {
   spellsLearnNew:  'Neuen Zauberspruch lernen',
 
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
-  rulesTitle:     'Regeln',
-  rulesImportBtn: 'Regeldateien importieren…',
+  rulesTitle:          'Regeln',
+  rulesImportBtn:      'Regeldateien importieren…',
+  rulesGithubBtn:      'Von Github laden',
+  rulesGithubLoading:  'Wird geladen…',
+  rulesGithubSuccess:  (n: number) => `${n} Regelwerk(e) erfolgreich geladen.`,
+  rulesGithubNoAssets: 'Dieses Release enthält keine JSON-Assets.',
+  rulesGithubAvailable:   'Erhältlich auf Github',
+  rulesGithubDownloadBtn: 'Herunterladen',
   rulesEmptyHint:
     'Keine Regeln geladen. Importiere eine Regelwerk-JSON-Datei, um zu beginnen.',
 

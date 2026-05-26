@@ -68,21 +68,21 @@ function computeDiff(existing: Character, incoming: Character): DiffEntry[] {
     }
   }
 
-  // Base properties
-  for (const key of Object.keys(existing.baseProperties) as Array<keyof typeof existing.baseProperties>) {
-    const oldVal = existing.baseProperties[key]
-    const newVal = incoming.baseProperties[key]
+  // Properties
+  for (const key of Object.keys(existing.properties) as Array<keyof typeof existing.properties>) {
+    const oldVal = existing.properties[key]
+    const newVal = incoming.properties[key]
     if (oldVal !== newVal) {
-      entries.push({ label: `Base: ${key}`, oldValue: oldVal, newValue: newVal })
+      entries.push({ label: `Eigenschaft: ${key}`, oldValue: oldVal, newValue: newVal })
     }
   }
 
-  // Derived properties
-  for (const key of Object.keys(existing.derivedProperties) as Array<keyof typeof existing.derivedProperties>) {
-    const oldVal = existing.derivedProperties[key]
-    const newVal = incoming.derivedProperties[key]
+  // Boni
+  for (const key of Object.keys(existing.boni) as Array<keyof typeof existing.boni>) {
+    const oldVal = existing.boni[key]
+    const newVal = incoming.boni[key]
     if (oldVal !== newVal) {
-      entries.push({ label: `Derived: ${key}`, oldValue: oldVal, newValue: newVal })
+      entries.push({ label: `Bonus: ${key}`, oldValue: oldVal, newValue: newVal })
     }
   }
 
