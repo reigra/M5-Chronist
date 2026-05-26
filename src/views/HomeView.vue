@@ -140,7 +140,7 @@ async function importCharacter(): Promise<void> {
       // New character — save and navigate immediately.
       await characterStorage.save(incoming)
       await loadList()
-      await router.push({ name: 'advancement', params: { id: incoming.id } })
+      await router.push({ name: 'character-sheet', params: { id: incoming.id } })
       return
     }
 
@@ -162,7 +162,7 @@ async function confirmImport(): Promise<void> {
     await characterStorage.save(p.incoming)
     pendingImport.value = null
     await loadList()
-    await router.push({ name: 'advancement', params: { id: p.incoming.id } })
+    await router.push({ name: 'character-sheet', params: { id: p.incoming.id } })
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
     pendingImport.value = null

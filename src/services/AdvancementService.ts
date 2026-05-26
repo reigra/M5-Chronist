@@ -54,6 +54,8 @@ export class AdvancementService {
    * @returns EP cost, or null if no further advancement is possible.
    */
   advanceCost(skill: Skill, currentValue: number, type: CharacterType): number | null {
+    // Angeborene Fertigkeiten (z.B. Raufen, Trinken) haben keine Steigerungstabelle.
+    if (!skill.advancementCosts?.length) return null
     if (currentValue >= skill.maxValue) return null
     const stepIndex = currentValue - skill.baseValue
     const teCost = skill.advancementCosts[stepIndex]
