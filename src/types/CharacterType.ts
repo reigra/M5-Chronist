@@ -13,9 +13,16 @@ export interface CharacterType {
   /** Broad category: "Kämpfer" | "KampfZauberer" | "Zauberer" */
   category: string
   /** EP cost per TE for each skill group */
-  groupCosts: Record<string, number>
+  groupCosts?: Record<string, number>
   /** EP cost per TE for each spell group (magic types only) */
   spellCosts?: Record<string, number>
+  /** EP cost per TE for each fight skill group (Ars Armorum) */
+  fightCosts?: Record<string, number>
   /** Flache Boni auf Eigenschaften/Resistenzen (z.B. ResBg, ResBk) */
   propertyBonuses?: Array<{ id: string; value: number }>
+  /**
+   * Wenn true: Kein spielbarer Typ, sondern ein Meta-Typ der Felder
+   * an alle Typen einer Kategorie vererbt (z.B. ZAU → alle Zauberer).
+   */
+  isMeta?: boolean
 }
