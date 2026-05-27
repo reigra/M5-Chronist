@@ -1,4 +1,5 @@
 import type { RulebookData, RulesData } from '../types/Rules'
+import type { CharacterType } from '../types/CharacterType'
 
 const DB_NAME = 'MagusNG-Rules'
 const DB_VERSION = 1
@@ -290,8 +291,142 @@ export class RulesStorage {
   }
 
   /**
+   * Merge CharacterType entries from all enabled sources.
+   *
+   * Priority:
+   *   1. Core sources (metadata.isCore === true) win on scalar conflicts.
+   *   2. Non-core: first loaded value wins.
+   *   3. Meta-types (isMeta: true) are applied last with the lowest priority,
+   *      then removed from the result.
+   *
+   * Record fields (groupCosts, spellCosts, fightCosts) and propertyBonuses
+   * are merged key-by-key — new keys are added, existing values are never
+   * overwritten. Conflicts are logged via console.warn.
+   */
+  private mergeTypes(entries: StoredSource[]): CharacterType[] {
+    // Core sources first — stable sort preserves original order within each tier
+    const sorted = [...entries].sort((a, b) =>
+      (a.data.metadata.isCore ? 0 : 1) - (b.data.metadata.isCore ? 0 : 1)
+    )
+
+    const merged    = new Map<string, CharacterType>()
+    const metaTypes: CharacterType[] = []
+
+    for (const entry of sorted) {
+      for (const type of (entry.data.types ?? [])) {
+        if (type.isMeta) { metaTypes.push(type); continue }
+
+        if (!merged.has(type.id)) {
+          merged.set(type.id, {
+            ...type,
+            groupCosts:      type.groupCosts      ? { ...type.groupCosts }      : undefined,
+            spellCosts:      type.spellCosts      ? { ...type.spellCosts }      : undefined,
+            fightCosts:      type.fightCosts      ? { ...type.fightCosts }      : undefined,
+            propertyBonuses: type.propertyBonuses ? [...type.propertyBonuses]   : undefined,
+          })
+        } else {
+          this.mergeTypeInto(merged.get(type.id)!, type, entry.data.metadata.id)
+        }
+      }
+    }
+
+    // Apply meta-types to all types sharing the same category (lowest priority)
+    for (const meta of metaTypes) {
+      for (const target of merged.values()) {
+        if (target.category === meta.category) {
+          this.mergeTypeInto(target, meta, `meta:${meta.id}`, true)
+        }
+      }
+    }
+
+    // Post-merge pass: mark types without groupCosts as non-playable (isMeta).
+    // A type needs at least one groupCosts entry to be usable for character advancement.
+    for (const type of merged.values()) {
+      if (!type.isMeta && (!type.groupCosts || Object.keys(type.groupCosts).length === 0)) {
+        type.isMeta = true
+        console.warn(
+          `[RulesLoader] Typ "${type.id}" hat kein groupCosts — wird als nicht spielbar markiert (isMeta).`
+        )
+      }
+    }
+
+    return Array.from(merged.values())
+  }
+
+  /**
+   * Merge fields from `source` into `target` in-place.
+   *
+   * @param target     - The type being accumulated.
+   * @param source     - Incoming type data.
+   * @param sourceName - Used in conflict warnings.
+   * @param metaOnly   - When true, skip conflict warnings (meta-types have lowest priority).
+   */
+  private mergeTypeInto(
+    target:     CharacterType,
+    source:     CharacterType,
+    sourceName: string,
+    metaOnly = false,
+  ): void {
+    // Scalar fields — warn on conflict, keep existing value
+    for (const key of ['name', 'category'] as const) {
+      if (source[key] && target[key] !== source[key] && !metaOnly) {
+        console.warn(
+          `[RulesLoader] Typ "${target.id}".${key}: Kollision ` +
+          `("${target[key]}" vs. "${source[key]}" aus "${sourceName}") — ` +
+          `vorhandener Wert wird beibehalten.`
+        )
+      }
+    }
+
+    // Record fields — add new keys, keep existing values, warn on value conflict
+    for (const key of ['groupCosts', 'spellCosts', 'fightCosts'] as const) {
+      if (!source[key]) continue
+      if (!target[key]) {
+        (target as unknown as Record<string, unknown>)[key] = { ...source[key] }
+      } else {
+        for (const [k, v] of Object.entries(source[key]!) as [string, number][]) {
+          if (!(k in target[key]!)) {
+            (target[key] as Record<string, number>)[k] = v
+          } else if ((target[key] as Record<string, number>)[k] !== v && !metaOnly) {
+            console.warn(
+              `[RulesLoader] Typ "${target.id}".${key}["${k}"]: Kollision ` +
+              `(${(target[key] as Record<string, number>)[k]} vs. ${v} aus "${sourceName}") — ` +
+              `vorhandener Wert wird beibehalten.`
+            )
+          }
+        }
+      }
+    }
+
+    // propertyBonuses — merge by id
+    if (source.propertyBonuses) {
+      if (!target.propertyBonuses) {
+        target.propertyBonuses = [...source.propertyBonuses]
+      } else {
+        const known = new Set(target.propertyBonuses.map((b: { id: string; value: number }) => b.id))
+        for (const bonus of source.propertyBonuses) {
+          if (!known.has(bonus.id)) {
+            target.propertyBonuses.push({ ...bonus })
+          } else if (!metaOnly) {
+            const existing = target.propertyBonuses.find((b: { id: string; value: number }) => b.id === bonus.id)!
+            if (existing.value !== bonus.value) {
+              console.warn(
+                `[RulesLoader] Typ "${target.id}".propertyBonuses["${bonus.id}"]: Kollision ` +
+                `(${existing.value} vs. ${bonus.value} aus "${sourceName}") — ` +
+                `vorhandener Wert wird beibehalten.`
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Load and merge all enabled sources into a single RulesData object.
    * Returns empty arrays for all fields if no sources are enabled.
+   *
+   * Types are merged by ID across sources — see mergeTypes() for details.
    *
    * @returns Merged RulesData from all enabled sources.
    */
@@ -304,20 +439,21 @@ export class RulesStorage {
       request.onerror   = () => { db.close(); reject(request.error) }
     })
 
+    const active = entries.filter(e => e.enabled)
+
     const rules: RulesData = {
-      skills:           [],
-      types:            [],
-      races:            [],
-      origins:          [],
-      socialStatuses:   [],
-      spells:           [],
+      skills:            [],
+      types:             this.mergeTypes(active),
+      races:             [],
+      origins:           [],
+      socialStatuses:    [],
+      spells:            [],
       spellDescriptions: [],
     }
 
-    for (const entry of entries.filter(e => e.enabled)) {
+    for (const entry of active) {
       const src = entry.data
       if (src.skills)            rules.skills.push(...src.skills)
-      if (src.types)             rules.types.push(...src.types)
       if (src.races)             rules.races.push(...src.races)
       if (src.origins)           rules.origins.push(...src.origins)
       if (src.socialStatuses)    rules.socialStatuses.push(...src.socialStatuses)

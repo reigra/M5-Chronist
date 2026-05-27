@@ -143,9 +143,10 @@ export const UI = {
   homeManageRules:    'Regeln verwalten',
 
   // ── Charakterbogen (CharacterSheetView) ──────────────────────────────────────
-  sheetExport:       'Als JSON exportieren',
-  sheetExportHint:   'Charakter als JSON exportieren',
-  sheetExportHintNA: 'Benötigt einen Chromium-basierten Browser',
+  sheetExport:          'Als JSON exportieren',
+  sheetExportHint:      'Charakter als JSON exportieren',
+  sheetExportHintNA:    'Benötigt einen Chromium-basierten Browser',
+  sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
   advAddEp:          'EP hinzufügen',

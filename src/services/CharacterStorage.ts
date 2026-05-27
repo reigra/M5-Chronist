@@ -120,16 +120,16 @@ export class CharacterStorage {
 
   /**
    * List all characters saved in IndexedDB.
-   * Returns only the ID and name of each character — enough for a list view.
+   * Returns ID, name and typeId of each character — enough for list views.
    */
-  async list(): Promise<Array<{ id: string; name: string }>> {
+  async list(): Promise<Array<{ id: string; name: string; typeId: string }>> {
     const db = await this.open()
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, 'readonly')
       const request = tx.objectStore(STORE).getAll()
       request.onsuccess = () => {
         db.close()
-        resolve((request.result as Character[]).map(c => ({ id: c.id, name: c.name })))
+        resolve((request.result as Character[]).map(c => ({ id: c.id, name: c.name, typeId: c.typeId })))
       }
       request.onerror = () => { db.close(); reject(request.error) }
     })

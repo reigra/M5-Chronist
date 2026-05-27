@@ -113,6 +113,15 @@ const spellRows = computed(() => {
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
+/** Playable types: isMeta filtered out, sorted alphabetically. */
+const playableTypes = computed(() => {
+  const r = rules.value
+  if (!r) return []
+  return r.types
+    .filter(t => !t.isMeta)
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
+
 /** For display: look up skill names from rules. */
 const skillRows = computed(() => {
   const r = rules.value
@@ -309,7 +318,7 @@ onMounted(async () => {
         <label>{{ UI.labelType }} *
           <select v-model="typeId" required>
             <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-            <option v-for="t in rules?.types" :key="t.id" :value="t.id">{{ t.name }}</option>
+            <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
           </select>
         </label>
 
