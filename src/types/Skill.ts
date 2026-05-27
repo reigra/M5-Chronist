@@ -32,4 +32,11 @@ export interface Skill {
    * Absent means the skill cannot be used unlearned.
    */
   unlearnedValue?: number
+  /**
+   * Grade-dependent advancement table (Abwehr, Resistenz, Zaubern).
+   * When present, the FW is NOT advanced via EP but increases when the
+   * character reaches certain Grad thresholds. Shown as a hint only —
+   * the player enters the new value manually.
+   */
+  gradValues?: Array<{ grad: number; fw: number }>
 }
