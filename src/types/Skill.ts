@@ -24,6 +24,8 @@ export interface Skill {
   maxValue: number
   /** Base property that is added to check rolls */
   linkedProperty: string
+  /** Optional derived bonus key to add on top (e.g. AnB, AbB, ZauB, ResBg, ResBk) */
+  bonusKey?: 'AusB' | 'SchB' | 'AnB' | 'AbB' | 'ZauB' | 'ResBg' | 'ResBk'
   /** Optional notes or rule exceptions */
   notes: string
   /**

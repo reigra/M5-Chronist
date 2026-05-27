@@ -76,6 +76,9 @@ const knownSkillRows = computed(() => {
       // Grad-basierte Fertigkeit (Abwehr, Resistenz, Zaubern): kein EP-Steigern
       const isGradBased = Array.isArray(skill.gradValues) && skill.gradValues.length > 0
 
+      // Fertigkeit ohne Steigerungstabelle (z.B. angeborene Fertigkeiten): nicht steigerbar
+      const isNotAdvanceable = !isGradBased && (!skill.advancementCosts || skill.advancementCosts.length === 0)
+
       // Nächste erreichbare Steigerung anzeigen (informativer Hinweis)
       let nextGradHint: string | null = null
       if (isGradBased && skill.gradValues) {
@@ -85,7 +88,7 @@ const knownSkillRows = computed(() => {
         }
       }
 
-      const cost = isGradBased ? null : advancementService.advanceCost(skill, cs.value, type)
+      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type)
       const maxValue = skill.maxValue ?? null
       return {
         skillId: cs.skillId,
@@ -96,6 +99,7 @@ const knownSkillRows = computed(() => {
         cost,
         canAdvance: cost !== null && char.availableEp >= cost,
         isGradBased,
+        isNotAdvanceable,
         nextGradHint,
         skill,
       }
@@ -332,10 +336,13 @@ onMounted(async () => {
           <tbody>
             <tr v-for="row in knownSkillRows" :key="row.skillId">
               <td>{{ row.name }}</td>
-              <td>{{ row.value }}<template v-if="row.maxValue !== null"> / {{ row.maxValue }}</template></td>
+              <td>{{ row.value }}</td>
               <td>
                 <template v-if="row.isGradBased">
-                  <span class="tag-grad-based">Grad-basiert</span>
+                  <span class="tag-grad-based">{{ UI.advGradBased }}</span>
+                </template>
+                <template v-else-if="row.isNotAdvanceable">
+                  <span class="tag-not-advanceable">{{ UI.advNotAdvanceable }}</span>
                 </template>
                 <template v-else>
                   {{ row.isMaxed ? UI.notApplicable : row.cost + ' ' + UI.unitEp }}
@@ -345,6 +352,8 @@ onMounted(async () => {
                 <template v-if="row.isGradBased">
                   <span v-if="row.nextGradHint" class="hint-grad">{{ row.nextGradHint }}</span>
                   <span v-else class="tag-max">{{ UI.advMaxTag }}</span>
+                </template>
+                <template v-else-if="row.isNotAdvanceable">
                 </template>
                 <template v-else>
                   <button
@@ -576,6 +585,13 @@ button:disabled {
 /* Hinweis für grad-basierte Fertigkeiten (Abwehr, Resistenz, Zaubern) */
 .tag-grad-based {
   color: #8888bb;
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+/* Hinweis für nicht steigerbare Fertigkeiten (keine advancementCosts) */
+.tag-not-advanceable {
+  color: #888888;
   font-size: 0.8em;
   font-style: italic;
 }
