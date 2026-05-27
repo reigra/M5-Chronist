@@ -3,8 +3,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { characterStorage } from '../services/CharacterStorage'
 import { rulesStorage } from '../services/RulesStorage'
+import { RulesLoader } from '../services/RulesLoader'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
+import type { RulesData } from '../types/Rules'
 import type { SourceSummary } from '../services/RulesStorage'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -25,11 +27,23 @@ interface PendingImport {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const router = useRouter()
-const characters = ref<Array<{ id: string; name: string }>>([])
+const characters = ref<Array<{ id: string; name: string; typeId: string }>>([])
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const pendingImport = ref<PendingImport | null>(null)
 const activeSources = ref<SourceSummary[]>([])
+const rules = ref<RulesData | null>(null)
+
+/**
+ * True if a character's type is not fully supported by the loaded rules.
+ * A type is unsupported when it is missing from the rules or has isMeta: true.
+ */
+function isUnsupported(char: { typeId: string }): boolean {
+  const r = rules.value
+  if (!r) return false
+  const t = r.types.find(x => x.id === char.typeId)
+  return !t || t.isMeta === true
+}
 
 /** True if the current browser supports the File System Access API. */
 const browserSupported = 'showOpenFilePicker' in window
@@ -115,9 +129,14 @@ function computeDiff(existing: Character, incoming: Character): DiffEntry[] {
  */
 async function loadList(): Promise<void> {
   try {
-    characters.value = await characterStorage.list()
-    const allSources = await rulesStorage.list()
+    const [chars, allSources, loadedRules] = await Promise.all([
+      characterStorage.list(),
+      rulesStorage.list(),
+      new RulesLoader().load(),
+    ])
+    characters.value = chars
     activeSources.value = allSources.filter(s => s.enabled)
+    rules.value = loadedRules
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to load characters.'
   } finally {
@@ -235,7 +254,12 @@ onMounted(loadList)
             <span class="char-name">{{ char.name }}</span>
             <div class="char-links">
               <router-link :to="{ name: 'character-sheet', params: { id: char.id } }" class="btn-link">{{ UI.navSheet }}</router-link>
-              <router-link :to="{ name: 'advancement', params: { id: char.id } }" class="btn-link">{{ UI.navAdvancement }}</router-link>
+              <router-link
+                :to="isUnsupported(char) ? '' : { name: 'advancement', params: { id: char.id } }"
+                class="btn-link"
+                :class="{ 'btn-link--disabled': isUnsupported(char) }"
+                :aria-disabled="isUnsupported(char)"
+              >{{ UI.navAdvancement }}</router-link>
               <router-link :to="{ name: 'character-edit', params: { id: char.id } }" class="btn-link btn-link--edit">{{ UI.navEdit }}</router-link>
             </div>
           </li>
@@ -327,6 +351,12 @@ onMounted(loadList)
 .btn-link:hover {
   background: #f0f0f0;
   text-decoration: none;
+}
+
+.btn-link--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-link--edit {

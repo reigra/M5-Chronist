@@ -62,6 +62,16 @@ const isCaster = computed(() => {
   return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
 })
 
+/**
+ * True if the character's type is marked as isMeta (not fully supported by loaded rules).
+ * In this case all actions except export are disabled.
+ */
+const isUnsupportedType = computed(() => {
+  const c = character.value; const r = rules.value
+  if (!c || !r) return false
+  return r.types.find(x => x.id === c.typeId)?.isMeta === true
+})
+
 /** Learned spells with display data, sorted by level then name. */
 const spellRows = computed(() => {
   const c = character.value; const r = rules.value
@@ -174,8 +184,17 @@ onMounted(async () => {
           <span class="grad-badge">{{ UI.labelGrad }} {{ grad }}</span>
         </div>
         <nav class="sheet-nav">
-          <router-link :to="{ name: 'advancement', params: { id: character.id } }" class="btn-nav">{{ UI.navAdvancement }}</router-link>
-          <router-link v-if="isCaster" :to="{ name: 'spells', params: { id: character.id } }" class="btn-nav">{{ UI.spells }}</router-link>
+          <router-link
+            :to="isUnsupportedType ? '' : { name: 'advancement', params: { id: character.id } }"
+            class="btn-nav"
+            :class="{ 'btn-nav--disabled': isUnsupportedType }"
+            :aria-disabled="isUnsupportedType"
+          >{{ UI.navAdvancement }}</router-link>
+          <router-link
+            v-if="isCaster && !isUnsupportedType"
+            :to="{ name: 'spells', params: { id: character.id } }"
+            class="btn-nav"
+          >{{ UI.spells }}</router-link>
           <router-link :to="{ name: 'character-edit', params: { id: character.id } }" class="btn-nav">{{ UI.navEdit }}</router-link>
           <button
             class="btn-nav"
@@ -186,6 +205,11 @@ onMounted(async () => {
         </nav>
       </header>
 
+      <!-- ── Unsupported type warning ── -->
+      <div v-if="isUnsupportedType" class="status error unsupported-warning">
+        {{ UI.sheetUnsupportedType }}
+      </div>
+
       <!-- ── Identity ── -->
       <section class="card">
         <h2>{{ UI.secIdentity }}</h2>
@@ -195,6 +219,22 @@ onMounted(async () => {
           <dt>{{ UI.labelType }}</dt>      <dd>{{ typeName }}</dd>
           <dt>{{ UI.labelOrigin }}</dt>    <dd>{{ originName }}</dd>
           <dt>{{ UI.labelStatus }}</dt>    <dd>{{ statusName }}</dd>
+        </dl>
+      </section>
+
+      <!-- ── Personalia ── -->
+      <section class="card">
+        <h2>{{ UI.secPersonalia }}</h2>
+        <dl class="prop-list">
+          <dt>{{ UI.labelGeschlecht }}</dt>  <dd>{{ character.personalia?.geschlecht  ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelHaendigkeit }}</dt> <dd>{{ character.personalia?.haendigkeit ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelAlter }}</dt>       <dd>{{ character.personalia?.alter       ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGroesse }}</dt>     <dd>{{ character.personalia?.groesse     ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGewicht }}</dt>     <dd>{{ character.personalia?.gewicht     ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGestalt }}</dt>     <dd>{{ character.personalia?.gestalt     ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGlaube }}</dt>      <dd>{{ character.personalia?.glaube      ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGG }}</dt>          <dd>{{ character.personalia?.gg          ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelSG }}</dt>          <dd>{{ character.personalia?.sg          ?? UI.notApplicable }}</dd>
         </dl>
       </section>
 
@@ -306,6 +346,15 @@ onMounted(async () => {
 .status { color: #555; }
 .status.error { color: #c00; }
 
+.unsupported-warning {
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: #fff0f0;
+  border: 1px solid #c00;
+  border-radius: 4px;
+}
+
 .sheet-header {
   display: flex;
   align-items: flex-start;
@@ -353,6 +402,12 @@ onMounted(async () => {
 
 .btn-nav:hover {
   background: #f0f0f0;
+}
+
+.btn-nav--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .card {
