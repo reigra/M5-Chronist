@@ -70,6 +70,18 @@ const spells = ref<string[]>([])
 /** The spell ID selected in the "add spell" dropdown. */
 const spellToAdd = ref('')
 
+// ── Personalia fields ─────────────────────────────────────────────────────────
+
+const geschlecht  = ref('')
+const haendigkeit = ref('')
+const alter       = ref<number | null>(null)
+const groesse     = ref<number | null>(null)
+const gewicht     = ref<number | null>(null)
+const gestalt     = ref('')
+const glaube      = ref('')
+const gg          = ref<number | null>(null)
+const sg          = ref<number | null>(null)
+
 // ── Computed ──────────────────────────────────────────────────────────────────
 
 /** Skills not yet on the character — available to add. */
@@ -169,6 +181,16 @@ function fillForm(c: Character): void {
 
   skills.value = [...c.skills]
   spells.value = [...(c.spells ?? [])]
+
+  geschlecht.value  = c.personalia?.geschlecht  ?? ''
+  haendigkeit.value = c.personalia?.haendigkeit ?? ''
+  alter.value       = c.personalia?.alter       ?? null
+  groesse.value     = c.personalia?.groesse     ?? null
+  gewicht.value     = c.personalia?.gewicht     ?? null
+  gestalt.value     = c.personalia?.gestalt     ?? ''
+  glaube.value      = c.personalia?.glaube      ?? ''
+  gg.value          = c.personalia?.gg          ?? null
+  sg.value          = c.personalia?.sg          ?? null
 }
 
 /** Build the Character object from the current form state. */
@@ -195,6 +217,17 @@ function buildCharacter(): Character {
     },
     skills:    [...skills.value],
     spells:    [...spells.value],
+    personalia: {
+      geschlecht:  geschlecht.value  || undefined,
+      haendigkeit: haendigkeit.value || undefined,
+      alter:       alter.value       ?? undefined,
+      groesse:     groesse.value     ?? undefined,
+      gewicht:     gewicht.value     ?? undefined,
+      gestalt:     gestalt.value     || undefined,
+      glaube:      glaube.value      || undefined,
+      gg:          gg.value          ?? undefined,
+      sg:          sg.value          ?? undefined,
+    },
     createdAt: isEdit.value ? (id.value ? '' : now) : now, // preserved on edit
     updatedAt: now,
   }
@@ -335,6 +368,44 @@ onMounted(async () => {
             <option v-for="s in rules?.socialStatuses" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
         </label>
+      </section>
+
+      <!-- ── Personalia ── -->
+      <section class="card">
+        <h2>{{ UI.secPersonalia }}</h2>
+        <div class="prop-grid prop-grid--wide">
+
+          <label for="p-geschlecht">{{ UI.labelGeschlecht }}</label>
+          <input id="p-geschlecht" v-model="geschlecht" type="text" />
+
+          <label for="p-haendigkeit">{{ UI.labelHaendigkeit }}</label>
+          <select id="p-haendigkeit" v-model="haendigkeit">
+            <option value="">—</option>
+            <option v-for="opt in UI.haendigkeitOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+
+          <label for="p-alter">{{ UI.labelAlter }}</label>
+          <input id="p-alter" v-model.number="alter" type="number" min="1" max="999" />
+
+          <label for="p-groesse">{{ UI.labelGroesse }}</label>
+          <input id="p-groesse" v-model.number="groesse" type="number" min="1" max="300" />
+
+          <label for="p-gewicht">{{ UI.labelGewicht }}</label>
+          <input id="p-gewicht" v-model.number="gewicht" type="number" min="1" max="999" />
+
+          <label for="p-gestalt">{{ UI.labelGestalt }}</label>
+          <input id="p-gestalt" v-model="gestalt" type="text" />
+
+          <label for="p-glaube">{{ UI.labelGlaube }}</label>
+          <input id="p-glaube" v-model="glaube" type="text" />
+
+          <label for="p-gg">{{ UI.labelGG }}</label>
+          <input id="p-gg" v-model.number="gg" type="number" min="0" max="99" />
+
+          <label for="p-sg">{{ UI.labelSG }}</label>
+          <input id="p-sg" v-model.number="sg" type="number" min="0" max="99" />
+
+        </div>
       </section>
 
       <!-- ── Experience ── -->

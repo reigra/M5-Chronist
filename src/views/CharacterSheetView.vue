@@ -222,6 +222,22 @@ onMounted(async () => {
         </dl>
       </section>
 
+      <!-- ── Personalia ── -->
+      <section class="card">
+        <h2>{{ UI.secPersonalia }}</h2>
+        <dl class="prop-list">
+          <dt>{{ UI.labelGeschlecht }}</dt>  <dd>{{ character.personalia?.geschlecht  ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelHaendigkeit }}</dt> <dd>{{ character.personalia?.haendigkeit ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelAlter }}</dt>       <dd>{{ character.personalia?.alter       ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGroesse }}</dt>     <dd>{{ character.personalia?.groesse     ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGewicht }}</dt>     <dd>{{ character.personalia?.gewicht     ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGestalt }}</dt>     <dd>{{ character.personalia?.gestalt     ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGlaube }}</dt>      <dd>{{ character.personalia?.glaube      ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelGG }}</dt>          <dd>{{ character.personalia?.gg          ?? UI.notApplicable }}</dd>
+          <dt>{{ UI.labelSG }}</dt>          <dd>{{ character.personalia?.sg          ?? UI.notApplicable }}</dd>
+        </dl>
+      </section>
+
       <!-- ── Experience ── -->
       <section class="card">
         <h2>{{ UI.secExperience }}</h2>

@@ -40,6 +40,7 @@ export const UI = {
 
   // ── Abschnitts-Überschriften ─────────────────────────────────────────────────
   secIdentity:    'Identität',
+  secPersonalia:  'Personalia',
   secExperience:  'Erfahrung',
   secProps:       'Eigenschaften',
   secBoni:        'Boni',
@@ -74,6 +75,19 @@ export const UI = {
   labelEsTotal:      'ES (gesamt)',
   labelEpAvail:      'EP (verfügbar)',
   labelNextGrad:     'Nächster Grad bei',
+
+  // ── Personalia-Feldbezeichner ─────────────────────────────────────────────────
+  labelGeschlecht:  'Geschlecht',
+  labelHaendigkeit: 'Händigkeit',
+  labelAlter:       'Alter',
+  labelGroesse:     'Größe (cm)',
+  labelGewicht:     'Gewicht (kg)',
+  labelGestalt:     'Gestalt',
+  labelGlaube:      'Glaube',
+  labelGG:          'GG (Göttergunst)',
+  labelSG:          'SG (Schicksalsgunst)',
+
+  haendigkeitOptions: ['rechts', 'links', 'beidhändig'] as const,
 
   // ── Eigenschafts-Labels (Charakterbogen) ─────────────────────────────────────
   propSt:   'Stärke (St)',

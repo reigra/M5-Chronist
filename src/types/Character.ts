@@ -9,6 +9,22 @@ export interface CharacterSkill {
 }
 
 /**
+ * CharacterPersonalia — beschreibende Eigenschaften des Charakters.
+ * Alle Felder optional (Rückwärtskompatibilität mit älteren Speicherständen).
+ */
+export interface CharacterPersonalia {
+  geschlecht?:  string  // z.B. "männlich", "weiblich", "divers"
+  haendigkeit?: string  // "rechts" | "links" | "beidhändig"
+  alter?:       number  // Alter in Jahren
+  groesse?:     number  // Größe in cm
+  gewicht?:     number  // Gewicht in kg
+  gestalt?:     string  // Freitext: körperliche Erscheinung
+  glaube?:      string  // Gottheit / Glaube
+  gg?:          number  // Göttergunst
+  sg?:          number  // Schicksalsgunst
+}
+
+/**
  * CharacterProperties — alle Eigenschaften des Charakters (Basis und abgeleitet).
  */
 export interface CharacterProperties {
@@ -70,6 +86,8 @@ export interface Character {
   skills: CharacterSkill[]
   /** IDs of all spells the character has learned */
   spells: string[]
+  /** Beschreibende Eigenschaften (optional, für Rückwärtskompatibilität) */
+  personalia?: CharacterPersonalia
   /** ISO date string when the character was created */
   createdAt: string
   /** ISO date string when the character was last modified */
