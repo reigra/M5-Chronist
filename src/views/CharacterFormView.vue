@@ -6,6 +6,13 @@ import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
 import type { Character, CharacterSkill } from '../types/Character'
 import type { RulesData } from '../types/Rules'
+import skillRulesJson from '../config/skillRules.json'
+import type { SkillRulesConfig } from '../types/SkillRules'
+import weaponsJson from '../config/weapons.json'
+import type { WeaponsConfig } from '../types/Weapon'
+
+const skillRules = skillRulesJson as SkillRulesConfig
+const weaponsData = weaponsJson as unknown as WeaponsConfig
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -70,6 +77,14 @@ const spells = ref<string[]>([])
 /** The spell ID selected in the "add spell" dropdown. */
 const spellToAdd = ref('')
 
+/** Waffenspezialisierungen (bis zu 3, nur für Kämpfer/KampfZauberer) */
+const weaponSpec1 = ref('')
+const weaponSpec2 = ref('')
+const weaponSpec3 = ref('')
+
+/** Magier-Spezialgebiet (nur für Typ "Ma") */
+const spellSpecialization = ref('')
+
 // ── Personalia fields ─────────────────────────────────────────────────────────
 
 const geschlecht  = ref('')
@@ -84,14 +99,37 @@ const sg          = ref<number | null>(null)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
-/** Skills not yet on the character — available to add. */
+/** Skills not yet on the character — available to add.
+ *  Multi-Instanz-Skills (z.B. Sprache) werden als einzelne Instanz-Einträge aufgeführt. */
 const availableSkills = computed(() => {
   const r = rules.value
   if (!r) return []
   const existing = new Set(skills.value.map(s => s.skillId))
-  return r.skills
-    .filter(s => !existing.has(s.id) && s.id !== 'Zaubersprüche')
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const result: { id: string; name: string }[] = []
+  for (const skill of r.skills) {
+    if (skill.id === 'Zaubersprüche') continue
+    const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === skill.id)
+    if (multiRule) {
+      // Multi-Instanz: alle Instanzen einzeln anzeigen, bereits gelernte ausfiltern
+      let instances: string[]
+      const src = multiRule.instanceSource
+      if (src.type === 'rules') {
+        const list = (r as Record<string, unknown>)[src.rulesKey] as Array<Record<string, string>> | undefined
+        instances = list?.map(item => item[src.nameField]) ?? []
+      } else {
+        instances = src.values
+      }
+      for (const inst of instances) {
+        const instanceId = multiRule.idPrefix + inst
+        if (!existing.has(instanceId)) {
+          result.push({ id: instanceId, name: skill.name + ': ' + inst })
+        }
+      }
+    } else if (!existing.has(skill.id)) {
+      result.push({ id: skill.id, name: skill.name })
+    }
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name))
 })
 /** True if the selected type can cast spells. */
 const isCaster = computed(() => {
@@ -134,16 +172,47 @@ const playableTypes = computed(() => {
     .sort((a, b) => a.name.localeCompare(b.name))
 })
 
-/** For display: look up skill names from rules. */
+/** For display: look up skill names from rules.
+ *  Multi-Instanz-Skills (z.B. "Sprache:Albisch") werden als "Sprache: Albisch" angezeigt. */
 const skillRows = computed(() => {
   const r = rules.value
   if (!r) return skills.value.map(s => ({ ...s, name: s.skillId }))
-  return skills.value.map(cs => ({
-    ...cs,
-    name: r.skills.find(s => s.id === cs.skillId)?.name ?? cs.skillId,
-  })).sort((a, b) => a.name.localeCompare(b.name))
+  return skills.value.map(cs => {
+    const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+    if (multiRule) {
+      const baseSkill = r.skills.find(s => s.id === multiRule.baseSkillId)
+      const instanceName = cs.skillId.slice(multiRule.idPrefix.length)
+      return { ...cs, name: (baseSkill?.name ?? multiRule.baseSkillId) + ': ' + instanceName }
+    }
+    return { ...cs, name: r.skills.find(s => s.id === cs.skillId)?.name ?? cs.skillId }
+  }).sort((a, b) => a.name.localeCompare(b.name))
+})
+/** Ob der gewählte Typ eine Waffenspezialisierung wählen kann (Kämpfer oder KampfZauberer). */
+const canHaveWeaponSpec = computed(() => {
+  const r = rules.value
+  if (!r || !typeId.value) return false
+  const t = r.types.find(x => x.id === typeId.value)
+  return t?.category === 'Kämpfer' || t?.category === 'KampfZauberer'
 })
 
+/** Anzahl der Waffenspezialisierungs-Slots: Krieger (Kr) erhält 3, alle anderen 1. */
+const weaponSlotCount = computed(() => typeId.value === 'Kr' ? 3 : 1)
+
+/** Ob der gewählte Typ ein Spezialgebiet wählen kann (nur Magier, id "Ma"). */
+const canHaveSpellSpec = computed(() => typeId.value === 'Ma')
+
+/** Spezialgebiet-Optionen des Magiers: spellGroup-Keys aus dem Typ. */
+const spellSpecGroups = computed(() => {
+  const r = rules.value
+  if (!r || !typeId.value) return []
+  const t = r.types.find(x => x.id === typeId.value)
+  return Object.keys(t?.spellCosts ?? {})
+})
+
+/** Alle Waffen aus weapons.json, alphabetisch sortiert. */
+const allWeapons = computed(() =>
+  [...weaponsData.weapons].sort((a, b) => a.name.localeCompare(b.name))
+)
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Populate all form fields from an existing character. */
@@ -181,6 +250,11 @@ function fillForm(c: Character): void {
 
   skills.value = [...c.skills]
   spells.value = [...(c.spells ?? [])]
+  const wSpecs = c.weaponSpecializations ?? []
+  weaponSpec1.value = wSpecs[0] ?? ''
+  weaponSpec2.value = wSpecs[1] ?? ''
+  weaponSpec3.value = wSpecs[2] ?? ''
+  spellSpecialization.value = c.spellSpecialization ?? ''
 
   geschlecht.value  = c.personalia?.geschlecht  ?? ''
   haendigkeit.value = c.personalia?.haendigkeit ?? ''
@@ -217,6 +291,14 @@ function buildCharacter(): Character {
     },
     skills:    [...skills.value],
     spells:    [...spells.value],
+    weaponSpecializations: canHaveWeaponSpec.value
+      ? [weaponSpec1.value, weaponSpec2.value, weaponSpec3.value]
+          .slice(0, weaponSlotCount.value)
+          .filter(s => s !== '')
+      : [],
+    spellSpecialization: canHaveSpellSpec.value && spellSpecialization.value
+      ? spellSpecialization.value
+      : undefined,
     personalia: {
       geschlecht:  geschlecht.value  || undefined,
       haendigkeit: haendigkeit.value || undefined,
@@ -233,12 +315,16 @@ function buildCharacter(): Character {
   }
 }
 
-/** Add the selected skill to the character's skill list. */
+/** Add the selected skill to the character's skill list.
+ *  Bei Multi-Instanz-Skills wird der baseValue des Basis-Skills verwendet. */
 function addSkill(): void {
   const sid = skillToAdd.value
   if (!sid) return
   const r = rules.value
-  const ruleSkill = r?.skills.find(s => s.id === sid)
+  // Bei Multi-Instanz-Skills (z.B. "Sprache:Albisch") den Basis-Skill für den FW-Default holen
+  const multiRule = skillRules.multiInstanceSkills.find(m => sid.startsWith(m.idPrefix))
+  const baseSkillId = multiRule ? multiRule.baseSkillId : sid
+  const ruleSkill = r?.skills.find(s => s.id === baseSkillId)
   const fw = skillFwToAdd.value ?? (ruleSkill?.baseValue ?? 12)
   skills.value = [...skills.value, { skillId: sid, value: fw }]
   skillToAdd.value = ''
@@ -496,6 +582,47 @@ onMounted(async () => {
           </label>
           <button type="button" class="btn-add" :disabled="!skillToAdd" @click="addSkill">{{ UI.add }}</button>
         </div>
+      </section>
+
+      <!-- ── Spezialisierungen ── -->
+      <section v-if="canHaveWeaponSpec || canHaveSpellSpec" class="card">
+        <h2>{{ UI.secSpecializations }}</h2>
+
+        <template v-if="canHaveWeaponSpec">
+          <label>{{ UI.labelWeaponSpec }} 1
+            <select v-model="weaponSpec1">
+              <option value="">{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="w in allWeapons" :key="w.id" :value="w.id">
+                {{ w.name }} ({{ w.groups.join(', ') }})
+              </option>
+            </select>
+          </label>
+          <label v-if="weaponSlotCount >= 2">{{ UI.labelWeaponSpec }} 2
+            <select v-model="weaponSpec2">
+              <option value="">{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="w in allWeapons" :key="w.id" :value="w.id">
+                {{ w.name }} ({{ w.groups.join(', ') }})
+              </option>
+            </select>
+          </label>
+          <label v-if="weaponSlotCount >= 3">{{ UI.labelWeaponSpec }} 3
+            <select v-model="weaponSpec3">
+              <option value="">{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="w in allWeapons" :key="w.id" :value="w.id">
+                {{ w.name }} ({{ w.groups.join(', ') }})
+              </option>
+            </select>
+          </label>
+        </template>
+
+        <label v-if="canHaveSpellSpec">{{ UI.labelSpellSpec }}
+          <select v-model="spellSpecialization">
+            <option value="">{{ UI.formSelectPlaceholder }}</option>
+            <option v-for="g in spellSpecGroups" :key="g" :value="g">
+              {{ (UI.spellGroupNames as Record<string, string>)[g] ?? g }}
+            </option>
+          </select>
+        </label>
       </section>
 
       <!-- ── Spells ── -->

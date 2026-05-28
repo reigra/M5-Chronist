@@ -163,18 +163,20 @@ export const UI = {
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
-  advAddEp:          'EP hinzufügen',
-  confirmLearnPfx:   'Lernen:',
-  confirmFor:        'für',
-  confirmAdvancePfx: 'Steigern:',
-  advFromFw:         'von FW',
-  advToFw:           'auf FW',
-  advKnownSkills:    'Bekannte Fertigkeiten',
+  advAddEp:             'EP hinzufügen',
+  confirmLearnPfx:      'Lernen:',
+  confirmFor:           'für',
+  confirmAdvancePfx:    'Steigern:',
+  advFromFw:            'von FW',
+  advToFw:              'auf FW',
+  advKnownSkills:       'Bekannte Fertigkeiten',
   advAdvanceBtn:        'Steigern',
   advMaxTag:            'Max',
-  advGradBased:          'Grad-basiert',
+  advGradBased:         'Grad-basiert',
   advNotAdvanceable:    'nicht steigerbar',
   advLearnNewSkill:     'Neue Fertigkeit lernen',
+  advChooseInstance:    'Spezialisierung:',
+  advChoosePlaceholder: '— bitte wählen —',
 
   // ── Zaubersprüche-Ansicht (SpellsView) ───────────────────────────────────────
   spellsNotCaster: 'Dieser Charaktertyp kann keine Zaubersprüche wirken.',
@@ -185,6 +187,7 @@ export const UI = {
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',
   rulesImportBtn:      'Regeldateien importieren…',
+  rulesImportEvaBtn:   'EVA-XML importieren…',
   rulesGithubBtn:      'Von Github laden',
   rulesGithubLoading:  'Wird geladen…',
   rulesGithubSuccess:  (n: number) => `${n} Regelwerk(e) erfolgreich geladen.`,
@@ -208,5 +211,24 @@ export const UI = {
   formSaving:                'Wird gespeichert…',
   formSaveChanges:           'Änderungen speichern',
   formCreateChar:            'Charakter erstellen',
+
+  // ── Spezialisierungen ──────────────────────────────────────────────────────
+  secSpecializations: 'Spezialisierungen',
+  labelWeaponSpec:    'Spezialwaffe',
+  labelSpellSpec:     'Spezialgebiet',
+
+  // ── Zauberschulen (spellGroup → Langname) ──────────────────────────────────────
+  spellGroupNames: {
+    'Beherr.':   'Beherrschen',
+    'Beweg.':    'Bewegen',
+    'Erkenn.':   'Erkennen',
+    'Erschaff.': 'Erschaffen',
+    'Formen':    'Formen',
+    'Veränd.':   'Verändern',
+    'Zerstören': 'Zerstören',
+    'Wunder':    'Wunder',
+    'Lied':      'Lied',
+    'Dweom.':    'Dweomer',
+  } as Record<string, string>,
 
 } as const

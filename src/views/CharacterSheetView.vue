@@ -8,6 +8,10 @@ import { sheetSkillService } from '../services/SheetSkillService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
+import type { SkillRulesConfig } from '../types/SkillRules'
+import skillRulesData from '../config/skillRules.json'
+
+const skillRules = skillRulesData as SkillRulesConfig
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -73,6 +77,12 @@ const isUnsupportedType = computed(() => {
   return r.types.find(x => x.id === c.typeId)?.isMeta === true
 })
 
+/** True wenn der Charakter mindestens eine Waffen- oder Spezialgebiet-Spezialisierung hat. */
+const hasSpecializations = computed(() =>
+  (character.value?.weaponSpecializations?.length ?? 0) > 0 ||
+  !!character.value?.spellSpecialization,
+)
+
 /** Learned spells with display data, sorted by level then name. */
 const spellRows = computed(() => {
   const c = character.value; const r = rules.value
@@ -87,7 +97,7 @@ const spellRows = computed(() => {
 const skillRows = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return []
-  return sheetSkillService.buildRows(c, r)
+  return sheetSkillService.buildRows(c, r, skillRules)
 })
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -278,6 +288,27 @@ onMounted(async () => {
           </tbody>
         </table>
           <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
+      </section>
+
+      <!-- ── Spezialisierungen ── -->
+      <section v-if="hasSpecializations" class="card">
+        <h2>{{ UI.secSpecializations }}</h2>
+        <dl class="prop-list">
+          <template v-if="(character.weaponSpecializations?.length ?? 0) > 0">
+            <dt
+              v-for="(_, i) in character.weaponSpecializations"
+              :key="'ws-dt-' + i"
+            >{{ UI.labelWeaponSpec }} {{ (character.weaponSpecializations!.length > 1) ? i + 1 : '' }}</dt>
+            <dd
+              v-for="(spec, i) in character.weaponSpecializations"
+              :key="'ws-dd-' + i"
+            >{{ spec }}</dd>
+          </template>
+          <template v-if="character.spellSpecialization">
+            <dt>{{ UI.labelSpellSpec }}</dt>
+            <dd>{{ (UI.spellGroupNames as Record<string, string>)[character.spellSpecialization] ?? character.spellSpecialization }}</dd>
+          </template>
+        </dl>
       </section>
 
       <!-- ── Footer ── -->

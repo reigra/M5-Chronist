@@ -86,6 +86,10 @@ export interface Character {
   skills: CharacterSkill[]
   /** IDs of all spells the character has learned */
   spells: string[]
+  /** IDs der Spezialwaffen (max. 3 für Krieger, sonst 1 für Kämpfer/KampfZauberer) */
+  weaponSpecializations?: string[]
+  /** Spezialgebiet des Magiers (spellGroup-Key, nur für Typ "Ma") */
+  spellSpecialization?: string
   /** Beschreibende Eigenschaften (optional, für Rückwärtskompatibilität) */
   personalia?: CharacterPersonalia
   /** ISO date string when the character was created */

@@ -1,5 +1,6 @@
 import type { RulebookData, RulesData } from '../types/Rules'
 import type { CharacterType } from '../types/CharacterType'
+import { parseEvaXml } from './EvaImporter'
 
 const DB_NAME = 'MagusNG-Rules'
 const DB_VERSION = 1
@@ -13,6 +14,8 @@ export interface StoredSource {
   id: string
   title: string
   version: string
+  /** Spiegelt metadata.houseRule wider — für schnellen Zugriff ohne data zu lesen. */
+  houseRule: boolean
   enabled: boolean
   data: RulebookData
 }
@@ -24,6 +27,8 @@ export interface SourceSummary {
   id: string
   title: string
   version: string
+  /** True wenn diese Quelle als Hausregel markiert ist. */
+  houseRule: boolean
   enabled: boolean
 }
 
@@ -95,11 +100,15 @@ export class RulesStorage {
         )
       }
 
+      // Sprachen und Schriften normalisieren: id = name, falls nicht vorhanden
+      this.normalizeIds(data)
+
       const entry: StoredSource = {
-        id:      data.metadata.id,
-        title:   data.metadata.title,
-        version: data.metadata.version ?? '?',
-        enabled: true,
+        id:        data.metadata.id,
+        title:     data.metadata.title,
+        version:   data.metadata.version ?? '?',
+        houseRule: data.metadata.houseRule ?? false,
+        enabled:   true,
         data,
       }
 
@@ -111,7 +120,59 @@ export class RulesStorage {
         tx.onerror    = () => { db.close(); reject(tx.error) }
       })
 
-      imported.push({ id: entry.id, title: entry.title, version: entry.version, enabled: true })
+      imported.push({ id: entry.id, title: entry.title, version: entry.version, houseRule: entry.houseRule, enabled: true })
+    }
+
+    return imported
+  }
+
+  /**
+   * Open a multi-file picker for EVA-XML files (.xml) and import each one.
+   * Supports m5kodex.xml (Fertigkeiten, Klassen, Rassen) and
+   * m5arkanum.xml (Zauber) — auto-detected from content.
+   *
+   * @returns Summaries of all successfully imported sources.
+   * @throws  If the browser does not support the File System Access API,
+   *          or if a file cannot be parsed.
+   */
+  async importEvaFiles(): Promise<SourceSummary[]> {
+    if (!('showOpenFilePicker' in window)) {
+      throw new Error('File System Access API is not supported in this browser.')
+    }
+
+    const fileHandles: FileSystemFileHandle[] = await (window as any).showOpenFilePicker({
+      types: [{ description: 'EVA XML-Datei', accept: { 'text/xml': ['.xml'] } }],
+      multiple: true,
+    })
+
+    const imported: SourceSummary[] = []
+
+    for (const handle of fileHandles) {
+      const file      = await handle.getFile()
+      const buffer    = await file.arrayBuffer()
+      const xmlString = new TextDecoder('iso-8859-1').decode(buffer)
+      const data      = parseEvaXml(xmlString)
+
+      this.normalizeIds(data)
+
+      const entry: StoredSource = {
+        id:        data.metadata.id,
+        title:     data.metadata.title,
+        version:   data.metadata.version ?? '?',
+        houseRule: data.metadata.houseRule ?? false,
+        enabled:   true,
+        data,
+      }
+
+      const db = await this.open()
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite')
+        tx.objectStore(STORE).put(entry)
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onerror    = () => { db.close(); reject(tx.error) }
+      })
+
+      imported.push({ id: entry.id, title: entry.title, version: entry.version, houseRule: entry.houseRule, enabled: true })
     }
 
     return imported
@@ -131,10 +192,11 @@ export class RulesStorage {
         db.close()
         resolve(
           (request.result as StoredSource[]).map(s => ({
-            id:      s.id,
-            title:   s.title,
-            version: s.version,
-            enabled: s.enabled,
+            id:        s.id,
+            title:     s.title,
+            version:   s.version,
+            houseRule: s.houseRule ?? false,
+            enabled:   s.enabled,
           }))
         )
       }
@@ -184,130 +246,18 @@ export class RulesStorage {
   }
 
   /**
-   * Fetch the list of JSON assets from a GitHub release without downloading them.
-   * Returns name + direct download URL for each .json asset.
-   *
-   * @param repo - GitHub repo in "owner/name" format.
-   * @param ref  - 'latest' or a specific release tag.
-   */
-  async fetchReleaseAssetLinks(repo: string, ref: string): Promise<AssetLink[]> {
-    const apiUrl = ref === 'latest'
-      ? `https://api.github.com/repos/${repo}/releases/latest`
-      : `https://api.github.com/repos/${repo}/releases/tags/${ref}`
-
-    const res = await fetch(apiUrl, {
-      headers: { Accept: 'application/vnd.github+json' },
-    })
-
-    if (!res.ok) {
-      throw new Error(`GitHub API-Fehler ${res.status}: ${res.statusText}`)
-    }
-
-    const release = await res.json() as {
-      assets: Array<{ name: string; browser_download_url: string }>
-    }
-
-    return release.assets
-      .filter(a => a.name.endsWith('.json'))
-      .map(a => ({ name: a.name, downloadUrl: a.browser_download_url }))
-  }
-
-  /**
-   * Fetch all JSON rule assets from a GitHub release and save them to IndexedDB.
-   *
-   * Uses the GitHub Releases API to discover available assets automatically —
-   * no hardcoded file list needed.
-   *
-   * @param repo - GitHub repo in "owner/name" format.
-   * @param ref  - 'latest' or a specific release tag (e.g. 'release-2026-05-26').
-   * @returns Summaries of all successfully imported sources.
-   * @throws If the release cannot be fetched or contains no JSON assets.
-   */
-  async fetchFromGithubRelease(repo: string, ref: string): Promise<SourceSummary[]> {
-    const apiUrl = ref === 'latest'
-      ? `https://api.github.com/repos/${repo}/releases/latest`
-      : `https://api.github.com/repos/${repo}/releases/tags/${ref}`
-
-    const releaseRes = await fetch(apiUrl, {
-      headers: { Accept: 'application/vnd.github+json' },
-    })
-
-    if (!releaseRes.ok) {
-      throw new Error(
-        `GitHub API-Fehler ${releaseRes.status}: ${releaseRes.statusText}`
-      )
-    }
-
-    const release = await releaseRes.json() as { assets: Array<{ name: string; url: string }> }
-    const jsonAssets = release.assets.filter(a => a.name.endsWith('.json'))
-
-    if (jsonAssets.length === 0) {
-      throw new Error('Dieses Release enthält keine JSON-Assets.')
-    }
-
-    const imported: SourceSummary[] = []
-
-    for (const asset of jsonAssets) {
-      // Über die API-URL herunterladen (CORS-kompatibel, im Gegensatz zu browser_download_url).
-      const dataRes = await fetch(asset.url, {
-        headers: {
-          Accept: 'application/octet-stream',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      })
-
-      if (!dataRes.ok) {
-        throw new Error(`Fehler beim Laden von "${asset.name}": ${dataRes.statusText}`)
-      }
-
-      const data = await dataRes.json() as RulebookData
-
-      if (!data.metadata?.id || !data.metadata?.title) {
-        throw new Error(
-          `"${asset.name}" ist keine gültige Regelwerk-Datei — metadata.id oder metadata.title fehlt.`
-        )
-      }
-
-      const entry: StoredSource = {
-        id:      data.metadata.id,
-        title:   data.metadata.title,
-        version: data.metadata.version ?? '?',
-        enabled: true,
-        data,
-      }
-
-      const db = await this.open()
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(STORE, 'readwrite')
-        tx.objectStore(STORE).put(entry)
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror    = () => { db.close(); reject(tx.error) }
-      })
-
-      imported.push({ id: entry.id, title: entry.title, version: entry.version, enabled: true })
-    }
-
-    return imported
-  }
-
-  /**
    * Merge CharacterType entries from all enabled sources.
    *
-   * Priority:
-   *   1. Core sources (metadata.isCore === true) win on scalar conflicts.
-   *   2. Non-core: first loaded value wins.
-   *   3. Meta-types (isMeta: true) are applied last with the lowest priority,
-   *      then removed from the result.
+   * Priority: Hausregeln → Core-Quellen → Rest (via priorityOf()).
+   * Meta-types (isMeta: true) are applied last with the lowest priority,
+   * then removed from the result.
    *
    * Record fields (groupCosts, spellCosts, fightCosts) and propertyBonuses
    * are merged key-by-key — new keys are added, existing values are never
    * overwritten. Conflicts are logged via console.warn.
    */
   private mergeTypes(entries: StoredSource[]): CharacterType[] {
-    // Core sources first — stable sort preserves original order within each tier
-    const sorted = [...entries].sort((a, b) =>
-      (a.data.metadata.isCore ? 0 : 1) - (b.data.metadata.isCore ? 0 : 1)
-    )
+    const sorted = [...entries].sort((a, b) => this.priorityOf(a) - this.priorityOf(b))
 
     const merged    = new Map<string, CharacterType>()
     const metaTypes: CharacterType[] = []
@@ -423,10 +373,63 @@ export class RulesStorage {
   }
 
   /**
+   * Ordnungszahl für die Lade-Reihenfolge.
+   * Hausregeln zuerst (0), dann Core-Quellen (1), dann alle anderen (2).
+   */
+  private priorityOf(entry: StoredSource): number {
+    if (entry.houseRule)             return 0
+    if (entry.data.metadata.isCore)  return 1
+    return 2
+  }
+
+  /**
+   * Ergänzt fehlende id-Felder für Language- und Script-Einträge.
+   * Verwendet den Namen als id-Fallback (Rückwärtskompatibilität).
+   */
+  private normalizeIds(data: RulebookData): void {
+    data.languages?.forEach(l => { if (!l.id) l.id = l.name })
+    data.scripts?.forEach(s =>   { if (!s.id) s.id = s.name })
+  }
+
+  /**
+   * Fügt Elemente aus sources in target ein (ID-basiertes First-Wins-Merge).
+   *
+   * - Unbekannte ID → vollständig übernehmen.
+   * - Bekannte ID → nur fehlende Felder (undefined) aus source auffüllen.
+   *
+   * Da target bereits nach Priorität sortiert befüllt wird, gewinnt immer
+   * die höchstpriore Quelle (z.B. Hausregel) auf Feldebene.
+   *
+   * @param target  - Ziel-Array (wird in-place befüllt).
+   * @param sources - Quell-Einträge dieser Quelle.
+   */
+  private mergeById<T extends { id?: string }>(target: T[], sources: T[]): void {
+    const seen = new Map<string, T>()
+    for (const e of target) { if (e.id) seen.set(e.id, e) }
+    for (const item of sources) {
+      if (!item.id) continue
+      if (!seen.has(item.id)) {
+        const copy = { ...item }
+        target.push(copy)
+        seen.set(item.id, copy)
+      } else {
+        const existing = seen.get(item.id)!
+        for (const key of Object.keys(item) as (keyof T)[]) {
+          if (existing[key] === undefined) {
+            existing[key] = item[key]
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Load and merge all enabled sources into a single RulesData object.
    * Returns empty arrays for all fields if no sources are enabled.
    *
-   * Types are merged by ID across sources — see mergeTypes() for details.
+   * Sortierung: Hausregeln zuerst, dann Core, dann Rest.
+   * Merge-Strategie: ID-basiertes First-Wins (via mergeById) —
+   * höchstpriore Quelle gewinnt auf Feldebene.
    *
    * @returns Merged RulesData from all enabled sources.
    */
@@ -439,7 +442,13 @@ export class RulesStorage {
       request.onerror   = () => { db.close(); reject(request.error) }
     })
 
-    const active = entries.filter(e => e.enabled)
+    // Sortierung: Hausregeln → Core → Rest (stabile Reihenfolge innerhalb jeder Stufe)
+    const active = entries
+      .filter(e => e.enabled)
+      .sort((a, b) => this.priorityOf(a) - this.priorityOf(b))
+
+    // Rückwärtskompatibilität: id-Felder für Language/Script ergänzen
+    for (const entry of active) this.normalizeIds(entry.data)
 
     const rules: RulesData = {
       skills:            [],
@@ -447,18 +456,22 @@ export class RulesStorage {
       races:             [],
       origins:           [],
       socialStatuses:    [],
+      languages:         [],
+      scripts:           [],
       spells:            [],
       spellDescriptions: [],
     }
 
     for (const entry of active) {
       const src = entry.data
-      if (src.skills)            rules.skills.push(...src.skills)
-      if (src.races)             rules.races.push(...src.races)
-      if (src.origins)           rules.origins.push(...src.origins)
-      if (src.socialStatuses)    rules.socialStatuses.push(...src.socialStatuses)
-      if (src.spells)            rules.spells.push(...src.spells)
-      if (src.spellDescriptions) rules.spellDescriptions.push(...src.spellDescriptions)
+      if (src.skills)            this.mergeById(rules.skills,            src.skills)
+      if (src.races)             this.mergeById(rules.races,             src.races)
+      if (src.origins)           this.mergeById(rules.origins,           src.origins)
+      if (src.socialStatuses)    this.mergeById(rules.socialStatuses,    src.socialStatuses)
+      if (src.languages)         this.mergeById(rules.languages,         src.languages)
+      if (src.scripts)           this.mergeById(rules.scripts,           src.scripts)
+      if (src.spells)            this.mergeById(rules.spells,            src.spells)
+      if (src.spellDescriptions) this.mergeById(rules.spellDescriptions, src.spellDescriptions)
     }
 
     return rules
