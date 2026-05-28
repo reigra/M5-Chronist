@@ -211,4 +211,23 @@ export const UI = {
   formSaveChanges:           'Änderungen speichern',
   formCreateChar:            'Charakter erstellen',
 
+  // ── Spezialisierungen ──────────────────────────────────────────────────────
+  secSpecializations: 'Spezialisierungen',
+  labelWeaponSpec:    'Spezialwaffe',
+  labelSpellSpec:     'Spezialgebiet',
+
+  // ── Zauberschulen (spellGroup → Langname) ──────────────────────────────────────
+  spellGroupNames: {
+    'Beherr.':   'Beherrschen',
+    'Beweg.':    'Bewegen',
+    'Erkenn.':   'Erkennen',
+    'Erschaff.': 'Erschaffen',
+    'Formen':    'Formen',
+    'Veränd.':   'Verändern',
+    'Zerstören': 'Zerstören',
+    'Wunder':    'Wunder',
+    'Lied':      'Lied',
+    'Dweom.':    'Dweomer',
+  } as Record<string, string>,
+
 } as const
