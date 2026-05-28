@@ -9,6 +9,10 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
+import type { SkillRulesConfig } from '../types/SkillRules'
+import skillRulesData from '../config/skillRules.json'
+
+const skillRules = skillRulesData as SkillRulesConfig
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -23,15 +27,22 @@ const errorMessage = ref<string | null>(null)
 /**
  * A pending action holds everything needed to show the cost preview and
  * execute the action on confirmation. currentValue is only set for 'advance'.
+ * isMultiInstance flags a learn action that requires an instance combobox.
+ * instanceId carries the full instance key (e.g. "Sprache:Albisch") for advances.
  */
 interface PendingAction {
   type: 'learn' | 'advance'
   skill: Skill
   cost: number
   currentValue?: number
+  isMultiInstance?: boolean
+  instanceId?: string
 }
 
 const pendingAction = ref<PendingAction | null>(null)
+
+/** Gewählte Spezialisierung beim Lernen eines Multi-Instanz-Skills. */
+const selectedInstance = ref<string>('')
 
 /** Amount to add in the "Add EP" form. */
 const epToAdd = ref(1)
@@ -58,8 +69,9 @@ const charType = computed(() => {
 /**
  * Known skills — each rule Skill paired with the character's current FW
  * and the EP cost for the next advancement step.
- * For grad-based skills (gradValues present), no EP advancement is possible —
- * instead a hint is shown about when the FW can next increase.
+ * Multi-Instanz-Skills (z. B. "Sprache:Albisch") werden über skillRules auf
+ * den Basis-Skill aufgelöst; instanceId wird für requestAdvance mitgeführt.
+ * Grad-basierte Skills zeigen nur einen Hinweis auf den nächsten FW-Anstieg.
  */
 const knownSkillRows = computed(() => {
   const char = character.value
@@ -70,7 +82,21 @@ const knownSkillRows = computed(() => {
 
   return char.skills
     .map(cs => {
-      const skill = r.skills.find(s => s.id === cs.skillId)
+      // Reguläre Fertigkeit oder Multi-Instanz-Fertigkeit (z. B. "Sprache:Albisch")
+      let skill = r.skills.find(s => s.id === cs.skillId)
+      let instanceId: string | null = null
+      let displayName: string | null = null
+
+      if (!skill) {
+        const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+        if (multiRule) {
+          skill = r.skills.find(s => s.id === multiRule.baseSkillId)
+          instanceId = cs.skillId
+          // "Sprache:Albisch" → "Sprache: Albisch"
+          displayName = cs.skillId.replace(':', ': ')
+        }
+      }
+
       if (!skill) return null
 
       // Grad-basierte Fertigkeit (Abwehr, Resistenz, Zaubern): kein EP-Steigern
@@ -92,7 +118,7 @@ const knownSkillRows = computed(() => {
       const maxValue = skill.maxValue ?? null
       return {
         skillId: cs.skillId,
-        name: skill.name,
+        name: displayName ?? skill.name,
         value: cs.value,
         maxValue,
         isMaxed: maxValue !== null && cs.value >= maxValue,
@@ -102,6 +128,7 @@ const knownSkillRows = computed(() => {
         isNotAdvanceable,
         nextGradHint,
         skill,
+        instanceId,
       }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -136,38 +163,72 @@ const learnableSkillRows = computed(() => {
     .sort((a, b) => a.name.localeCompare(b.name))
 })
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+/**
+ * Verfügbare Spezialisierungen für den Instanz-Dialog beim Lernen.
+ * Liefert alle möglichen Instanzen des gewählten Multi-Instanz-Skills,
+ * abzüglich der bereits gelernten.
+ */
+const pendingInstanceOptions = computed(() => {
+  const action = pendingAction.value
+  const r = rules.value
+  const char = character.value
+  if (!action?.isMultiInstance || !r || !char) return []
+
+  const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
+  if (!multiRule) return []
+
+  // Bereits gelernte Spezialisierungen dieser Fertigkeit (nur der Teil nach dem Doppelpunkt)
+  const learnedInstances = new Set(
+    char.skills
+      .filter(s => s.skillId.startsWith(multiRule.idPrefix))
+      .map(s => s.skillId.slice(multiRule.idPrefix.length))
+  )
+
+  let allOptions: string[]
+  const src = multiRule.instanceSource
+  if (src.type === 'fixed') {
+    allOptions = src.values
+  } else {
+    // Aus rules-Tabelle laden: z. B. rules.languages oder rules.scripts
+    const table = (r as Record<string, unknown>)[src.rulesKey] as Array<Record<string, unknown>>
+    allOptions = (table ?? []).map(item => String(item[src.nameField]))
+  }
+
+  return allOptions.filter(opt => !learnedInstances.has(opt))
+})
 
 /**
  * Stage a "learn skill" action for confirmation.
+ * Bei Multi-Instanz-Skills wird zusätzlich die Instanz-Combobox eingeblendet.
  * @param skill - The skill the player wants to learn.
  */
 function requestLearn(skill: Skill): void {
   const type = charType.value
   if (!type) return
-  pendingAction.value = {
-    type: 'learn',
-    skill,
-    cost: advancementService.learnCost(skill, type),
-  }
+  const cost = advancementService.learnCost(skill, type)
+  const isMultiInstance = skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
+  selectedInstance.value = ''
+  pendingAction.value = { type: 'learn', skill, cost, isMultiInstance }
 }
 
 /**
  * Stage an "advance skill" action for confirmation.
  * @param skill        - The skill to advance.
  * @param currentValue - The character's current FW for this skill.
+ * @param instanceId   - Optional: die vollständige Instanz-ID bei Multi-Instanz-Skills.
  */
-function requestAdvance(skill: Skill, currentValue: number): void {
+function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
   const type = charType.value
   if (!type) return
   const cost = advancementService.advanceCost(skill, currentValue, type)
   if (cost === null) return
-  pendingAction.value = { type: 'advance', skill, cost, currentValue }
+  pendingAction.value = { type: 'advance', skill, cost, currentValue, instanceId }
 }
 
 /** Discard the staged action without making any changes. */
 function cancelAction(): void {
   pendingAction.value = null
+  selectedInstance.value = ''
 }
 
 /**
@@ -206,17 +267,32 @@ async function confirmAction(): Promise<void> {
   if (!action || !char || !type) return
 
   try {
-    const updated =
-      action.type === 'learn'
-        ? advancementService.learnSkill(char, action.skill, type)
-        : advancementService.advanceSkill(char, action.skill, type)
+    let updated: Character
+    if (action.type === 'learn') {
+      if (action.isMultiInstance) {
+        const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
+        if (!multiRule || !selectedInstance.value) return
+        const fullId = multiRule.idPrefix + selectedInstance.value
+        updated = advancementService.learnSkillInstance(char, action.skill, fullId, type)
+      } else {
+        updated = advancementService.learnSkill(char, action.skill, type)
+      }
+    } else {
+      if (action.instanceId) {
+        updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type)
+      } else {
+        updated = advancementService.advanceSkill(char, action.skill, type)
+      }
+    }
 
     await characterStorage.save(updated)
     character.value = updated
     pendingAction.value = null
+    selectedInstance.value = ''
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'An error occurred.'
     pendingAction.value = null
+    selectedInstance.value = ''
   }
 }
 
@@ -298,26 +374,48 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- ── Confirmation panel ── -->
-      <div v-if="pendingAction !== null" class="confirmation">
-        <template v-if="pendingAction.type === 'learn'">
-          <p>
-            {{ UI.confirmLearnPfx }} <strong>{{ pendingAction.skill.name }}</strong>
-            ({{ UI.colBaseFw }} {{ pendingAction.skill.baseValue }})
-            {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
-          </p>
-        </template>
-        <template v-else>
-          <p>
-            {{ UI.confirmAdvancePfx }} <strong>{{ pendingAction.skill.name }}</strong>
-            {{ UI.advFromFw }} {{ pendingAction.currentValue }}
-            {{ UI.advToFw }} {{ (pendingAction.currentValue ?? 0) + 1 }}
-            {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
-          </p>
-        </template>
-        <div class="confirmation-buttons">
-          <button class="btn-confirm" @click="confirmAction">{{ UI.confirm }}</button>
-          <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>
+      <!-- ── Confirmation modal ── -->
+      <div v-if="pendingAction !== null" class="modal-overlay" @click.self="cancelAction">
+        <div class="modal-box">
+          <template v-if="pendingAction.type === 'learn'">
+            <p>
+              {{ UI.confirmLearnPfx }}
+              <strong>
+                {{ pendingAction.skill.name }}<template v-if="pendingAction.isMultiInstance && selectedInstance"> ({{ selectedInstance }})</template>
+              </strong>
+              <template v-if="!pendingAction.isMultiInstance">
+                ({{ UI.colBaseFw }} {{ pendingAction.skill.baseValue }})
+              </template>
+              {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
+            </p>
+            <div v-if="pendingAction.isMultiInstance" class="instance-select-row">
+              <label class="instance-label">{{ UI.advChooseInstance }}</label>
+              <select v-model="selectedInstance" class="instance-select">
+                <option value="">{{ UI.advChoosePlaceholder }}</option>
+                <option v-for="opt in pendingInstanceOptions" :key="opt" :value="opt">{{ opt }}</option>
+              </select>
+            </div>
+          </template>
+          <template v-else>
+            <p>
+              {{ UI.confirmAdvancePfx }}
+              <strong>
+                <template v-if="pendingAction.instanceId">{{ pendingAction.instanceId.replace(':', ': ') }}</template>
+                <template v-else>{{ pendingAction.skill.name }}</template>
+              </strong>
+              {{ UI.advFromFw }} {{ pendingAction.currentValue }}
+              {{ UI.advToFw }} {{ (pendingAction.currentValue ?? 0) + 1 }}
+              {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
+            </p>
+          </template>
+          <div class="confirmation-buttons">
+            <button
+              class="btn-confirm"
+              :disabled="pendingAction.isMultiInstance && !selectedInstance"
+              @click="confirmAction"
+            >{{ UI.confirm }}</button>
+            <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>
+          </div>
         </div>
       </div>
 
@@ -359,7 +457,7 @@ onMounted(async () => {
                   <button
                     v-if="!row.isMaxed"
                     :disabled="!row.canAdvance || pendingAction !== null"
-                    @click="requestAdvance(row.skill, row.value)"
+                    @click="requestAdvance(row.skill, row.value, row.instanceId ?? undefined)"
                   >
                     {{ UI.advAdvanceBtn }}
                   </button>
@@ -505,16 +603,49 @@ onMounted(async () => {
   color: #444;
 }
 
-.confirmation {
-  background: #fffbe6;
-  border: 1px solid #e6c800;
-  border-radius: 4px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.confirmation p {
+.modal-box {
+  background: #fffbe6;
+  border: 1px solid #e6c800;
+  border-radius: 6px;
+  padding: 1.5rem 1.75rem;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.modal-box p {
   margin: 0 0 0.75rem;
+}
+
+.instance-select-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.instance-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.instance-select {
+  flex: 1;
+  max-width: 20rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  font-size: 1rem;
 }
 
 .confirmation-buttons {

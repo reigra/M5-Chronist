@@ -3,6 +3,21 @@ import type { CharacterType } from './CharacterType'
 import type { Race, Origin, SocialStatus } from './Race'
 import type { Spell, SpellDescription } from './Spell'
 
+/** Eine Sprache aus languages.json. */
+export interface Language {
+  name: string
+  old?: boolean
+  regions: string[]
+}
+
+/** Eine Schrift aus scripts.json. */
+export interface Script {
+  name: string
+  old?: boolean
+  secret?: boolean
+  regions: string[]
+}
+
 /**
  * RulebookMetadata — the "metadata" block inside a combined source file.
  */
@@ -26,6 +41,8 @@ export interface RulebookData {
   races?: Race[]
   origins?: Origin[]
   socialStatuses?: SocialStatus[]
+  languages?: Language[]
+  scripts?: Script[]
   spells?: Spell[]
   spellDescriptions?: SpellDescription[]
 }
@@ -40,6 +57,8 @@ export interface RulesData {
   races: Race[]
   origins: Origin[]
   socialStatuses: SocialStatus[]
+  languages: Language[]
+  scripts: Script[]
   spells: Spell[]
   spellDescriptions: SpellDescription[]
 }
