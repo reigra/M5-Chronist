@@ -5,6 +5,8 @@ import type { Spell, SpellDescription } from './Spell'
 
 /** Eine Sprache aus languages.json. */
 export interface Language {
+  /** Eindeutige ID — wird beim Import auf `name` normalisiert, falls nicht vorhanden. */
+  id?: string
   name: string
   old?: boolean
   regions: string[]
@@ -12,6 +14,8 @@ export interface Language {
 
 /** Eine Schrift aus scripts.json. */
 export interface Script {
+  /** Eindeutige ID — wird beim Import auf `name` normalisiert, falls nicht vorhanden. */
+  id?: string
   name: string
   old?: boolean
   secret?: boolean
@@ -26,6 +30,8 @@ export interface RulebookMetadata {
   title: string
   version: string
   isCore: boolean
+  /** Wenn true: diese Quelle überschreibt andere Quellen (höchste Priorität). */
+  houseRule?: boolean
   createdAt: string
   notes: string
 }
