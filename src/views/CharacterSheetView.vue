@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad, esForNextGrad } from '../services/GradUtils'
+import { sheetSkillService } from '../services/SheetSkillService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
@@ -82,58 +83,11 @@ const spellRows = computed(() => {
   }).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
 
-/**
- * Returns the Fertigkeitsbonus for a given property value.
- * @param v - The property value (1–100).
- */
-function fertigkeitsbonus(v: number): number {
-  if (v <= 5)  return -2
-  if (v <= 20) return -1
-  if (v <= 80) return  0
-  if (v <= 95) return +1
-  return +2
-}
-
-/**
- * Looks up a property value on the character by key.
- * Covers both base and derived properties.
- * @param key - The property key (e.g. "Gs", "pA").
- */
-function propertyValue(key: string): number {
-  const c = character.value
-  if (!c) return 0
-  return (c.properties as Record<string, number>)[key] ?? 0
-}
-
 /** Known skills with their display name looked up from the rules. */
 const skillRows = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return []
-
-  const learnedIds = new Set(c.skills.map(cs => cs.skillId))
-
-  const learned = c.skills.map(cs => {
-    const skill = r.skills.find(s => s.id === cs.skillId)
-    const linkedProp = skill?.linkedProperty ?? '—'
-    const bonus = linkedProp !== '—' ? fertigkeitsbonus(propertyValue(linkedProp)) : 0
-    return {
-      name: skill?.name ?? cs.skillId,
-      displayEw: cs.value + bonus,
-      linkedProperty: linkedProp,
-      unlearned: false,
-    }
-  })
-
-  const unlearned = r.skills
-    .filter(s => s.unlearnedValue !== undefined && !learnedIds.has(s.id))
-    .map(s => ({
-      name: s.name,
-      displayEw: s.unlearnedValue as number,
-      linkedProperty: s.linkedProperty ?? '—',
-      unlearned: true,
-    }))
-
-  return [...learned, ...unlearned].sort((a, b) => a.name.localeCompare(b.name))
+  return sheetSkillService.buildRows(c, r)
 })
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────

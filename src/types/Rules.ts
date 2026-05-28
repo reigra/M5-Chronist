@@ -4,24 +4,6 @@ import type { Race, Origin, SocialStatus } from './Race'
 import type { Spell, SpellDescription } from './Spell'
 
 /**
- * SourceManifestEntry — one entry in sources.json.
- */
-export interface SourceManifestEntry {
-  id: string
-  title: string
-  version: string
-  isCore: boolean
-  file: string
-}
-
-/**
- * SourceManifest — the top-level structure of sources.json.
- */
-export interface SourceManifest {
-  sources: SourceManifestEntry[]
-}
-
-/**
  * RulebookMetadata — the "metadata" block inside a combined source file.
  */
 export interface RulebookMetadata {

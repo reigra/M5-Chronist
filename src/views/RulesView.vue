@@ -151,13 +151,6 @@ onMounted(loadList)
         >
           {{ UI.rulesImportBtn }}
         </button>
-        <button
-          class="btn-github"
-          :disabled="githubLoading"
-          @click="loadFromGithub"
-        >
-          {{ githubLoading ? UI.rulesGithubLoading : UI.rulesGithubBtn }}
-        </button>
       </div>
 
       <div v-if="assetLinks.length > 0" class="github-assets">

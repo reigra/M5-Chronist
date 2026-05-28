@@ -170,9 +170,11 @@ export const UI = {
   advFromFw:         'von FW',
   advToFw:           'auf FW',
   advKnownSkills:    'Bekannte Fertigkeiten',
-  advAdvanceBtn:     'Steigern',
-  advMaxTag:         'Max',
-  advLearnNewSkill:  'Neue Fertigkeit lernen',
+  advAdvanceBtn:        'Steigern',
+  advMaxTag:            'Max',
+  advGradBased:          'Grad-basiert',
+  advNotAdvanceable:    'nicht steigerbar',
+  advLearnNewSkill:     'Neue Fertigkeit lernen',
 
   // ── Zaubersprüche-Ansicht (SpellsView) ───────────────────────────────────────
   spellsNotCaster: 'Dieser Charaktertyp kann keine Zaubersprüche wirken.',
