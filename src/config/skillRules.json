@@ -1,0 +1,87 @@
+{
+  "splitSkills": [
+    {
+      "baseSkillId": "Resistenz",
+      "variants": [
+        { "displayName": "Resistenz (Geist)",   "bonusKey": "ResBg" },
+        { "displayName": "Resistenz (Körper)",  "bonusKey": "ResBk" }
+      ]
+    }
+  ],
+  "multiInstanceSkills": [
+    {
+      "baseSkillId": "Sprache",
+      "idPrefix": "Sprache:",
+      "instanceSource": {
+        "type": "rules",
+        "rulesKey": "languages",
+        "nameField": "name"
+      }
+    },
+    {
+      "baseSkillId": "Schreiben",
+      "idPrefix": "Schreiben:",
+      "instanceSource": {
+        "type": "rules",
+        "rulesKey": "scripts",
+        "nameField": "name"
+      }
+    },
+    {
+      "baseSkillId": "Landeskunde",
+      "idPrefix": "Landeskunde:",
+      "instanceSource": {
+        "type": "rules",
+        "rulesKey": "origins",
+        "nameField": "name"
+      }
+    },
+    {
+      "baseSkillId": "Überleben",
+      "idPrefix": "Überleben:",
+      "instanceSource": {
+        "type": "fixed",
+        "values": ["Gebirge", "Steppe", "Wald"]
+      }
+    },
+    {
+      "baseSkillId": "Musizieren",
+      "idPrefix": "Musizieren:",
+      "instanceSource": {
+        "type": "fixed",
+        "values": [
+          "Flöten: Doppelflöte",
+          "Flöten: Dudelsack",
+          "Flöten: Längsflöte",
+          "Flöten: Panflöte",
+          "Flöten: Pfeife",
+          "Flöten: Querflöte",
+          "Blasinstrumente: Horn",
+          "Blasinstrumente: Krummhorn",
+          "Blasinstrumente: Posaune",
+          "Blasinstrumente: Schalmei",
+          "Blasinstrumente: Trompete",
+          "Rhythmusinstrumente: Becken",
+          "Rhythmusinstrumente: Glocken",
+          "Rhythmusinstrumente: Handtrommel",
+          "Rhythmusinstrumente: Pauke",
+          "Rhythmusinstrumente: Rasseln",
+          "Rhythmusinstrumente: Tamburin",
+          "Rhythmusinstrumente: Zimbeln",
+          "Streichinstrumente: Dornfiedel",
+          "Streichinstrumente: Drehleier",
+          "Streichinstrumente: Fiedel",
+          "Streichinstrumente: Rebec",
+          "Streichinstrumente: Stabgeige (Erhu)",
+          "Streichinstrumente: Trumscheit",
+          "Zupfinstrumente: Gitarre",
+          "Zupfinstrumente: Harfe",
+          "Zupfinstrumente: Stabzither (Kithara)",
+          "Zupfinstrumente: Laute",
+          "Zupfinstrumente: Leier",
+          "Zupfinstrumente: Brettzither (Psalter)"
+        ]
+      }
+    }
+  ]
+}

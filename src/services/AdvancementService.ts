@@ -93,6 +93,35 @@ export class AdvancementService {
   }
 
   /**
+   * Lernt eine Multi-Instanz-Fertigkeit (z. B. "Sprache:Albisch").
+   *
+   * EP-Kosten und Basiswert werden vom Basis-Skill übernommen.
+   * Die instanceId (z. B. "Sprache:Albisch") wird direkt als skillId gespeichert.
+   *
+   * @param character  - Der aktuelle Charakter.
+   * @param skill      - Der Basis-Skill (z. B. "Sprache").
+   * @param instanceId - Die vollständige Instanz-ID (z. B. "Sprache:Albisch").
+   * @param type       - Der Charaktertyp.
+   */
+  learnSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType): Character {
+    const cost = this.learnCost(skill, type)
+
+    if (character.availableEp < cost) {
+      throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
+    }
+    if (character.skills.some(s => s.skillId === instanceId)) {
+      throw new Error(`${instanceId} is already learned.`)
+    }
+
+    return {
+      ...character,
+      availableEp: character.availableEp - cost,
+      skills: [...character.skills, { skillId: instanceId, value: skill.baseValue }],
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  /**
    * Apply skill advancement to a character (Steigern).
    *
    * Does NOT mutate the original character — returns a new object with the
@@ -122,6 +151,40 @@ export class AdvancementService {
       availableEp: character.availableEp - cost,
       skills: character.skills.map(s =>
         s.skillId === skill.id ? { ...s, value: s.value + 1 } : s,
+      ),
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  /**
+   * Steigert eine einzelne Instanz einer Multi-Instanz-Fertigkeit (z. B. "Sprache:Albisch").
+   *
+   * Steigerungskosten werden vom Basis-Skill berechnet; gesucht wird nach der exakten instanceId.
+   *
+   * @param character  - Der aktuelle Charakter.
+   * @param skill      - Der Basis-Skill (z. B. "Sprache") für die Kostenberechnung.
+   * @param instanceId - Die vollständige Instanz-ID (z. B. "Sprache:Albisch").
+   * @param type       - Der Charaktertyp.
+   */
+  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType): Character {
+    const charSkill = character.skills.find(s => s.skillId === instanceId)
+    if (!charSkill) {
+      throw new Error(`${instanceId} has not been learned yet.`)
+    }
+
+    const cost = this.advanceCost(skill, charSkill.value, type)
+    if (cost === null) {
+      throw new Error(`${instanceId} is already at its maximum value.`)
+    }
+    if (character.availableEp < cost) {
+      throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
+    }
+
+    return {
+      ...character,
+      availableEp: character.availableEp - cost,
+      skills: character.skills.map(s =>
+        s.skillId === instanceId ? { ...s, value: s.value + 1 } : s,
       ),
       updatedAt: new Date().toISOString(),
     }

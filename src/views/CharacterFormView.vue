@@ -6,6 +6,10 @@ import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
 import type { Character, CharacterSkill } from '../types/Character'
 import type { RulesData } from '../types/Rules'
+import skillRulesJson from '../config/skillRules.json'
+import type { SkillRulesConfig } from '../types/SkillRules'
+
+const skillRules = skillRulesJson as SkillRulesConfig
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -84,14 +88,37 @@ const sg          = ref<number | null>(null)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
-/** Skills not yet on the character — available to add. */
+/** Skills not yet on the character — available to add.
+ *  Multi-Instanz-Skills (z.B. Sprache) werden als einzelne Instanz-Einträge aufgeführt. */
 const availableSkills = computed(() => {
   const r = rules.value
   if (!r) return []
   const existing = new Set(skills.value.map(s => s.skillId))
-  return r.skills
-    .filter(s => !existing.has(s.id) && s.id !== 'Zaubersprüche')
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const result: { id: string; name: string }[] = []
+  for (const skill of r.skills) {
+    if (skill.id === 'Zaubersprüche') continue
+    const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === skill.id)
+    if (multiRule) {
+      // Multi-Instanz: alle Instanzen einzeln anzeigen, bereits gelernte ausfiltern
+      let instances: string[]
+      const src = multiRule.instanceSource
+      if (src.type === 'rules') {
+        const list = (r as Record<string, unknown>)[src.rulesKey] as Array<Record<string, string>> | undefined
+        instances = list?.map(item => item[src.nameField]) ?? []
+      } else {
+        instances = src.values
+      }
+      for (const inst of instances) {
+        const instanceId = multiRule.idPrefix + inst
+        if (!existing.has(instanceId)) {
+          result.push({ id: instanceId, name: skill.name + ': ' + inst })
+        }
+      }
+    } else if (!existing.has(skill.id)) {
+      result.push({ id: skill.id, name: skill.name })
+    }
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name))
 })
 /** True if the selected type can cast spells. */
 const isCaster = computed(() => {
@@ -134,14 +161,20 @@ const playableTypes = computed(() => {
     .sort((a, b) => a.name.localeCompare(b.name))
 })
 
-/** For display: look up skill names from rules. */
+/** For display: look up skill names from rules.
+ *  Multi-Instanz-Skills (z.B. "Sprache:Albisch") werden als "Sprache: Albisch" angezeigt. */
 const skillRows = computed(() => {
   const r = rules.value
   if (!r) return skills.value.map(s => ({ ...s, name: s.skillId }))
-  return skills.value.map(cs => ({
-    ...cs,
-    name: r.skills.find(s => s.id === cs.skillId)?.name ?? cs.skillId,
-  })).sort((a, b) => a.name.localeCompare(b.name))
+  return skills.value.map(cs => {
+    const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+    if (multiRule) {
+      const baseSkill = r.skills.find(s => s.id === multiRule.baseSkillId)
+      const instanceName = cs.skillId.slice(multiRule.idPrefix.length)
+      return { ...cs, name: (baseSkill?.name ?? multiRule.baseSkillId) + ': ' + instanceName }
+    }
+    return { ...cs, name: r.skills.find(s => s.id === cs.skillId)?.name ?? cs.skillId }
+  }).sort((a, b) => a.name.localeCompare(b.name))
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -233,12 +266,16 @@ function buildCharacter(): Character {
   }
 }
 
-/** Add the selected skill to the character's skill list. */
+/** Add the selected skill to the character's skill list.
+ *  Bei Multi-Instanz-Skills wird der baseValue des Basis-Skills verwendet. */
 function addSkill(): void {
   const sid = skillToAdd.value
   if (!sid) return
   const r = rules.value
-  const ruleSkill = r?.skills.find(s => s.id === sid)
+  // Bei Multi-Instanz-Skills (z.B. "Sprache:Albisch") den Basis-Skill für den FW-Default holen
+  const multiRule = skillRules.multiInstanceSkills.find(m => sid.startsWith(m.idPrefix))
+  const baseSkillId = multiRule ? multiRule.baseSkillId : sid
+  const ruleSkill = r?.skills.find(s => s.id === baseSkillId)
   const fw = skillFwToAdd.value ?? (ruleSkill?.baseValue ?? 12)
   skills.value = [...skills.value, { skillId: sid, value: fw }]
   skillToAdd.value = ''

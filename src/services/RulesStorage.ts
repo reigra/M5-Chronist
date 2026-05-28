@@ -447,6 +447,8 @@ export class RulesStorage {
       races:             [],
       origins:           [],
       socialStatuses:    [],
+      languages:         [],
+      scripts:           [],
       spells:            [],
       spellDescriptions: [],
     }
@@ -457,6 +459,8 @@ export class RulesStorage {
       if (src.races)             rules.races.push(...src.races)
       if (src.origins)           rules.origins.push(...src.origins)
       if (src.socialStatuses)    rules.socialStatuses.push(...src.socialStatuses)
+      if (src.languages)         rules.languages.push(...src.languages)
+      if (src.scripts)           rules.scripts.push(...src.scripts)
       if (src.spells)            rules.spells.push(...src.spells)
       if (src.spellDescriptions) rules.spellDescriptions.push(...src.spellDescriptions)
     }

@@ -163,18 +163,20 @@ export const UI = {
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
-  advAddEp:          'EP hinzufügen',
-  confirmLearnPfx:   'Lernen:',
-  confirmFor:        'für',
-  confirmAdvancePfx: 'Steigern:',
-  advFromFw:         'von FW',
-  advToFw:           'auf FW',
-  advKnownSkills:    'Bekannte Fertigkeiten',
+  advAddEp:             'EP hinzufügen',
+  confirmLearnPfx:      'Lernen:',
+  confirmFor:           'für',
+  confirmAdvancePfx:    'Steigern:',
+  advFromFw:            'von FW',
+  advToFw:              'auf FW',
+  advKnownSkills:       'Bekannte Fertigkeiten',
   advAdvanceBtn:        'Steigern',
   advMaxTag:            'Max',
-  advGradBased:          'Grad-basiert',
+  advGradBased:         'Grad-basiert',
   advNotAdvanceable:    'nicht steigerbar',
   advLearnNewSkill:     'Neue Fertigkeit lernen',
+  advChooseInstance:    'Spezialisierung:',
+  advChoosePlaceholder: '— bitte wählen —',
 
   // ── Zaubersprüche-Ansicht (SpellsView) ───────────────────────────────────────
   spellsNotCaster: 'Dieser Charaktertyp kann keine Zaubersprüche wirken.',

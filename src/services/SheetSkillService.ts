@@ -1,6 +1,7 @@
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
+import type { SkillRulesConfig } from '../types/SkillRules'
 
 export interface SheetSkillRow {
   name: string
@@ -43,39 +44,60 @@ export class SheetSkillService {
   /**
    * Build all skill rows for the character sheet.
    *
-   * Uses rule-driven bonus keys from skills.json and supports a compatibility
-   * fallback: if an old character still stores a single "Resistenz" skill,
-   * it is shown as the two split rows if those rules exist.
+   * Verarbeitet drei Sonderfälle über die skillRules-Konfiguration:
+   *   1. Split-Skills (z. B. Resistenz → zwei Zeilen)
+   *   2. Multi-Instanz-Skills (z. B. "Sprache:Albisch" → Basis-Fertigkeit "Sprache")
+   *   3. Normale Fertigkeiten
+   *
+   * @param character  - Der Charakter, dessen Fertigkeiten angezeigt werden.
+   * @param rules      - Die aktuell aktiven Regelwerk-Daten.
+   * @param skillRules - Die Spezialkonfiguration für Split- und Multi-Instanz-Fertigkeiten.
    */
-  buildRows(character: Character, rules: RulesData): SheetSkillRow[] {
+  buildRows(character: Character, rules: RulesData, skillRules: SkillRulesConfig): SheetSkillRow[] {
     const learnedIds = new Set(character.skills.map(cs => cs.skillId))
     const learnedRows: SheetSkillRow[] = []
 
     for (const cs of character.skills) {
-      if (cs.skillId === 'Resistenz') {
-        // Resistenz wird direkt aufgeteilt — die Split-Varianten existieren nicht in skills.json.
-        // Der abgeleitete Bonus kommt aus character.boni['ResBg'] bzw. 'ResBk'.
-        const resistSkill = rules.skills.find(s => s.id === 'Resistenz')
-        const linkedProperty = resistSkill?.linkedProperty ?? null
+      // 1. Split-Skill: eine Fertigkeit wird als mehrere Zeilen dargestellt (z. B. Resistenz)
+      const splitRule = skillRules.splitSkills.find(s => s.baseSkillId === cs.skillId)
+      if (splitRule) {
+        const baseSkill = rules.skills.find(s => s.id === splitRule.baseSkillId)
+        const linkedProperty = baseSkill?.linkedProperty ?? null
         const propertyBonus = linkedProperty && isCharacterPropertyKey(linkedProperty)
           ? fertigkeitsbonus(character.properties[linkedProperty] ?? 0)
           : 0
 
+        for (const variant of splitRule.variants) {
+          const bonusValue = variant.bonusKey
+            ? ((character.boni as unknown as Record<string, number>)[variant.bonusKey] ?? 0)
+            : 0
+          learnedRows.push({
+            name: variant.displayName,
+            displayEw: cs.value + propertyBonus + bonusValue,
+            linkedProperty: linkedProperty ?? '—',
+            unlearned: false,
+          })
+        }
+        continue
+      }
+
+      // 2. Multi-Instanz-Skill: z. B. "Sprache:Albisch" → Basis-Fertigkeit "Sprache"
+      const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+      if (multiRule) {
+        const baseSkill = rules.skills.find(s => s.id === multiRule.baseSkillId)
+        if (!baseSkill) continue
+        // Anzeigename: "Sprache:Albisch" → "Sprache: Albisch"
+        const displayName = cs.skillId.replace(':', ': ')
         learnedRows.push({
-          name: 'Resistenz (Geist)',
-          displayEw: cs.value + propertyBonus + (character.boni['ResBg'] ?? 0),
-          linkedProperty: linkedProperty ?? '—',
-          unlearned: false,
-        })
-        learnedRows.push({
-          name: 'Resistenz (Körper)',
-          displayEw: cs.value + propertyBonus + (character.boni['ResBk'] ?? 0),
-          linkedProperty: linkedProperty ?? '—',
+          name: displayName,
+          displayEw: computeEw(character, baseSkill, cs.value),
+          linkedProperty: baseSkill.linkedProperty ?? '—',
           unlearned: false,
         })
         continue
       }
 
+      // 3. Normale Fertigkeit
       const skill = rules.skills.find(s => s.id === cs.skillId)
       if (!skill) continue
 
