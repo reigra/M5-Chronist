@@ -58,26 +58,49 @@ const charType = computed(() => {
 /**
  * Known skills — each rule Skill paired with the character's current FW
  * and the EP cost for the next advancement step.
+ * For grad-based skills (gradValues present), no EP advancement is possible —
+ * instead a hint is shown about when the FW can next increase.
  */
 const knownSkillRows = computed(() => {
   const char = character.value
   const r = rules.value
   const type = charType.value
+  const currentGrad = grad.value
   if (!char || !r || !type) return []
 
   return char.skills
     .map(cs => {
       const skill = r.skills.find(s => s.id === cs.skillId)
       if (!skill) return null
-      const cost = advancementService.advanceCost(skill, cs.value, type)
+
+      // Grad-basierte Fertigkeit (Abwehr, Resistenz, Zaubern): kein EP-Steigern
+      const isGradBased = Array.isArray(skill.gradValues) && skill.gradValues.length > 0
+
+      // Fertigkeit ohne Steigerungstabelle (z.B. angeborene Fertigkeiten): nicht steigerbar
+      const isNotAdvanceable = !isGradBased && (!skill.advancementCosts || skill.advancementCosts.length === 0)
+
+      // Nächste erreichbare Steigerung anzeigen (informativer Hinweis)
+      let nextGradHint: string | null = null
+      if (isGradBased && skill.gradValues) {
+        const next = skill.gradValues.find(gv => gv.grad > currentGrad)
+        if (next) {
+          nextGradHint = `FW ${next.fw} bei Grad ${next.grad}`
+        }
+      }
+
+      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type)
+      const maxValue = skill.maxValue ?? null
       return {
         skillId: cs.skillId,
         name: skill.name,
         value: cs.value,
-        maxValue: skill.maxValue,
-        isMaxed: cs.value >= skill.maxValue,
+        maxValue,
+        isMaxed: maxValue !== null && cs.value >= maxValue,
         cost,
         canAdvance: cost !== null && char.availableEp >= cost,
+        isGradBased,
+        isNotAdvanceable,
+        nextGradHint,
         skill,
       }
     })
@@ -98,7 +121,7 @@ const learnableSkillRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.id !== 'Zaubersprüche' && Array.isArray(s.groups) && s.groups.length > 0)
+    .filter(s => !knownIds.has(s.id) && s.id !== 'Zaubersprüche' && Array.isArray(s.groups) && s.groups.length > 0 && !s.gradValues?.length)
     .map(skill => {
       const cost = advancementService.learnCost(skill, type)
       return {
@@ -313,17 +336,35 @@ onMounted(async () => {
           <tbody>
             <tr v-for="row in knownSkillRows" :key="row.skillId">
               <td>{{ row.name }}</td>
-              <td>{{ row.value }} / {{ row.maxValue }}</td>
-              <td>{{ row.isMaxed ? UI.notApplicable : row.cost + ' ' + UI.unitEp }}</td>
+              <td>{{ row.value }}</td>
               <td>
-                <button
-                  v-if="!row.isMaxed"
-                  :disabled="!row.canAdvance || pendingAction !== null"
-                  @click="requestAdvance(row.skill, row.value)"
-                >
-                  {{ UI.advAdvanceBtn }}
-                </button>
-                <span v-else class="tag-max">{{ UI.advMaxTag }}</span>
+                <template v-if="row.isGradBased">
+                  <span class="tag-grad-based">{{ UI.advGradBased }}</span>
+                </template>
+                <template v-else-if="row.isNotAdvanceable">
+                  <span class="tag-not-advanceable">{{ UI.advNotAdvanceable }}</span>
+                </template>
+                <template v-else>
+                  {{ row.isMaxed ? UI.notApplicable : row.cost + ' ' + UI.unitEp }}
+                </template>
+              </td>
+              <td>
+                <template v-if="row.isGradBased">
+                  <span v-if="row.nextGradHint" class="hint-grad">{{ row.nextGradHint }}</span>
+                  <span v-else class="tag-max">{{ UI.advMaxTag }}</span>
+                </template>
+                <template v-else-if="row.isNotAdvanceable">
+                </template>
+                <template v-else>
+                  <button
+                    v-if="!row.isMaxed"
+                    :disabled="!row.canAdvance || pendingAction !== null"
+                    @click="requestAdvance(row.skill, row.value)"
+                  >
+                    {{ UI.advAdvanceBtn }}
+                  </button>
+                  <span v-else class="tag-max">{{ UI.advMaxTag }}</span>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -538,6 +579,25 @@ button:disabled {
 
 .tag-max {
   color: #888;
+  font-size: 0.85em;
+}
+
+/* Hinweis für grad-basierte Fertigkeiten (Abwehr, Resistenz, Zaubern) */
+.tag-grad-based {
+  color: #8888bb;
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+/* Hinweis für nicht steigerbare Fertigkeiten (keine advancementCosts) */
+.tag-not-advanceable {
+  color: #888888;
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+.hint-grad {
+  color: #7ab87a;
   font-size: 0.85em;
 }
 </style>
