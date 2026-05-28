@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { rulesStorage } from '../services/RulesStorage'
 import { UI } from '../constants/ui'
-import { RULES_GITHUB_REPO, RULES_RELEASE_REF } from '../constants/rules'
 import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -10,7 +9,6 @@ import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 const sources      = ref<SourceSummary[]>([])
 const loading      = ref(true)
 const errorMessage = ref<string | null>(null)
-const githubLoading  = ref(false)
 const assetLinks     = ref<AssetLink[]>([])
 
 /** True if the current browser supports the File System Access API. */
@@ -62,22 +60,6 @@ async function toggleEnabled(source: SourceSummary): Promise<void> {
   }
 }
 
-/**
- * Fetch the list of downloadable JSON assets from the configured GitHub release.
- * Does not download or import any files — just populates the asset link list.
- */
-async function loadFromGithub(): Promise<void> {
-  githubLoading.value = true
-  assetLinks.value    = []
-  errorMessage.value  = null
-  try {
-    assetLinks.value = await rulesStorage.fetchReleaseAssetLinks(RULES_GITHUB_REPO, RULES_RELEASE_REF)
-  } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Fehler beim Laden von Github.'
-  } finally {
-    githubLoading.value = false
-  }
-}
 
 /**
  * Permanently delete a source from IndexedDB.
@@ -152,7 +134,6 @@ onMounted(loadList)
           {{ UI.rulesImportBtn }}
         </button>
       </div>
-
       <div v-if="assetLinks.length > 0" class="github-assets">
         <p class="github-assets-title">{{ UI.rulesGithubAvailable }}</p>
         <ul class="asset-list">
