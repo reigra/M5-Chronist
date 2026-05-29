@@ -8,8 +8,14 @@ import { useRegisterSW } from 'virtual:pwa-register/vue'
  */
 const { needRefresh, updateServiceWorker } = useRegisterSW()
 
-function reload(): void {
-  updateServiceWorker(true)
+async function reload(): Promise<void> {
+  // Erst auf controllerchange warten (neuer SW hat Kontrolle übernommen), dann neu laden.
+  // So wird sichergestellt dass der Reload nicht zu früh passiert → verhindert weiße Seite.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload()
+  }, { once: true })
+  // skipWaiting senden, aber ohne auto-reload (false) — reload übernimmt der Listener oben
+  await updateServiceWorker(false)
 }
 
 function dismiss(): void {
@@ -20,7 +26,7 @@ function dismiss(): void {
 <template>
   <div v-if="needRefresh" class="update-banner" role="alert">
     <span class="update-banner__text">
-      Eine neue Version ist verfügbar.
+      ⚡ Eine neue Version ist verfügbar.
     </span>
     <button class="update-banner__btn update-banner__btn--primary" @click="reload">
       Jetzt aktualisieren
@@ -34,21 +40,19 @@ function dismiss(): void {
 <style scoped>
 .update-banner {
   position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 1rem;
-  background: #2a4a7a;
+  padding: 0.6rem 1.5rem;
+  background: #1a3a5c;
   color: #fff;
-  border-radius: 6px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   font-family: sans-serif;
   font-size: 0.9rem;
   z-index: 9999;
-  white-space: nowrap;
 }
 
 .update-banner__text {
@@ -63,11 +67,12 @@ function dismiss(): void {
   color: #fff;
   cursor: pointer;
   font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .update-banner__btn--primary {
   background: #fff;
-  color: #2a4a7a;
+  color: #1a3a5c;
   font-weight: 600;
   border-color: #fff;
 }
