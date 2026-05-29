@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { UI } from './constants/ui'
+import UpdateBanner from './components/UpdateBanner.vue'
+
+// __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
+const appVersion = __APP_VERSION__
 </script>
 
 <template>
   <nav class="app-nav">
     <router-link to="/" class="nav-home">{{ UI.appBrand }}</router-link>
+    <span class="nav-version">Version {{ appVersion }}</span>
     <router-link to="/character/new" class="nav-link">{{ UI.appNewChar }}</router-link>
+    <a
+      href="https://gitlab.com/silbaer/magusng-pwa"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="nav-link nav-link--help"
+    >Hilfe in der README</a>
   </nav>
   <RouterView />
+  <UpdateBanner />
 </template>
 
 <style>
@@ -33,6 +45,15 @@ body { margin: 0; background: #fff; }
   font-family: sans-serif;
 }
 
+.nav-version {
+  color: #8aaad0;
+  font-size: 0.75rem;
+  font-family: sans-serif;
+  margin-left: -1rem;  /* optisch nah am Brand-Namen */
+  align-self: flex-end;
+  padding-bottom: 0.1rem;
+}
+
 .nav-link {
   color: #c8d8f0;
   font-size: 0.9rem;
@@ -43,5 +64,15 @@ body { margin: 0; background: #fff; }
 .nav-link:hover,
 .nav-home:hover {
   text-decoration: underline;
+}
+
+.nav-link--help {
+  margin-left: auto;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.nav-link--help:hover {
+  opacity: 1;
 }
 </style>

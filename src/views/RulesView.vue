@@ -157,6 +157,18 @@ onMounted(loadList)
           {{ UI.rulesImportEvaBtn }}
         </button>
       </div>
+
+      <p class="import-hint">
+        Regelwerkdateien werden als JSON-Dateien im MagusNG-Format erstellt oder
+        aus der EVA-Charaktersoftware als XML exportiert. Anleitungen und
+        vorgefertigte Dateien findest du auf der
+        <a
+          href="https://gitlab.com/silbaer/magusng-pwa"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Projektseite</a>.
+      </p>
+
       <div v-if="assetLinks.length > 0" class="github-assets">
         <p class="github-assets-title">{{ UI.rulesGithubAvailable }}</p>
         <ul class="asset-list">
@@ -348,5 +360,20 @@ onMounted(loadList)
 
 .btn-import--eva:hover:not(:disabled) {
   background: #fdf5e6;
+}
+
+.import-hint {
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.6;
+  margin: 0.25rem 0 0;
+  padding: 0.75rem 1rem;
+  background: #f5f7fa;
+  border-left: 3px solid #2a4a7a;
+  border-radius: 0 4px 4px 0;
+}
+
+.import-hint a {
+  color: #2a4a7a;
 }
 </style>
