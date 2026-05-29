@@ -16,9 +16,37 @@ MagusNG ermöglicht es, Midgard-M5-Charaktere Schritt für Schritt zu erstellen 
 
 - Neue Midgard-M5-Charaktere anlegen
 - Bestehende Charaktere verwalten und steigern
-- Offline-Nutzung nach dem ersten Laden
+- Offline-Nutzung nach dem ersten Laden (TBD)
 - Charaktere als lokale JSON-Dateien speichern (kein Cloud-Konto erforderlich)
 - Regelwerke (Fertigkeiten, Kosten, Rassen, Typen) aus lokalen JSON-Dateien laden
+
+## Speicherung der Charaktäre
+
+Alle Daten werden lokal in deinem Browser gespeichert. Einmal importierte Regelwerke bleiben dauerhaft verfügbar, auch wenn du die App zwischendurch schließt.
+Das gleiche gilt für die Charaktäre. Die Charaktäre kannst du auch zur Sicherung exportieren.
+
+**Das empfehle ich auf jeden fall nach jeder größeren Änderung!**
+Das Program ist noch in der Entwicklungsphase und ich kann nicht garantieren, dass nicht auch Daten verloren gehen!
+
+## Quelle für Regelwerkdateien
+
+Aus rechtlichen Gründen kann ich keine Dateien mit den Regeln mitliefern. Diese muss sich jeder Nutzer selbst erstellen oder anderweitig besorgen. 
+Ich habe auf Github Midgard-M5 -Regeln gefunden und dann mit der Entwicklung der PWA angefangen...
+
+Das Format der Regeldateien wird [hier](docs/data-schema.md) beschrieben.
+
+Alternativ kann man die Regeln aus EVA importieren. EVA findest du auf [ebruenner.de](https://ebruenner.de) ([Direktlink](http://ebruenner.de/download/EVA.zip)) 
+In dem Archiv findest du (u.a.) zwei XML Dateien:
+- m5arkanum.xml
+- m5kodex.xml
+
+Diese kannst du unter "Regeln verwalten" in der PWA speichern. 
+
+## Kontakt
+
+Wenn du ein Problem mit der App hast, kannst du ein Issue erstellen.
+
+Du kannst mich auch über [Mastodon](https://social.tchncs.de/deck/@silbaer) oder [Signal](https://signal.me/#eu/k3jTHrQSX-LOVOw4Xw_pVuci-kXdACgPZz3-VRvD0ID_sfDjxUhNqrHlIf7hsg1j).
 
 ---
 
