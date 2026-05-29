@@ -1,15 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
-import { execSync } from 'child_process'
-
-const gitHash = execSync('git rev-parse --short HEAD').toString().trim()
+import pkg from './package.json'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   define: {
-    // __APP_VERSION__ ist der kurze Git-Commit-Hash, z.B. "a3f9c12"
-    __APP_VERSION__: JSON.stringify(gitHash),
+    // __APP_VERSION__ wird zur Build-Zeit aus package.json injiziert
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   plugins: [
     vue(),

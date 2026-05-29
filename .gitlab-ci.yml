@@ -20,12 +20,29 @@ pages:
   stage: deploy
   image: node:20
   script:
+    # Version erhöhen (patch: 1.0.0 → 1.0.1)
+    - npm version patch --no-git-tag-version
+
+    # App bauen
     - npm ci
     - npm run build
     - rm -rf public
     - mv dist public
+
+    # Neue Versionsnummer auslesen
+    - NEW_VERSION=$(node -p "require('./package.json').version")
+
+    # Git für den Push konfigurieren
+    - git config user.email "ci-bot@gitlab.com"
+    - git config user.name "GitLab CI Bot"
+    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+
+    # package.json und package-lock.json committen → master
+    - git add package.json package-lock.json
+    - 'git commit -m "chore: release v${NEW_VERSION} [skip ci]"'
+    - git push origin HEAD:master
   artifacts:
     paths:
       - public
   only:
-    - master
+    - release
