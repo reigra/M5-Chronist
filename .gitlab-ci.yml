@@ -39,7 +39,7 @@ pages:
 
     # package.json und package-lock.json committen → master
     - git add package.json package-lock.json
-    - git commit -m "chore: release v${NEW_VERSION} [skip ci]"
+    - 'git commit -m "chore: release v${NEW_VERSION} [skip ci]"'
     - git push origin HEAD:master
   artifacts:
     paths:
