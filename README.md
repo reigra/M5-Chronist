@@ -4,6 +4,11 @@
 
 Eine Progressive Web App (PWA) zur Erstellung und Verwaltung von Charakteren im Tabletop-Rollenspiel **Midgard M5**.
 
+Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Regelwerk liegen beim Verlag für F&SF-Spiele oder Pegasus Spiele.  (Das versuche ich grad rauszufinden)
+
+Du kannst die aktuelle Version der Software jederzeit [hier](https://magusng-pwa-823c6f.gitlab.io/) ausprobieren. 
+Die App läuft komplett im Browser und auch alle Daten werden nur in deinem Browser gespeichert. Die App läuft auch auf Tablets und Telefonen, aber das Layout ist für Handys aktuell nicht gut geeignet.
+
 ---
 
 ## Zweck
@@ -41,6 +46,9 @@ In dem Archiv findest du (u.a.) zwei XML Dateien:
 - m5kodex.xml
 
 Diese kannst du unter "Regeln verwalten" in der PWA speichern. 
+
+> [!Warning] Achtung
+> Die Unterstützung der EVA-Dateien ist explizit experimentell und einige Sachen werden nicht wie gewünscht funktionieren! 
 
 ## Kontakt
 
