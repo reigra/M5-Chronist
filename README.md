@@ -2,9 +2,9 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-Eine Progressive Web App (PWA) zur Erstellung und Verwaltung von Charakteren im Tabletop-Rollenspiel **Midgard M5**.
+Eine Progressive Web App (PWA) zur Erstellung und Verwaltung von Charakteren für Tabletop-Rollenspiele wie  **Midgard M5** und andere.
 
-Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Regelwerk liegen beim Verlag für F&SF-Spiele oder Pegasus Spiele.  (Das versuche ich grad rauszufinden)
+Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Midgard-Regelwerk liegen beim Verlag für F&SF-Spiele oder Pegasus Spiele.  (Das versuche ich grad rauszufinden)
 
 Du kannst die aktuelle Version der Software jederzeit [hier](https://magusng-pwa-823c6f.gitlab.io/) ausprobieren. 
 Die App läuft komplett im Browser und auch alle Daten werden nur in deinem Browser gespeichert. Die App läuft auch auf Tablets und Telefonen, aber das Layout ist für Handys aktuell nicht gut geeignet.
@@ -13,13 +13,13 @@ Die App läuft komplett im Browser und auch alle Daten werden nur in deinem Brow
 
 ## Zweck
 
-MagusNG ermöglicht es, Midgard-M5-Charaktere Schritt für Schritt zu erstellen und zwischen Abenteuern weiterzuentwickeln. Die App ist für Desktop-Browser ausgelegt und kann als PWA installiert werden, um auch offline nutzbar zu sein.
+MagusNG ermöglicht es, RPG-Charaktere Schritt für Schritt zu erstellen und zwischen Abenteuern weiterzuentwickeln. Die App ist für Desktop-Browser ausgelegt und kann als PWA installiert werden, um auch offline nutzbar zu sein.
 
 ---
 
 ## Funktionen
 
-- Neue Midgard-M5-Charaktere anlegen
+- Neue RPG-Charaktere anlegen
 - Bestehende Charaktere verwalten und steigern
 - Offline-Nutzung nach dem ersten Laden (TBD)
 - Charaktere als lokale JSON-Dateien speichern (kein Cloud-Konto erforderlich)
@@ -35,10 +35,12 @@ Das Program ist noch in der Entwicklungsphase und ich kann nicht garantieren, da
 
 ## Quelle für Regelwerkdateien
 
-Aus rechtlichen Gründen kann ich keine Dateien mit den Regeln mitliefern. Diese muss sich jeder Nutzer selbst erstellen oder anderweitig besorgen. 
-Ich habe auf Github Midgard-M5 -Regeln gefunden und dann mit der Entwicklung der PWA angefangen...
+Aus rechtlichen Gründen kann ich keine Dateien mit den Regeln mitliefern. Diese muss sich jeder Nutzer selbst erstellen oder erstellen lassen.
 
-Das Format der Regeldateien wird [hier](docs/data-schema.md) beschrieben.
+> [!Warning] Achtung
+> Dabei unbedingt das Copyright beachten! Im Allgemeinen ist die Weitergabe der erstellten Dateien nicht erlaubt
+
+Das Format der Regeldateien wird [hier](docs/data-schema.md) beschrieben. Falls sich Fragen ergeben könnt ihr mich gerne kontaktieren (siehe unten).
 
 Alternativ kann man die Regeln aus EVA importieren. EVA findest du auf [ebruenner.de](https://ebruenner.de) ([Direktlink](http://ebruenner.de/download/EVA.zip)) 
 In dem Archiv findest du (u.a.) zwei XML Dateien:
@@ -47,7 +49,7 @@ In dem Archiv findest du (u.a.) zwei XML Dateien:
 
 Diese kannst du unter "Regeln verwalten" in der PWA speichern. 
 
-> [!Warning] Achtung
+> [!important] Wichtig
 > Die Unterstützung der EVA-Dateien ist explizit experimentell und einige Sachen werden nicht wie gewünscht funktionieren! 
 
 ## Kontakt
