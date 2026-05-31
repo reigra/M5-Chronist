@@ -59,7 +59,7 @@ export class SheetSkillService {
 
     for (const cs of character.skills) {
       // 1. Split-Skill: eine Fertigkeit wird als mehrere Zeilen dargestellt (z. B. Resistenz)
-      const splitRule = skillRules.splitSkills.find(s => s.baseSkillId === cs.skillId)
+      const splitRule = skillRules.splitSkills?.find(s => s.baseSkillId === cs.skillId)
       if (splitRule) {
         const baseSkill = rules.skills.find(s => s.id === splitRule.baseSkillId)
         const linkedProperty = baseSkill?.linkedProperty ?? null
@@ -82,7 +82,7 @@ export class SheetSkillService {
       }
 
       // 2. Multi-Instanz-Skill: z. B. "Sprache:Albisch" → Basis-Fertigkeit "Sprache"
-      const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+      const multiRule = skillRules.multiInstanceSkills?.find(m => cs.skillId.startsWith(m.idPrefix))
       if (multiRule) {
         const baseSkill = rules.skills.find(s => s.id === multiRule.baseSkillId)
         if (!baseSkill) continue
