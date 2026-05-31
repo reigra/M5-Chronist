@@ -231,6 +231,38 @@ def parse_land(el: ET.Element) -> dict:
         'languages': languages
     }
 
+def parse_stand(el: ET.Element) -> dict:
+    name = attr(el, 'Name')
+    dp = get_child(el, 'Dynprops')
+    
+    stand = {
+        'id': name.lower(),
+        'name': name
+    }
+    
+    if dp is not None:
+        extrale = attr(dp, 'ExtraLE')
+        if extrale:
+            parts = [p.strip() for p in extrale.split(',')]
+            group = parts[0]
+            if group == 'Halbwelt':
+                group = 'Halbw.'
+                
+            starting_skills = {'group': group}
+            
+            if len(parts) > 1:
+                try:
+                    starting_skills['le'] = int(parts[1])
+                except ValueError:
+                    pass
+                    
+            if len(parts) > 2:
+                starting_skills['maxDifficulty'] = parts[2]
+                
+            stand['startingSkills'] = starting_skills
+            
+    return stand
+
 def parse_kodex_document(xml_path: str) -> dict:
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -250,6 +282,7 @@ def parse_kodex_document(xml_path: str) -> dict:
     types = [parse_klasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Klasse']
     races = [parse_rasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Rasse']
     origins = [parse_land(el) for el in lernstoffe if attr(el, 'Typ') == 'Land']
+    social_statuses = [parse_stand(el) for el in lernstoffe if attr(el, 'Typ') == 'Stand']
     
     metadata = {
         'id': 'eva-kodex',
@@ -266,7 +299,7 @@ def parse_kodex_document(xml_path: str) -> dict:
         'types': types,
         'races': races,
         'origins': origins,
-        'socialStatuses': [],
+        'socialStatuses': social_statuses,
         'languages': [],
         'scripts': [],
         'skillRules': {
