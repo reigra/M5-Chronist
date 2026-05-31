@@ -644,7 +644,7 @@ onMounted(async () => {
           <select v-model="spellToAdd" class="skill-select">
             <option value="" disabled>{{ UI.formAddSpellPlaceholder }}</option>
             <option v-for="s in availableSpells" :key="s.id" :value="s.id">
-              {{ UI.colLevel }} {{ s.level }} – {{ s.name }} ({{ s.spellGroup }})
+              {{ s.name }} -  ({{ UI.colLevel }} {{ s.level }}) 
             </option>
           </select>
           <button type="button" class="btn-add" :disabled="!spellToAdd" @click="addSpell">{{ UI.add }}</button>
