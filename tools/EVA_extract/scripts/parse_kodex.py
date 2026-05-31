@@ -303,6 +303,15 @@ def parse_kodex_document(xml_path: str) -> dict:
         'languages': [],
         'scripts': [],
         'skillRules': {
+            'splitSkills': [
+                {
+                    'baseSkillId': 'Resistenz',
+                    'variants': [
+                        { 'displayName': 'Resistenz (Geist)', 'bonusKey': 'ResBg' },
+                        { 'displayName': 'Resistenz (Körper)', 'bonusKey': 'ResBk' }
+                    ]
+                }
+            ],
             'multiInstanceSkills': multi_instance_skills
         }
     }
