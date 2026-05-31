@@ -214,6 +214,23 @@ def parse_rasse(el: ET.Element) -> dict:
             
     return race
 
+def parse_land(el: ET.Element) -> dict:
+    name = attr(el, 'Name')
+    dp = get_child(el, 'Dynprops')
+    
+    languages = []
+    if dp is not None:
+        lang_str = attr(dp, 'Sprache')
+        if lang_str:
+            languages = [lang.strip() for lang in lang_str.split(',') if lang.strip()]
+            
+    return {
+        'id': name,
+        'name': name,
+        'description': '',
+        'languages': languages
+    }
+
 def parse_kodex_document(xml_path: str) -> dict:
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -232,6 +249,7 @@ def parse_kodex_document(xml_path: str) -> dict:
                 
     types = [parse_klasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Klasse']
     races = [parse_rasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Rasse']
+    origins = [parse_land(el) for el in lernstoffe if attr(el, 'Typ') == 'Land']
     
     metadata = {
         'id': 'eva-kodex',
@@ -247,7 +265,7 @@ def parse_kodex_document(xml_path: str) -> dict:
         'skills': skills,
         'types': types,
         'races': races,
-        'origins': [],
+        'origins': origins,
         'socialStatuses': [],
         'languages': [],
         'scripts': [],
