@@ -28,12 +28,9 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-/tools/EVA_extract/result/py_kodex.json
-/tools/EVA_extract/result/py_arkanum.json
+/tools/EVA_extract/result/*
 /tools/EVA_extract/scripts/skill_sort.py
-/tools/EVA_extract/source/m5kodex.xml
-/tools/EVA_extract/source/dinge.xml
-/tools/EVA_extract/source/m5arkanum.xml
+/tools/EVA_extract/source/*
 /docs/waffen.txt
 /docs/Siandra von KalmaranV2.json
 /docs/Siandra_von_Kalmaran.json
