@@ -7,8 +7,8 @@
 $ErrorActionPreference = 'Stop'
 $ZipUrl = 'https://ebruenner.de/download/EVAsrc.zip'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$SourceDir = Join-Path $ScriptDir 'source'
-$ResultDir = Join-Path $ScriptDir 'result'
+$SourceDir = Join-Path $ScriptDir 'EVA'
+$ResultDir = Join-Path $ScriptDir 'rules'
 $TempZip = Join-Path $ScriptDir 'EVAsrc_temp.zip'
 
 Write-Host "=== MagusNG EVA-Extract Installer ===" -ForegroundColor Cyan
@@ -24,7 +24,7 @@ try {
 }
 
 # 2. Extract EVAsrc/*.xml into source/
-Write-Host "[2/6] Extracting EVAsrc/*.xml to source/..." -ForegroundColor Yellow
+Write-Host "[2/6] Extracting EVAsrc/*.xml to EVA/..." -ForegroundColor Yellow
 if (-not (Test-Path $SourceDir)) {
     New-Item -ItemType Directory -Path $SourceDir -Force | Out-Null
 }
