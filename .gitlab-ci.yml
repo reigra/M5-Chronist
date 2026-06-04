@@ -28,7 +28,7 @@ pages:
     - npm ci
 
     # Version bump: patch + Commit + Tag
-    - npm version patch -m "chore: release v%s [skip ci]"
+    - 'npm version patch -m "chore: release v%s [skip ci]"'
 
     # App bauen
     - npm run build
@@ -66,6 +66,7 @@ release:
       links:
         - name: "tools.zip"
           url: "${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/tools.zip"
+    description: "Automatisierter Release v$NEW_VERSION"
   needs:
     - pages
   only:
