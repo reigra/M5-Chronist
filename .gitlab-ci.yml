@@ -47,6 +47,7 @@ pages:
     - echo "PAGES_JOB_ID=$CI_JOB_ID" >> build.env
 
     # ZIP-Archiv für Release-Asset erstellen
+    - apt-get update && apt-get install -y zip --no-install-recommends && rm -rf /var/lib/apt/lists/*
     - zip -r tools.zip tools/
   artifacts:
     paths:
