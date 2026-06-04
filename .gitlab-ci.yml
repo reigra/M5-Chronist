@@ -36,6 +36,7 @@ pages:
 
     # Version-Commit + Tag nach release pushen (SSH Deploy Key)
     - eval $(ssh-agent -s) && echo "$SSH_DEPLOY_KEY_B64" | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh && ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
     - git remote set-url origin "git@${CI_SERVER_HOST}:${CI_PROJECT_PATH}.git"
     - git push origin HEAD:release --tags
 
@@ -88,6 +89,7 @@ merge-back:
     - git config user.email "ci-bot@gitlab.com"
     - git config user.name "GitLab CI Bot"
     - eval $(ssh-agent -s) && echo "$SSH_DEPLOY_KEY_B64" | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh && ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
     - git remote set-url origin "git@${CI_SERVER_HOST}:${CI_PROJECT_PATH}.git"
     - git push origin HEAD:release --tags
     - git push origin HEAD:master
