@@ -34,8 +34,9 @@ pages:
     # Version bump: patch + Commit + Tag
     - 'npm version patch -m "chore: release v%s [skip ci]"'
 
-    # Version-Commit + Tag nach release pushen (damit GitLab den ref kennt)
-    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    # Version-Commit + Tag nach release pushen (SSH Deploy Key)
+    - eval $(ssh-agent -s) && ssh-add $SSH_DEPLOY_KEY
+    - git remote set-url origin "git@${CI_SERVER_HOST}:${CI_PROJECT_PATH}.git"
     - git push origin HEAD:release --tags
 
     # App bauen
@@ -86,7 +87,8 @@ merge-back:
   script:
     - git config user.email "ci-bot@gitlab.com"
     - git config user.name "GitLab CI Bot"
-    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - eval $(ssh-agent -s) && ssh-add $SSH_DEPLOY_KEY
+    - git remote set-url origin "git@${CI_SERVER_HOST}:${CI_PROJECT_PATH}.git"
     - git push origin HEAD:release --tags
     - git push origin HEAD:master
   needs:
