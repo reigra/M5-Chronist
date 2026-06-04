@@ -34,6 +34,10 @@ pages:
     # Version bump: patch + Commit + Tag
     - 'npm version patch -m "chore: release v%s [skip ci]"'
 
+    # Version-Commit + Tag nach release pushen (damit GitLab den ref kennt)
+    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git push origin HEAD:release --tags
+
     # App bauen
     - npm run build
     - rm -rf public
@@ -43,16 +47,15 @@ pages:
     - NEW_VERSION=$(node -p "require('./package.json').version")
     - echo "NEW_VERSION=$NEW_VERSION" >> build.env
     - echo "TAG_NAME=v$NEW_VERSION" >> build.env
-    - echo "VERSION_SHA=$(git rev-parse HEAD)" >> build.env
     - echo "PAGES_JOB_ID=$CI_JOB_ID" >> build.env
 
     # ZIP-Archiv für Release-Asset erstellen
     - apt-get update && apt-get install -y zip --no-install-recommends && rm -rf /var/lib/apt/lists/*
-    - zip -r tools.zip tools/
+    - cd tools && zip -r ../Magus-Release.zip .
   artifacts:
     paths:
       - public
-      - tools.zip
+      - Magus-Release.zip
     reports:
       dotenv: build.env
   only:
@@ -66,11 +69,11 @@ release:
   release:
     name: "Release $NEW_VERSION"
     tag_name: "$TAG_NAME"
-    ref: "$VERSION_SHA"
+    ref: "$TAG_NAME"
     assets:
       links:
-        - name: "tools.zip"
-          url: "${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/tools.zip"
+        - name: "Magus-Release.zip"
+          url: "${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/Magus-Release.zip"
     description: "Automatisierter Release v$NEW_VERSION"
   needs:
     - pages
