@@ -51,7 +51,16 @@ try {
 
 # 3. Check / install Python
 Write-Host "[3/6] Checking Python..." -ForegroundColor Yellow
-$PythonCmd = Get-Command 'python' -ErrorAction SilentlyContinue
+
+# Try py, python, python3 in order. Actually run --version to
+# distinguish real Python from the Microsoft Store stub.
+$PythonCmd = $null
+$PythonArgs = @()
+
+try { $v = & py -3 --version 2>&1; if ($LASTEXITCODE -eq 0 -and $v -match 'Python ') { $PythonCmd = 'py'; $PythonArgs = @('-3') } } catch {}
+if (-not $PythonCmd) { try { $v = & python --version 2>&1; if ($LASTEXITCODE -eq 0 -and $v -match 'Python ') { $PythonCmd = 'python'; $PythonArgs = @() } } catch {} }
+if (-not $PythonCmd) { try { $v = & python3 --version 2>&1; if ($LASTEXITCODE -eq 0 -and $v -match 'Python ') { $PythonCmd = 'python3'; $PythonArgs = @() } } catch {} }
+
 if (-not $PythonCmd) {
     Write-Host "  -> Python not found. Downloading and installing..." -ForegroundColor Yellow
     $PythonUrl = 'https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe'
@@ -62,15 +71,22 @@ if (-not $PythonCmd) {
         Start-Process -FilePath $PythonInstaller -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1' -Wait
         Remove-Item $PythonInstaller -Force
         $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+        try { $v = & python --version 2>&1; if ($LASTEXITCODE -eq 0 -and $v -match 'Python ') { $PythonCmd = 'python'; $PythonArgs = @() } } catch {}
+        if (-not $PythonCmd) {
+            Write-Host "  -> Python installed but not found in PATH after refresh" -ForegroundColor Red
+            Remove-Item $TempZip -Force -ErrorAction SilentlyContinue
+            exit 1
+        }
         Write-Host "  -> Python installed" -ForegroundColor Green
     } catch {
         Write-Host "  -> Python installation failed: $_" -ForegroundColor Red
         Remove-Item $TempZip -Force -ErrorAction SilentlyContinue
         exit 1
     }
-} else {
-    Write-Host "  -> Python found" -ForegroundColor Green
 }
+
+$PyVersion = & $PythonCmd @PythonArgs --version 2>&1
+Write-Host "  -> $PyVersion" -ForegroundColor Green
 
 if (-not (Test-Path $ResultDir)) {
     New-Item -ItemType Directory -Path $ResultDir -Force | Out-Null
@@ -81,7 +97,7 @@ Write-Host "[4/6] Running parse_kodex.py..." -ForegroundColor Yellow
 $KodexInput = Join-Path $SourceDir 'm5kodex.xml'
 $KodexOutput = Join-Path $ResultDir 'eva_kodex.json'
 try {
-    & python (Join-Path $ScriptDir 'scripts/parse_kodex.py') $KodexInput $KodexOutput
+    & $PythonCmd @PythonArgs (Join-Path $ScriptDir 'scripts/parse_kodex.py') $KodexInput $KodexOutput
     Write-Host "  -> Wrote $KodexOutput" -ForegroundColor Green
 } catch {
     Write-Host "  -> parse_kodex.py failed: $_" -ForegroundColor Red
@@ -94,7 +110,7 @@ Write-Host "[5/6] Running parse_arkanum.py..." -ForegroundColor Yellow
 $ArkanumInput = Join-Path $SourceDir 'm5arkanum.xml'
 $ArkanumOutput = Join-Path $ResultDir 'eva_arkanum.json'
 try {
-    & python (Join-Path $ScriptDir 'scripts/parse_arkanum.py') $ArkanumInput $ArkanumOutput
+    & $PythonCmd @PythonArgs (Join-Path $ScriptDir 'scripts/parse_arkanum.py') $ArkanumInput $ArkanumOutput
     Write-Host "  -> Wrote $ArkanumOutput" -ForegroundColor Green
 } catch {
     Write-Host "  -> parse_arkanum.py failed: $_" -ForegroundColor Red
@@ -107,7 +123,7 @@ Write-Host "[6/6] Running parse_dinge.py..." -ForegroundColor Yellow
 $DingeInput = Join-Path $SourceDir 'dinge.xml'
 $DingeOutput = Join-Path $ResultDir 'eva_dinge.json'
 try {
-    & python (Join-Path $ScriptDir 'scripts/parse_dinge.py') $DingeInput $DingeOutput
+    & $PythonCmd @PythonArgs (Join-Path $ScriptDir 'scripts/parse_dinge.py') $DingeInput $DingeOutput
     Write-Host "  -> Wrote $DingeOutput" -ForegroundColor Green
 } catch {
     Write-Host "  -> parse_dinge.py failed: $_" -ForegroundColor Red
