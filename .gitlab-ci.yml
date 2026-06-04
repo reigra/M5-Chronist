@@ -27,6 +27,10 @@ pages:
     # Dependencies installieren (vor Version-Bump, damit lockfile stabil)
     - npm ci
 
+    # Git-Identität für npm version patch (macht intern git commit)
+    - git config user.email "ci-bot@gitlab.com"
+    - git config user.name "GitLab CI Bot"
+
     # Version bump: patch + Commit + Tag
     - 'npm version patch -m "chore: release v%s [skip ci]"'
 
