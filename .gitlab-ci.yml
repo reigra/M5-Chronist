@@ -2,6 +2,8 @@ stages:
   - test
   - secret-detection
   - deploy
+  - release
+  - merge
 
 include:
   - template: Security/SAST.gitlab-ci.yml
@@ -9,6 +11,8 @@ include:
 
 variables:
   SECRET_DETECTION_ENABLED: 'true'
+  # .npmrc setzt git-tag-version=false → in CI überschreiben
+  NPM_CONFIG_GIT_TAG_VERSION: 'true'
 
 sast:
   stage: test
@@ -20,29 +24,64 @@ pages:
   stage: deploy
   image: node:20
   script:
-    # Version erhöhen (patch: 1.0.0 → 1.0.1)
-    - npm version patch --no-git-tag-version
+    # Dependencies installieren (vor Version-Bump, damit lockfile stabil)
+    - npm ci
+
+    # Version bump: patch + Commit + Tag
+    - 'npm version patch -m "chore: release v%s [skip ci]"'
 
     # App bauen
-    - npm ci
     - npm run build
     - rm -rf public
     - mv dist public
 
-    # Neue Versionsnummer auslesen
+    # Variablen für nachfolgende Jobs exportieren
     - NEW_VERSION=$(node -p "require('./package.json').version")
+    - echo "NEW_VERSION=$NEW_VERSION" >> build.env
+    - echo "TAG_NAME=v$NEW_VERSION" >> build.env
+    - echo "VERSION_SHA=$(git rev-parse HEAD)" >> build.env
+    - echo "PAGES_JOB_ID=$CI_JOB_ID" >> build.env
 
-    # Git für den Push konfigurieren
-    - git config user.email "ci-bot@gitlab.com"
-    - git config user.name "GitLab CI Bot"
-    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-
-    # package.json und package-lock.json committen → master
-    - git add package.json package-lock.json
-    - 'git commit -m "chore: release v${NEW_VERSION} [skip ci]"'
-    - git push origin HEAD:master
+    # ZIP-Archiv für Release-Asset erstellen
+    - zip -r tools.zip tools/
   artifacts:
     paths:
       - public
+      - tools.zip
+    reports:
+      dotenv: build.env
+  only:
+    - release
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - echo "Creating release $NEW_VERSION ..."
+  release:
+    name: "Release $NEW_VERSION"
+    tag_name: "$TAG_NAME"
+    ref: "$VERSION_SHA"
+    assets:
+      links:
+        - name: "tools.zip"
+          url: "${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/tools.zip"
+    description: "Automatisierter Release v$NEW_VERSION"
+  needs:
+    - pages
+  only:
+    - release
+
+merge-back:
+  stage: merge
+  image: node:20
+  script:
+    - git config user.email "ci-bot@gitlab.com"
+    - git config user.name "GitLab CI Bot"
+    - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git push origin HEAD:release --tags
+    - git push origin HEAD:master
+  needs:
+    - release
   only:
     - release

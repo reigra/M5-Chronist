@@ -460,6 +460,7 @@ export class RulesStorage {
       scripts:           [],
       spells:            [],
       spellDescriptions: [],
+      weapons:           [],
     }
 
     for (const entry of active) {
@@ -472,6 +473,14 @@ export class RulesStorage {
       if (src.scripts)           this.mergeById(rules.scripts,           src.scripts)
       if (src.spells)            this.mergeById(rules.spells,            src.spells)
       if (src.spellDescriptions) this.mergeById(rules.spellDescriptions, src.spellDescriptions)
+      if (src.weapons)           this.mergeById(rules.weapons,           src.weapons)
+    }
+
+    // Merge skillRules: take the first (highest priority) skillRules found
+    for (const entry of active) {
+      if (entry.data.skillRules && !rules.skillRules) {
+        rules.skillRules = entry.data.skillRules
+      }
     }
 
     return rules

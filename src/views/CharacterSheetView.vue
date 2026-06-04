@@ -8,10 +8,6 @@ import { sheetSkillService } from '../services/SheetSkillService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
-import type { SkillRulesConfig } from '../types/SkillRules'
-import skillRulesData from '../config/skillRules.json'
-
-const skillRules = skillRulesData as SkillRulesConfig
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -96,8 +92,8 @@ const spellRows = computed(() => {
 /** Known skills with their display name looked up from the rules. */
 const skillRows = computed(() => {
   const c = character.value; const r = rules.value
-  if (!c || !r) return []
-  return sheetSkillService.buildRows(c, r, skillRules)
+  if (!c || !r || !r.skillRules) return []
+  return sheetSkillService.buildRows(c, r, r.skillRules)
 })
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────

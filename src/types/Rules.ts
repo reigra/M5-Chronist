@@ -2,6 +2,8 @@ import type { Skill } from './Skill'
 import type { CharacterType } from './CharacterType'
 import type { Race, Origin, SocialStatus } from './Race'
 import type { Spell, SpellDescription } from './Spell'
+import type { SkillRulesConfig } from './SkillRules'
+import type { Weapon } from './Weapon'
 
 /** Eine Sprache aus languages.json. */
 export interface Language {
@@ -51,6 +53,8 @@ export interface RulebookData {
   scripts?: Script[]
   spells?: Spell[]
   spellDescriptions?: SpellDescription[]
+  skillRules?: SkillRulesConfig
+  weapons?: Weapon[]
 }
 
 /**
@@ -67,4 +71,6 @@ export interface RulesData {
   scripts: Script[]
   spells: Spell[]
   spellDescriptions: SpellDescription[]
+  skillRules?: SkillRulesConfig
+  weapons: Weapon[]
 }

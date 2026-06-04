@@ -6,13 +6,6 @@ import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
 import type { Character, CharacterSkill } from '../types/Character'
 import type { RulesData } from '../types/Rules'
-import skillRulesJson from '../config/skillRules.json'
-import type { SkillRulesConfig } from '../types/SkillRules'
-import weaponsJson from '../config/weapons.json'
-import type { WeaponsConfig } from '../types/Weapon'
-
-const skillRules = skillRulesJson as SkillRulesConfig
-const weaponsData = weaponsJson as unknown as WeaponsConfig
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -103,12 +96,12 @@ const sg          = ref<number | null>(null)
  *  Multi-Instanz-Skills (z.B. Sprache) werden als einzelne Instanz-Einträge aufgeführt. */
 const availableSkills = computed(() => {
   const r = rules.value
-  if (!r) return []
+  if (!r || !r.skillRules) return []
   const existing = new Set(skills.value.map(s => s.skillId))
   const result: { id: string; name: string }[] = []
   for (const skill of r.skills) {
     if (skill.id === 'Zaubersprüche') continue
-    const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === skill.id)
+    const multiRule = r.skillRules.multiInstanceSkills.find(m => m.baseSkillId === skill.id)
     if (multiRule) {
       // Multi-Instanz: alle Instanzen einzeln anzeigen, bereits gelernte ausfiltern
       let instances: string[]
@@ -176,9 +169,10 @@ const playableTypes = computed(() => {
  *  Multi-Instanz-Skills (z.B. "Sprache:Albisch") werden als "Sprache: Albisch" angezeigt. */
 const skillRows = computed(() => {
   const r = rules.value
-  if (!r) return skills.value.map(s => ({ ...s, name: s.skillId }))
+  if (!r || !r.skillRules) return skills.value.map(s => ({ ...s, name: s.skillId }))
+  const sr = r.skillRules
   return skills.value.map(cs => {
-    const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+    const multiRule = sr.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
     if (multiRule) {
       const baseSkill = r.skills.find(s => s.id === multiRule.baseSkillId)
       const instanceName = cs.skillId.slice(multiRule.idPrefix.length)
@@ -209,9 +203,9 @@ const spellSpecGroups = computed(() => {
   return Object.keys(t?.spellCosts ?? {})
 })
 
-/** Alle Waffen aus weapons.json, alphabetisch sortiert. */
+/** Alle Waffen aus den geladenen Regeln, alphabetisch sortiert. */
 const allWeapons = computed(() =>
-  [...weaponsData.weapons].sort((a, b) => a.name.localeCompare(b.name))
+  [...(rules.value?.weapons ?? [])].sort((a, b) => a.name.localeCompare(b.name))
 )
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -322,7 +316,7 @@ function addSkill(): void {
   if (!sid) return
   const r = rules.value
   // Bei Multi-Instanz-Skills (z.B. "Sprache:Albisch") den Basis-Skill für den FW-Default holen
-  const multiRule = skillRules.multiInstanceSkills.find(m => sid.startsWith(m.idPrefix))
+  const multiRule = r?.skillRules?.multiInstanceSkills.find(m => sid.startsWith(m.idPrefix))
   const baseSkillId = multiRule ? multiRule.baseSkillId : sid
   const ruleSkill = r?.skills.find(s => s.id === baseSkillId)
   const fw = skillFwToAdd.value ?? (ruleSkill?.baseValue ?? 12)
@@ -650,7 +644,7 @@ onMounted(async () => {
           <select v-model="spellToAdd" class="skill-select">
             <option value="" disabled>{{ UI.formAddSpellPlaceholder }}</option>
             <option v-for="s in availableSpells" :key="s.id" :value="s.id">
-              {{ UI.colLevel }} {{ s.level }} – {{ s.name }} ({{ s.spellGroup }})
+              {{ s.name }} -  ({{ UI.colLevel }} {{ s.level }}) 
             </option>
           </select>
           <button type="button" class="btn-add" :disabled="!spellToAdd" @click="addSpell">{{ UI.add }}</button>

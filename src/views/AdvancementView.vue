@@ -10,9 +10,9 @@ import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
 import type { SkillRulesConfig } from '../types/SkillRules'
-import skillRulesData from '../config/skillRules.json'
+// import skillRulesData from '../config/skillRules.json'
 
-const skillRules = skillRulesData as SkillRulesConfig
+// const skillRules = skillRulesData as SkillRulesConfig
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -78,8 +78,8 @@ const knownSkillRows = computed(() => {
   const r = rules.value
   const type = charType.value
   const currentGrad = grad.value
-  if (!char || !r || !type) return []
-
+  if (!char || !r || !type || !r.skillRules) return []
+  const sr = r.skillRules as SkillRulesConfig
   return char.skills
     .map(cs => {
       // Reguläre Fertigkeit oder Multi-Instanz-Fertigkeit (z. B. "Sprache:Albisch")
@@ -88,7 +88,7 @@ const knownSkillRows = computed(() => {
       let displayName: string | null = null
 
       if (!skill) {
-        const multiRule = skillRules.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
+        const multiRule = sr.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
         if (multiRule) {
           skill = r.skills.find(s => s.id === multiRule.baseSkillId)
           instanceId = cs.skillId
@@ -172,8 +172,8 @@ const pendingInstanceOptions = computed(() => {
   const action = pendingAction.value
   const r = rules.value
   const char = character.value
-  if (!action?.isMultiInstance || !r || !char) return []
-
+  if (!action?.isMultiInstance || !r || !char || !r.skillRules) return []
+  const skillRules = r.skillRules as SkillRulesConfig
   const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
   if (!multiRule) return []
 
@@ -204,9 +204,9 @@ const pendingInstanceOptions = computed(() => {
  */
 function requestLearn(skill: Skill): void {
   const type = charType.value
-  if (!type) return
+  if (!type || !rules.value || !rules.value.skillRules) return
   const cost = advancementService.learnCost(skill, type)
-  const isMultiInstance = skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
+  const isMultiInstance = rules.value.skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
   selectedInstance.value = ''
   pendingAction.value = { type: 'learn', skill, cost, isMultiInstance }
 }
@@ -264,13 +264,13 @@ async function confirmAction(): Promise<void> {
   const action = pendingAction.value
   const char = character.value
   const type = charType.value
-  if (!action || !char || !type) return
+  if (!action || !char || !type || !rules.value || !rules.value.skillRules) return
 
   try {
     let updated: Character
     if (action.type === 'learn') {
       if (action.isMultiInstance) {
-        const multiRule = skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
+        const multiRule = rules.value.skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
         if (!multiRule || !selectedInstance.value) return
         const fullId = multiRule.idPrefix + selectedInstance.value
         updated = advancementService.learnSkillInstance(char, action.skill, fullId, type)

@@ -28,3 +28,11 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+/tools/EVA_extract/result/*
+/tools/EVA_extract/scripts/skill_sort.py
+/tools/EVA_extract/source/*
+/docs/waffen.txt
+/docs/Siandra von KalmaranV2.json
+/docs/Siandra_von_Kalmaran.json
+/docs/todo.md
+/tools/scripts/skill_sort.py
