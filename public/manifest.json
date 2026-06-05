@@ -1,7 +1,7 @@
 {
   "name": "Magus NG",
   "short_name": "Magus NG",
-  "description": "Midgard M5 character management app",
+  "description": "RPG character management app",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",
