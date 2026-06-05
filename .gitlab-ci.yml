@@ -87,8 +87,8 @@ merge-back:
     - git config user.email "ci-bot@gitlab.com"
     - git config user.name "GitLab CI Bot"
     - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-    - git push origin HEAD:release --tags
-    - git push origin HEAD:master
+    - git fetch origin release
+    - git push origin origin/release:master
   needs:
     - release
   only:
