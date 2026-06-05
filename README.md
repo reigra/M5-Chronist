@@ -4,7 +4,7 @@
 
 Eine Progressive Web App (PWA) zur Erstellung und Verwaltung von Charakteren für Tabletop-Rollenspiele wie  **Midgard M5** und andere.
 
-Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Midgard-Regelwerk liegen beim Verlag für F&SF-Spiele oder Pegasus Spiele.  (Das versuche ich grad rauszufinden)
+Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Midgard-Regelwerk liegen beim Verlag für F&SF-Spiele GbR, Stelzenberg.
 
 Du kannst die aktuelle Version der Software jederzeit [hier](https://magusng-pwa-823c6f.gitlab.io/) ausprobieren. 
 Die App läuft komplett im Browser und auch alle Daten werden nur in deinem Browser gespeichert. Die App läuft auch auf Tablets und Telefonen, aber das Layout ist für Handys aktuell nicht gut geeignet.
