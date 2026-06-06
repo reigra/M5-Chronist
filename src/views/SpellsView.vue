@@ -20,7 +20,12 @@ const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
 /** The spell the player wants to learn — awaiting confirmation. */
-const pendingSpell = ref<Spell | null>(null)
+interface PendingSpellAction {
+  spell: Spell
+  epCost: number
+  goldCost: number
+}
+const pendingAction = ref<PendingSpellAction | null>(null)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -40,14 +45,6 @@ const charType = computed(() => {
 const isCaster = computed(() => {
   const t = charType.value
   return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
-})
-
-/** EP cost to learn the pending spell. */
-const pendingCost = computed(() => {
-  const spell = pendingSpell.value
-  const type = charType.value
-  if (!spell || !type?.spellCosts) return 0
-  return spell.level * (type.spellCosts[spell.spellGroup] ?? 0)
 })
 
 /**
@@ -92,47 +89,51 @@ const learnableSpellRows = computed(() => {
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 /**
- * Stage a spell to learn — shows the confirmation panel.
+ * Stage a spell to learn — shows the confirmation modal.
  * @param spell - The spell the player selected.
  */
 function requestLearn(spell: Spell): void {
-  pendingSpell.value = spell
+  const type = charType.value
+  if (!type?.spellCosts) return
+  const epCost = spell.level * (type.spellCosts[spell.spellGroup] ?? 0)
+  const goldCost = spell.level * 100
+  pendingAction.value = { spell, epCost, goldCost }
 }
 
 /** Discard the staged learn without any changes. */
 function cancelLearn(): void {
-  pendingSpell.value = null
+  pendingAction.value = null
 }
 
 /**
- * Confirm the staged learn: deduct EP, add spell ID, save.
+ * Confirm the staged learn: deduct EP and gold, add spell ID, save.
  */
 async function confirmLearn(): Promise<void> {
-  const spell = pendingSpell.value
+  const action = pendingAction.value
   const char = character.value
-  if (!spell || !char) return
+  if (!action || !char) return
 
-  const cost = pendingCost.value
-  if (char.availableEp < cost) {
+  if (char.availableEp < action.epCost) {
     errorMessage.value = 'Not enough EP.'
-    pendingSpell.value = null
+    pendingAction.value = null
     return
   }
 
   const updated: Character = {
     ...char,
-    spells: [...(char.spells ?? []), spell.id],
-    availableEp: char.availableEp - cost,
+    spells: [...(char.spells ?? []), action.spell.id],
+    availableEp: char.availableEp - action.epCost,
+    gold: (char.gold ?? 0) - action.goldCost,
     updatedAt: new Date().toISOString(),
   }
 
   try {
     await characterStorage.save(updated)
     character.value = updated
-    pendingSpell.value = null
+    pendingAction.value = null
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
-    pendingSpell.value = null
+    pendingAction.value = null
   }
 }
 
@@ -185,6 +186,7 @@ onMounted(async () => {
         <p class="ep-balance">
           {{ UI.epAvailable }} <strong>{{ character.availableEp }}</strong>
           / {{ character.totalEs }} {{ UI.esTotal }}
+          &nbsp;| {{ UI.labelGold }} <strong>{{ character.gold ?? 0 }}</strong>
         </p>
       </header>
 
@@ -195,19 +197,29 @@ onMounted(async () => {
 
       <template v-else>
 
-        <!-- ── Confirmation panel ── -->
-        <div v-if="pendingSpell !== null" class="confirmation">
-          <p>
-            {{ UI.confirmLearnPfx }} <strong>{{ pendingSpell.name }}</strong>
-            ({{ UI.colLevel }} {{ pendingSpell.level }}, {{ pendingSpell.spellGroup }})
-            {{ UI.confirmFor }} <strong>{{ pendingCost }} {{ UI.unitEp }}</strong>?
-          </p>
-          <p class="ep-after">
-            {{ UI.spellsEpAfter }} {{ character.availableEp - pendingCost }}
-          </p>
-          <div class="confirmation-buttons">
-            <button class="btn-confirm" :disabled="character.availableEp < pendingCost" @click="confirmLearn">{{ UI.confirm }}</button>
-            <button class="btn-cancel" @click="cancelLearn">{{ UI.cancel }}</button>
+        <!-- ── Confirmation modal ── -->
+        <div v-if="pendingAction !== null" class="modal-overlay" @click.self="cancelLearn">
+          <div class="modal-box">
+            <p>
+              {{ UI.confirmLearnPfx }} <strong>{{ pendingAction.spell.name }}</strong>
+              ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ pendingAction.spell.spellGroup }})
+              {{ UI.confirmFor }} <strong>{{ pendingAction.epCost }} {{ UI.unitEp }}</strong>?
+            </p>
+            <label class="gold-cost-row">
+              {{ UI.advGoldLearnCost }}
+              <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
+            </label>
+            <p class="ep-after">
+              {{ UI.spellsEpAfter }} {{ character.availableEp - pendingAction.epCost }}
+            </p>
+            <div class="confirmation-buttons">
+              <button
+                class="btn-confirm"
+                :disabled="(character.gold ?? 0) < pendingAction.goldCost"
+                @click="confirmLearn"
+              >{{ UI.confirm }}</button>
+              <button class="btn-cancel" @click="cancelLearn">{{ UI.cancel }}</button>
+            </div>
           </div>
         </div>
 
@@ -254,7 +266,7 @@ onMounted(async () => {
                 <td>{{ row.cost }} {{ UI.unitEp }}</td>
                 <td>
                   <button
-                    :disabled="!row.canAfford || pendingSpell !== null"
+                    :disabled="!row.canAfford || pendingAction !== null"
                     @click="requestLearn(row.spell)"
                   >
                     {{ UI.learnBtn }}
@@ -339,15 +351,47 @@ onMounted(async () => {
   font-style: italic;
 }
 
-.confirmation {
-  background: #fffbe6;
-  border: 1px solid #e6c800;
-  border-radius: 4px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.confirmation p { margin: 0 0 0.5rem; }
+.modal-box {
+  background: #fffbe6;
+  border: 1px solid #e6c800;
+  border-radius: 6px;
+  padding: 1.5rem 1.75rem;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.modal-box p {
+  margin: 0 0 0.75rem;
+}
+
+.gold-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.gs-input {
+  width: 5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  font-size: 1rem;
+  text-align: right;
+}
 
 .ep-after { color: #555; font-size: 0.9em; }
 
