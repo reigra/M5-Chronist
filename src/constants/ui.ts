@@ -74,6 +74,7 @@ export const UI = {
   labelSocialStatus: 'Sozialer Status',
   labelEsTotal:      'ES (gesamt)',
   labelEpAvail:      'EP (verfügbar)',
+  labelGold:         'Gold (GS)',
   labelNextGrad:     'Nächster Grad bei',
 
   // ── Personalia-Feldbezeichner ─────────────────────────────────────────────────
@@ -206,6 +207,7 @@ export const UI = {
   formSelectPlaceholder:     '— wählen —',
   formEsTotalLabel:          'ES gesamt (Erfahrungsschatz)',
   formEpAvailLabel:          'EP verfügbar',
+  formGoldLabel:             'Gold (Goldstücke)',
   formAddSkillPlaceholder:   '— Fertigkeit hinzufügen —',
   formAddSpellPlaceholder:   '— Zauberspruch hinzufügen —',
   formSaving:                'Wird gespeichert…',

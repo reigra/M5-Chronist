@@ -72,6 +72,7 @@ function computeDiff(existing: Character, incoming: Character): DiffEntry[] {
     { key: 'socialStatusId', label: 'Social Status' },
     { key: 'totalEs',        label: 'ES (total)' },
     { key: 'availableEp',    label: 'EP (available)' },
+    { key: 'gold',           label: 'Gold' },
   ]
 
   for (const { key, label } of scalarFields) {

@@ -205,6 +205,7 @@ onMounted(async () => {
           <dt>{{ UI.labelGrad }}</dt>              <dd>{{ grad }}</dd>
           <dt>{{ UI.labelEsTotal }}</dt>           <dd>{{ character.totalEs }}</dd>
           <dt>{{ UI.labelEpAvail }}</dt>           <dd>{{ character.availableEp }}</dd>
+          <dt>{{ UI.labelGold }}</dt>              <dd>{{ character.gold ?? 0 }}</dd>
           <dt>{{ UI.labelNextGrad }}</dt>          <dd>{{ nextGradEs }} {{ UI.unitEs }}</dd>
         </dl>
       </section>
