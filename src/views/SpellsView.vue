@@ -78,11 +78,14 @@ const learnableSpellRows = computed(() => {
 
   return r.spells
     .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
-    .map(s => ({
-      spell: s,
-      cost: s.level * (type.spellCosts![s.spellGroup] ?? 0),
-      canAfford: (c.availableEp) >= s.level * (type.spellCosts![s.spellGroup] ?? 0),
-    }))
+    .map(s => {
+      const lc = s.learnCost ?? 0
+      return {
+        spell: s,
+        cost: lc * (type.spellCosts![s.spellGroup] ?? 0),
+        canAfford: (c.availableEp) >= lc * (type.spellCosts![s.spellGroup] ?? 0),
+      }
+    })
     .sort((a, b) => a.spell.level - b.spell.level || a.spell.name.localeCompare(b.spell.name))
 })
 
@@ -95,8 +98,9 @@ const learnableSpellRows = computed(() => {
 function requestLearn(spell: Spell): void {
   const type = charType.value
   if (!type?.spellCosts) return
-  const epCost = spell.level * (type.spellCosts[spell.spellGroup] ?? 0)
-  const goldCost = spell.level * 100
+  const lc = spell.learnCost ?? 0
+  const epCost = lc * (type.spellCosts[spell.spellGroup] ?? 0)
+  const goldCost = lc * 100
   pendingAction.value = { spell, epCost, goldCost }
 }
 

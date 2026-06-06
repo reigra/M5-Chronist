@@ -269,6 +269,7 @@ function parseZauber(el: Element): Spell {
     id:               name,
     name,
     level:            Number(a(dp, 'Stufe')) || 0,
+    learnCost:        Number(a(spellGroupAssoc, 'iWert')) || 0,
     spellType:        a(dp, 'Art'),
     spellGroup,
     elements:         [a(dp, 'Agens'), a(dp, 'Reagens')].filter(s => s.length > 0),
