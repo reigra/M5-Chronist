@@ -8,7 +8,7 @@ export interface Spell {
   name: string
   /** Spell level (1–10) */
   level: number
-  /** Lernkosten (Trainingseinheiten) aus EVA-XML */
+  /** Lernkosten (Trainingseinheiten) */
   learnCost?: number
   /** Type: "Wortzauber" | "Gestenmagie" | etc. */
   spellType: string

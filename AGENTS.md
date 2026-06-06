@@ -21,12 +21,11 @@ src/
   components/          — Only UpdateBanner.vue today
   services/            — Business logic, no framework dependency
     CharacterStorage   — IndexedDB CRUD + file export/import via FS Access API
-    RulesStorage       — IndexedDB CRUD, multi-source merge, EVA-XML import
+    RulesStorage       — IndexedDB CRUD, multi-source merge
     RulesLoader        — Thin facade over RulesStorage.loadActive()
     AdvancementService — EP cost calc, learn/advance skills (returns new Character, never mutates)
     GradUtils          — Pure functions: computeGrad, esForNextGrad
     SheetSkillService  — Sheet display helpers
-    EvaImporter        — XML → RulebookData parser
   types/               — Plain interfaces (Character, Skill, CharacterType, Rules, etc.)
   constants/ui.ts      — All UI strings exported as `UI` object (German), import via `import { UI } from '../constants/ui'`
 ```
