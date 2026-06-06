@@ -165,6 +165,8 @@ export const UI = {
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
   advAddEp:             'EP hinzufügen',
+  advGoldLearnCost:     'Lernkosten (GS):',
+  advGoldAdvanceCost:   'Trainingskosten (GS):',
   confirmLearnPfx:      'Lernen:',
   confirmFor:           'für',
   confirmAdvancePfx:    'Steigern:',
