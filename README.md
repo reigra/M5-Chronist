@@ -42,15 +42,26 @@ Aus rechtlichen Gründen kann ich keine Dateien mit den Regeln mitliefern. Diese
 
 Das Format der Regeldateien wird [hier](docs/data-schema.md) beschrieben. Falls sich Fragen ergeben könnt ihr mich gerne kontaktieren (siehe unten).
 
-Alternativ kann man die Regeln aus EVA importieren. EVA findest du auf [ebruenner.de](https://ebruenner.de) ([Direktlink](http://ebruenner.de/download/EVA.zip)) 
-In dem Archiv findest du (u.a.) zwei XML Dateien:
-- m5arkanum.xml
-- m5kodex.xml
+Die Regel-JSONs werden mit Python-Skripten aus den EVA-XML-Dateien erstellt. Die Skripte liegen im Verzeichnis `tools/`.
 
-Diese kannst du unter "Regeln verwalten" in der PWA speichern. 
+### Windows (einfach)
 
-> [!important] Wichtig
-> Die Unterstützung der EVA-Dateien ist explizit experimentell und einige Sachen werden nicht wie gewünscht funktionieren! 
+Einfach `tools/create-rules-files.cmd` doppelklicken. Das Skript lädt automatisch die aktuellen EVA-Daten herunter, entpackt sie und erzeugt die JSON-Dateien im Ordner `tools/rules/`.
+
+### Manuell
+
+1. Lade EVA von [ebruenner.de](https://ebruenner.de) herunter ([Direktlink](http://ebruenner.de/download/EVA.zip))
+2. Entpacke das Archiv — die benötigten Dateien sind `m5arkanum.xml`, `m5kodex.xml` und `dinge.xml`
+3. Lege die XML-Dateien in `tools/EVA/`
+4. Führe die Python-Skripte aus:
+
+   ```bash
+   python3 tools/scripts/parse_kodex.py tools/EVA/m5kodex.xml tools/rules/eva_kodex.json
+   python3 tools/scripts/parse_arkanum.py tools/EVA/m5arkanum.xml tools/rules/eva_arkanum.json
+   python3 tools/scripts/parse_dinge.py tools/EVA/dinge.xml tools/rules/eva_dinge.json
+   ```
+
+5. Lade die erzeugten JSON-Dateien unter "Regeln verwalten" in der PWA hoch
 
 ## Kontakt
 
