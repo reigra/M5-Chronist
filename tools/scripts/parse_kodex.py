@@ -73,6 +73,7 @@ def parse_fertigkeit(el: ET.Element):
     skill = {
         'id': name,
         'name': name,
+        'typ': attr(el, 'Typ'),
         'groups': [normalize_group_name(attr(a, 'sWert')) for a in assocs],
         'learnCost': learn_cost,
         'advancementCosts': tek['advancementCosts'],
@@ -273,7 +274,8 @@ def parse_kodex_document(xml_path: str) -> dict:
     multi_instance_skills = []
     
     for el in lernstoffe:
-        if attr(el, 'Typ') == 'Fertigkeit':
+        typ = attr(el, 'Typ')
+        if typ == 'Fertigkeit' or typ == 'Waffengruppe':
             skill, multi_info = parse_fertigkeit(el)
             skills.append(skill)
             if multi_info:

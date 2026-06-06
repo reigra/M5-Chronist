@@ -10,6 +10,8 @@ export interface Skill {
   id: string
   /** Display name */
   name: string
+  /** Source type from the EVA XML (e.g. "Fertigkeit", "Waffengruppe") */
+  typ?: string
   /** Skill groups this skill belongs to (e.g. ["Alltag", "Körper"]) */
   groups: string[]
   /** Difficulty rating per group */

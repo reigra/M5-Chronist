@@ -149,7 +149,31 @@ const learnableSkillRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.id !== 'Zaubersprüche' && Array.isArray(s.groups) && s.groups.length > 0 && !s.gradValues?.length)
+    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffengruppe' && s.id !== 'Zaubersprüche' && Array.isArray(s.groups) && s.groups.length > 0 && !s.gradValues?.length)
+    .map(skill => {
+      const cost = advancementService.learnCost(skill, type)
+      return {
+        skillId: skill.id,
+        name: skill.name,
+        baseValue: skill.baseValue,
+        cost,
+        canAfford: char.availableEp >= cost,
+        skill,
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const learnableWeaponRows = computed(() => {
+  const char = character.value
+  const r = rules.value
+  const type = charType.value
+  if (!char || !r || !type) return []
+
+  const knownIds = new Set(char.skills.map(s => s.skillId))
+
+  return r.skills
+    .filter(s => !knownIds.has(s.id) && s.typ === 'Waffengruppe' && !s.gradValues?.length)
     .map(skill => {
       const cost = advancementService.learnCost(skill, type)
       return {
@@ -485,8 +509,38 @@ onMounted(async () => {
         </table>
       </section>
 
+      <!-- ── Learn New Weapon Skill ── -->
+      <section v-if="learnableWeaponRows.length > 0">
+        <h2>{{ UI.advLearnWeaponSkill }}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>{{ UI.colSkill }}</th>
+              <th>{{ UI.colBaseFw }}</th>
+              <th>{{ UI.colCost }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in learnableWeaponRows" :key="row.skillId">
+              <td>{{ row.name }}</td>
+              <td>{{ row.baseValue }}</td>
+              <td>{{ row.cost }} {{ UI.unitEp }}</td>
+              <td>
+                <button
+                  :disabled="!row.canAfford || pendingAction !== null"
+                  @click="requestLearn(row.skill)"
+                >
+                  {{ UI.learnBtn }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <!-- ── Learn New Skill ── -->
-      <section>
+      <section v-if="learnableSkillRows.length > 0">
         <h2>{{ UI.advLearnNewSkill }}</h2>
         <table>
           <thead>

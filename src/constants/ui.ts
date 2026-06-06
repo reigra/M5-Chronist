@@ -39,12 +39,14 @@ export const UI = {
     'Das Importieren von Regeln erfordert einen Chromium-basierten Browser (Chrome, Edge oder Opera).',
 
   // ── Abschnitts-Überschriften ─────────────────────────────────────────────────
-  secIdentity:    'Identität',
-  secPersonalia:  'Personalia',
-  secExperience:  'Erfahrung',
-  secProps:       'Eigenschaften',
-  secBoni:        'Boni',
-  secSkills:      'Fertigkeiten',
+  secIdentity:        'Identität',
+  secPersonalia:      'Personalia',
+  secExperience:      'Erfahrung',
+  secProps:           'Eigenschaften',
+  secBoni:            'Boni',
+  secWeaponSkills:    'Waffenfertigkeiten',
+  secSkills:          'Fertigkeiten',
+  secUnlearnedSkills: 'Ungelernte Fertigkeiten',
 
   // ── Spalten- und Feldbezeichner ──────────────────────────────────────────────
   colSkill:    'Fertigkeit',
@@ -178,6 +180,7 @@ export const UI = {
   advGradBased:         'Grad-basiert',
   advNotAdvanceable:    'nicht steigerbar',
   advLearnNewSkill:     'Neue Fertigkeit lernen',
+  advLearnWeaponSkill:  'Neue Waffenfertigkeit lernen',
   advChooseInstance:    'Spezialisierung:',
   advChoosePlaceholder: '— bitte wählen —',
 

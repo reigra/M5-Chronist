@@ -96,6 +96,10 @@ const skillRows = computed(() => {
   return sheetSkillService.buildRows(c, r, r.skillRules)
 })
 
+const weaponRows = computed(() => skillRows.value.filter(r => r.isWeapon))
+const learnedRows = computed(() => skillRows.value.filter(r => !r.isWeapon && !r.unlearned))
+const unlearnedRows = computed(() => skillRows.value.filter(r => r.unlearned))
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 async function exportCharacter(): Promise<void> {
@@ -243,10 +247,10 @@ onMounted(async () => {
         </dl>
       </section>
 
-      <!-- ── Skills ── -->
-      <section class="card">
-        <h2>{{ UI.secSkills }}</h2>
-        <table v-if="skillRows.length > 0" class="skill-table">
+      <!-- ── Waffenfertigkeiten ── -->
+      <section v-if="weaponRows.length > 0" class="card">
+        <h2>{{ UI.secWeaponSkills }}</h2>
+        <table class="skill-table">
           <thead>
             <tr>
               <th>{{ UI.colSkill }}</th>
@@ -255,14 +259,55 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in skillRows" :key="row.name" :class="{ 'row-unlearned': row.unlearned }">
-              <td>{{ row.name }}{{ row.unlearned ? '*' : '' }}</td>
+            <tr v-for="row in weaponRows" :key="row.name">
+              <td>{{ row.name }}</td>
               <td>{{ row.displayEw }}</td>
               <td>{{ row.linkedProperty }}</td>
             </tr>
           </tbody>
         </table>
-          <p v-else class="empty-hint">{{ UI.emptySkillsLearned }}</p>
+      </section>
+
+      <!-- ── Gelernte Fertigkeiten ── -->
+      <section v-if="learnedRows.length > 0" class="card">
+        <h2>{{ UI.secSkills }}</h2>
+        <table class="skill-table">
+          <thead>
+            <tr>
+              <th>{{ UI.colSkill }}</th>
+              <th>{{ UI.colEw }}</th>
+              <th>{{ UI.colAttr }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in learnedRows" :key="row.name">
+              <td>{{ row.name }}</td>
+              <td>{{ row.displayEw }}</td>
+              <td>{{ row.linkedProperty }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ── Ungelernte Fertigkeiten ── -->
+      <section v-if="unlearnedRows.length > 0" class="card">
+        <h2>{{ UI.secUnlearnedSkills }}</h2>
+        <table class="skill-table">
+          <thead>
+            <tr>
+              <th>{{ UI.colSkill }}</th>
+              <th>{{ UI.colEw }}</th>
+              <th>{{ UI.colAttr }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in unlearnedRows" :key="row.name" class="row-unlearned">
+              <td>{{ row.name }}*</td>
+              <td>{{ row.displayEw }}</td>
+              <td>{{ row.linkedProperty }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <!-- ── Spells ── -->
