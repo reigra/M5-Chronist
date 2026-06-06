@@ -34,6 +34,7 @@ interface PendingAction {
   type: 'learn' | 'advance'
   skill: Skill
   cost: number
+  goldCost: number
   currentValue?: number
   isMultiInstance?: boolean
   instanceId?: string
@@ -206,9 +207,10 @@ function requestLearn(skill: Skill): void {
   const type = charType.value
   if (!type || !rules.value || !rules.value.skillRules) return
   const cost = advancementService.learnCost(skill, type)
+  const goldCost = skill.learnCost * 200
   const isMultiInstance = rules.value.skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
   selectedInstance.value = ''
-  pendingAction.value = { type: 'learn', skill, cost, isMultiInstance }
+  pendingAction.value = { type: 'learn', skill, cost, goldCost, isMultiInstance }
 }
 
 /**
@@ -222,7 +224,10 @@ function requestAdvance(skill: Skill, currentValue: number, instanceId?: string)
   if (!type) return
   const cost = advancementService.advanceCost(skill, currentValue, type)
   if (cost === null) return
-  pendingAction.value = { type: 'advance', skill, cost, currentValue, instanceId }
+  const stepIndex = currentValue - skill.baseValue
+  const teCost = skill.advancementCosts[stepIndex] ?? 0
+  const goldCost = teCost * 20
+  pendingAction.value = { type: 'advance', skill, cost, goldCost, currentValue, instanceId }
 }
 
 /** Discard the staged action without making any changes. */
@@ -284,6 +289,8 @@ async function confirmAction(): Promise<void> {
         updated = advancementService.advanceSkill(char, action.skill, type)
       }
     }
+
+    updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost }
 
     await characterStorage.save(updated)
     character.value = updated
@@ -351,6 +358,7 @@ onMounted(async () => {
         <p class="ep-balance">
           {{ UI.epAvailable }} <strong>{{ character.availableEp }}</strong>
           / {{ character.totalEs }} {{ UI.esTotal }}
+          &nbsp;| {{ UI.labelGold }} <strong>{{ character.gold ?? 0 }}</strong>
         </p>
       </header>
 
@@ -395,6 +403,10 @@ onMounted(async () => {
                 <option v-for="opt in pendingInstanceOptions" :key="opt" :value="opt">{{ opt }}</option>
               </select>
             </div>
+            <label class="gold-cost-row">
+              {{ UI.advGoldLearnCost }}
+              <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
+            </label>
           </template>
           <template v-else>
             <p>
@@ -407,11 +419,15 @@ onMounted(async () => {
               {{ UI.advToFw }} {{ (pendingAction.currentValue ?? 0) + 1 }}
               {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
             </p>
+            <label class="gold-cost-row">
+              {{ UI.advGoldAdvanceCost }}
+              <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
+            </label>
           </template>
           <div class="confirmation-buttons">
             <button
               class="btn-confirm"
-              :disabled="pendingAction.isMultiInstance && !selectedInstance"
+              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || (character.gold ?? 0) < pendingAction.goldCost"
               @click="confirmAction"
             >{{ UI.confirm }}</button>
             <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>
@@ -625,6 +641,24 @@ onMounted(async () => {
 
 .modal-box p {
   margin: 0 0 0.75rem;
+}
+
+.gold-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.gs-input {
+  width: 5rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  font-size: 1rem;
+  text-align: right;
 }
 
 .instance-select-row {

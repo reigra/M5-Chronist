@@ -31,6 +31,7 @@ const originId   = ref('')
 const statusId   = ref('')
 const totalEs    = ref(0)
 const availableEp = ref(0)
+const gold        = ref(0)
 
 // Base properties
 const St = ref(50)
@@ -220,6 +221,7 @@ function fillForm(c: Character): void {
   statusId.value    = c.socialStatusId
   totalEs.value     = c.totalEs
   availableEp.value = c.availableEp
+  gold.value        = c.gold ?? 0
 
   St.value  = c.properties.St
   Gs.value  = c.properties.Gs
@@ -275,6 +277,7 @@ function buildCharacter(): Character {
     socialStatusId: statusId.value,
     totalEs:        totalEs.value,
     availableEp:    availableEp.value,
+    gold:           gold.value,
     properties: {
       St: St.value, Gs: Gs.value, Gw: Gw.value, Ko: Ko.value, In: In.value, Zt: Zt.value,
       pA: pA.value, Wk: Wk.value, Au: Au.value, LP: LP.value, AP: AP.value, B: B.value,
@@ -496,6 +499,9 @@ onMounted(async () => {
         </label>
         <label>{{ UI.formEpAvailLabel }}
           <input v-model.number="availableEp" type="number" min="0" max="999999" class="es-input" />
+        </label>
+        <label>{{ UI.formGoldLabel }}
+          <input v-model.number="gold" type="number" min="0" max="999999" class="es-input" />
         </label>
       </section>
 

@@ -46,22 +46,6 @@ async function importFiles(): Promise<void> {
 }
 
 /**
- * Open a multi-file picker for EVA XML files and import them.
- * Supports m5kodex.xml (skills, classes, races) and m5arkanum.xml (spells).
- */
-async function importEvaFiles(): Promise<void> {
-  errorMessage.value = null
-  try {
-    await rulesStorage.importEvaFiles()
-    await loadList()
-  } catch (e) {
-    if (e instanceof Error && e.name !== 'AbortError') {
-      errorMessage.value = e.message
-    }
-  }
-}
-
-/**
  * Toggle the enabled state of a source.
  *
  * @param source - The source summary to toggle.
@@ -149,18 +133,11 @@ onMounted(loadList)
         >
           {{ UI.rulesImportBtn }}
         </button>
-        <button
-          class="btn-import btn-import--eva"
-          :disabled="!browserSupported"
-          @click="importEvaFiles"
-        >
-          {{ UI.rulesImportEvaBtn }}
-        </button>
       </div>
 
       <p class="import-hint">
-        Regelwerkdateien werden als JSON-Dateien im MagusNG-Format erstellt oder
-        aus der EVA-Charaktersoftware als XML exportiert. Anleitungen und
+        Regelwerkdateien werden als JSON-Dateien im MagusNG-Format erstellt.
+        Anleitungen und
         vorgefertigte Dateien findest du auf der
         <a
           href="https://gitlab.com/silbaer/magusng-pwa"
@@ -351,15 +328,6 @@ onMounted(loadList)
 .btn-import:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.btn-import--eva {
-  border-color: #7a5c2e;
-  color: #7a5c2e;
-}
-
-.btn-import--eva:hover:not(:disabled) {
-  background: #fdf5e6;
 }
 
 .import-hint {

@@ -82,6 +82,8 @@ export interface Character {
   totalEs: number
   /** Experience points currently available to spend */
   availableEp: number
+  /** Gold pieces (Goldstücke) */
+  gold?: number
   /** All skills the character has learned */
   skills: CharacterSkill[]
   /** IDs of all spells the character has learned */

@@ -39,7 +39,7 @@ export class AdvancementService {
    * @returns EP cost as a whole number.
    */
   learnCost(skill: Skill, type: CharacterType): number {
-    return skill.learnCost * this.cheapestGroupCost(skill, type)
+    return skill.learnCost * this.cheapestGroupCost(skill, type) * 3
   }
 
   /**

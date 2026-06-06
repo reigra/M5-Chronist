@@ -74,6 +74,7 @@ export const UI = {
   labelSocialStatus: 'Sozialer Status',
   labelEsTotal:      'ES (gesamt)',
   labelEpAvail:      'EP (verfügbar)',
+  labelGold:         'Gold (GS)',
   labelNextGrad:     'Nächster Grad bei',
 
   // ── Personalia-Feldbezeichner ─────────────────────────────────────────────────
@@ -164,6 +165,8 @@ export const UI = {
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
   advAddEp:             'EP hinzufügen',
+  advGoldLearnCost:     'Lernkosten (GS):',
+  advGoldAdvanceCost:   'Trainingskosten (GS):',
   confirmLearnPfx:      'Lernen:',
   confirmFor:           'für',
   confirmAdvancePfx:    'Steigern:',
@@ -187,7 +190,6 @@ export const UI = {
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',
   rulesImportBtn:      'Regeldateien importieren…',
-  rulesImportEvaBtn:   'EVA-XML importieren…',
   rulesGithubBtn:      'Von Github laden',
   rulesGithubLoading:  'Wird geladen…',
   rulesGithubSuccess:  (n: number) => `${n} Regelwerk(e) erfolgreich geladen.`,
@@ -206,6 +208,7 @@ export const UI = {
   formSelectPlaceholder:     '— wählen —',
   formEsTotalLabel:          'ES gesamt (Erfahrungsschatz)',
   formEpAvailLabel:          'EP verfügbar',
+  formGoldLabel:             'Gold (Goldstücke)',
   formAddSkillPlaceholder:   '— Fertigkeit hinzufügen —',
   formAddSpellPlaceholder:   '— Zauberspruch hinzufügen —',
   formSaving:                'Wird gespeichert…',

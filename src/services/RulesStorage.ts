@@ -1,6 +1,5 @@
 import type { RulebookData, RulesData } from '../types/Rules'
 import type { CharacterType } from '../types/CharacterType'
-import { parseEvaXml } from './EvaImporter'
 
 const DB_NAME = 'MagusNG-Rules'
 const DB_VERSION = 1
@@ -101,58 +100,6 @@ export class RulesStorage {
       }
 
       // Sprachen und Schriften normalisieren: id = name, falls nicht vorhanden
-      this.normalizeIds(data)
-
-      const entry: StoredSource = {
-        id:        data.metadata.id,
-        title:     data.metadata.title,
-        version:   data.metadata.version ?? '?',
-        houseRule: data.metadata.houseRule ?? false,
-        enabled:   true,
-        data,
-      }
-
-      const db = await this.open()
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(STORE, 'readwrite')
-        tx.objectStore(STORE).put(entry)
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror    = () => { db.close(); reject(tx.error) }
-      })
-
-      imported.push({ id: entry.id, title: entry.title, version: entry.version, houseRule: entry.houseRule, enabled: true })
-    }
-
-    return imported
-  }
-
-  /**
-   * Open a multi-file picker for EVA-XML files (.xml) and import each one.
-   * Supports m5kodex.xml (Fertigkeiten, Klassen, Rassen) and
-   * m5arkanum.xml (Zauber) — auto-detected from content.
-   *
-   * @returns Summaries of all successfully imported sources.
-   * @throws  If the browser does not support the File System Access API,
-   *          or if a file cannot be parsed.
-   */
-  async importEvaFiles(): Promise<SourceSummary[]> {
-    if (!('showOpenFilePicker' in window)) {
-      throw new Error('File System Access API is not supported in this browser.')
-    }
-
-    const fileHandles: FileSystemFileHandle[] = await (window as any).showOpenFilePicker({
-      types: [{ description: 'EVA XML-Datei', accept: { 'text/xml': ['.xml'] } }],
-      multiple: true,
-    })
-
-    const imported: SourceSummary[] = []
-
-    for (const handle of fileHandles) {
-      const file      = await handle.getFile()
-      const buffer    = await file.arrayBuffer()
-      const xmlString = new TextDecoder('iso-8859-1').decode(buffer)
-      const data      = parseEvaXml(xmlString)
-
       this.normalizeIds(data)
 
       const entry: StoredSource = {

@@ -29,6 +29,7 @@ def parse_zauber(el: ET.Element) -> dict:
         'id': name,
         'name': name,
         'level': level,
+        'learnCost': int(attr(spell_group_assoc, 'iWert', '0')) if spell_group_assoc is not None else 0,
         'spellType': attr(dp, 'Art'),
         'spellGroup': spell_group,
         'elements': elements,
