@@ -47,6 +47,15 @@ const formDescription = ref('')
 const formPrice = ref(0)
 const formWeight = ref(0)
 
+const formWaffe     = ref(false)
+const formDamage    = ref('')
+const formWaffentyp = ref('')
+const formSaveAP    = ref(0)
+const formAnb       = ref(0)
+const formSchb      = ref(0)
+const formAbb       = ref(0)
+const formMagisch   = ref(false)
+
 watch(searchQuery, (val) => {
   if (!val) {
     formGroup.value = ''
@@ -54,6 +63,14 @@ watch(searchQuery, (val) => {
     formDescription.value = ''
     formPrice.value = 0
     formWeight.value = 0
+    formWaffe.value     = false
+    formDamage.value    = ''
+    formWaffentyp.value = ''
+    formSaveAP.value    = 0
+    formAnb.value       = 0
+    formSchb.value      = 0
+    formAbb.value       = 0
+    formMagisch.value   = false
   }
 })
 
@@ -69,6 +86,14 @@ function selectItem(item: EquipmentItem): void {
   formDescription.value = item.description
   formPrice.value = item.price
   formWeight.value = item.weight
+  formWaffe.value     = !!(item.waffe ?? item.waffentyp)
+  formDamage.value    = item.damage ?? ''
+  formWaffentyp.value = item.waffentyp ?? ''
+  formSaveAP.value    = item.saveAP ?? 0
+  formAnb.value       = item.anb ?? 0
+  formSchb.value      = item.schb ?? 0
+  formAbb.value       = item.abb ?? 0
+  formMagisch.value   = !!item.magisch
 }
 
 function addItem(): void {
@@ -83,6 +108,14 @@ function addItem(): void {
       location: formLocation.value,
       price: formPrice.value,
       weight: formWeight.value,
+      waffe:     formWaffe.value || undefined,
+      damage:    formDamage.value || undefined,
+      waffentyp: formWaffentyp.value || undefined,
+      saveAP:    formSaveAP.value || undefined,
+      anb:       formAnb.value || undefined,
+      schb:      formSchb.value || undefined,
+      abb:       formAbb.value || undefined,
+      magisch:   formMagisch.value || undefined,
     },
   ]
   searchQuery.value = ''
@@ -91,6 +124,14 @@ function addItem(): void {
   formDescription.value = ''
   formPrice.value = 0
   formWeight.value = 0
+  formWaffe.value     = false
+  formDamage.value    = ''
+  formWaffentyp.value = ''
+  formSaveAP.value    = 0
+  formAnb.value       = 0
+  formSchb.value      = 0
+  formAbb.value       = 0
+  formMagisch.value   = false
 }
 
 function removeItem(idx: number): void {
@@ -195,6 +236,35 @@ onMounted(async () => {
               {{ item.name }} <span class="search-dropdown-group">({{ item.group }})</span>
             </li>
           </ul>
+        </div>
+
+        <label class="waffe-toggle">{{ UI.equipLabelWaffe }}
+          <input v-model="formWaffe" type="checkbox" />
+        </label>
+
+        <div v-if="formWaffe" class="weapon-grid">
+          <label>{{ UI.equipLabelWaffentyp }}
+            <input v-model="formWaffentyp" type="text" />
+          </label>
+          <label>{{ UI.equipLabelDamage }}
+            <input v-model="formDamage" type="text" />
+          </label>
+          <label class="checkbox-label">{{ UI.equipLabelMagisch }}
+            <input v-model="formMagisch" type="checkbox" />
+          </label>
+          <div></div>
+          <label>{{ UI.equipLabelSaveAP }}
+            <input v-model.number="formSaveAP" type="number" min="0" class="num-input" />
+          </label>
+          <label>{{ UI.equipLabelSchb }}
+            <input v-model.number="formSchb" type="number" class="num-input" />
+          </label>
+          <label>{{ UI.equipLabelAbb }}
+            <input v-model.number="formAbb" type="number" class="num-input" />
+          </label>
+          <label>{{ UI.equipLabelAnb }}
+            <input v-model.number="formAnb" type="number" class="num-input" />
+          </label>
         </div>
 
         <div class="form-grid">
@@ -314,6 +384,50 @@ onMounted(async () => {
 .empty-hint { color: #888; font-style: italic; margin: 0; }
 
 .add-section { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.waffe-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.95em;
+  user-select: none;
+}
+
+.waffe-toggle input { width: 1.1rem; height: 1.1rem; cursor: pointer; }
+
+.weapon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #f5f5f5;
+}
+
+.weapon-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85em;
+  color: #555;
+  gap: 0.2rem;
+}
+
+.weapon-grid input {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  font-size: 1rem;
+}
+
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.4rem !important;
+}
+
+.checkbox-label input { width: 1.1rem; height: 1.1rem; cursor: pointer; }
 
 .search-wrapper { position: relative; width: 100%; }
 

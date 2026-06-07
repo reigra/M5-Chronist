@@ -158,6 +158,14 @@ export const UI = {
   equipLabelDesc:       'Beschreibung',
   equipLabelPrice:      'Preis (GS)',
   equipLabelWeight:     'Gewicht (kg)',
+  equipLabelWaffe:      'Waffe',
+  equipLabelDamage:     'Schaden',
+  equipLabelWaffentyp:  'Waffentyp',
+  equipLabelSaveAP:     'AP-Schutz',
+  equipLabelAnb:        'Angriffs Bonus',
+  equipLabelSchb:       'Schadens Bonus',
+  equipLabelAbb:        'Abwehr Bonus',
+  equipLabelMagisch:    'Magisch',
 
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',

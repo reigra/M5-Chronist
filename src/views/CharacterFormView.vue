@@ -206,7 +206,9 @@ const spellSpecGroups = computed(() => {
 
 /** Alle Waffen aus den geladenen Regeln, alphabetisch sortiert. */
 const allWeapons = computed(() =>
-  [...(rules.value?.weapons ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+  [...(rules.value?.equipment ?? [])]
+    .filter(e => e.waffentyp)
+    .sort((a, b) => a.name.localeCompare(b.name))
 )
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -593,7 +595,7 @@ onMounted(async () => {
             <select v-model="weaponSpec1">
               <option value="">{{ UI.formSelectPlaceholder }}</option>
               <option v-for="w in allWeapons" :key="w.id" :value="w.id">
-                {{ w.name }} ({{ w.groups.join(', ') }})
+                {{ w.name }} ({{ w.waffentyp }})
               </option>
             </select>
           </label>
@@ -601,7 +603,7 @@ onMounted(async () => {
             <select v-model="weaponSpec2">
               <option value="">{{ UI.formSelectPlaceholder }}</option>
               <option v-for="w in allWeapons" :key="w.id" :value="w.id">
-                {{ w.name }} ({{ w.groups.join(', ') }})
+                {{ w.name }} ({{ w.waffentyp }})
               </option>
             </select>
           </label>
@@ -609,7 +611,7 @@ onMounted(async () => {
             <select v-model="weaponSpec3">
               <option value="">{{ UI.formSelectPlaceholder }}</option>
               <option v-for="w in allWeapons" :key="w.id" :value="w.id">
-                {{ w.name }} ({{ w.groups.join(', ') }})
+                {{ w.name }} ({{ w.waffentyp }})
               </option>
             </select>
           </label>
