@@ -86,7 +86,7 @@ def parse_fertigkeit(el: ET.Element):
     }
 
     if attr(el, 'Typ') == 'Waffengruppe':
-        skill['bonusKey'] = 'AbB' if name in ('Parierwaffen', 'Schilde') else 'AnB'
+        skill['bonusKey'] = 'AnB' if not name in ('Parierwaffen', 'Schilde') else ''
     
     ung = attr(dp, 'EWungelernt')
     if ung:

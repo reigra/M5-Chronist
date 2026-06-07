@@ -9,38 +9,60 @@ WEAPON_GROUPS = {'Waffen (Fern)', 'Waffen (Angriff)'}
 def parse_ding(el: ET.Element) -> dict:
     name = attr(el, 'name')
     group = attr(el, 'gruppe')
+    price_str = attr(el, 'preis', '0').strip()
+    weight_str = attr(el, 'gewicht', '0').strip()
+    try:
+        price = float(price_str) if price_str else 0.0
+    except ValueError:
+        price = 0.0
+    try:
+        weight = float(weight_str) if weight_str else 0.0
+    except ValueError:
+        weight = 0.0
     return {
         'id': name,
         'name': name,
-        'groups': [group],
-        'damage': '',
-        'propertyRestrictions': {},
-        'distance': []
+        'group': group,
+        'description': attr(el, 'desc'),
+        'price': price,
+        'weight': weight,
     }
 
 def parse_dinge_document(xml_path: str) -> dict:
     tree = ET.parse(xml_path)
     root = tree.getroot()
 
+    equipment = []
     weapons = []
     for el in root.findall('ding'):
-        group = attr(el, 'gruppe')
-        if group in WEAPON_GROUPS:
-            weapons.append(parse_ding(el))
+        item = parse_ding(el)
+        equipment.append(item)
+        if attr(el, 'gruppe') in WEAPON_GROUPS:
+            weapons.append({
+                'id': item['id'],
+                'name': item['name'],
+                'groups': [item['group']],
+                'damage': '',
+                'propertyRestrictions': {},
+                'distance': [],
+            })
 
     metadata = {
         'id': 'eva-weapons',
-        'title': 'Waffen (EVA)',
+        'title': 'Waffen & Ausrüstung (EVA)',
         'version': '1.0.0',
         'isCore': True,
         'createdAt': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
         'notes': 'Automatisch konvertiert aus dinge.xml (EVA-Charaktersoftware) via Python'
     }
 
-    return {'metadata': metadata, 'weapons': weapons}
+    result = {'metadata': metadata, 'equipment': equipment}
+    if weapons:
+        result['weapons'] = weapons
+    return result
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Parse dinge.xml und extrahiere Waffen in MagusNG weapons-JSON")
+    parser = argparse.ArgumentParser(description="Parse dinge.xml und erzeuge Ausrüstungs- & Waffen-JSON für MagusNG")
     parser.add_argument("input", help="Pfad zur Eingabe dinge.xml")
     parser.add_argument("output", help="Pfad zur Ausgabe JSON-Datei")
     args = parser.parse_args()

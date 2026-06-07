@@ -92,6 +92,8 @@ export interface Character {
   weaponSpecializations?: string[]
   /** Spezialgebiet des Magiers (spellGroup-Key, nur für Typ "Ma") */
   spellSpecialization?: string
+  /** IDs der Ausrüstungsgegenstände, die der Charakter besitzt */
+  inventory?: string[]
   /** Beschreibende Eigenschaften (optional, für Rückwärtskompatibilität) */
   personalia?: CharacterPersonalia
   /** ISO date string when the character was created */
