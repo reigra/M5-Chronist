@@ -38,6 +38,8 @@ export interface EquipmentItem {
   abb?:     number
   /** Whether the weapon is magical */
   magisch?: boolean
+  /** Whether the character is specialised in this weapon */
+  spezialwaffe?: boolean
 }
 
 export interface CharacterEquipmentItem {

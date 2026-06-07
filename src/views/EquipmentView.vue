@@ -54,7 +54,8 @@ const formSaveAP    = ref(0)
 const formAnb       = ref(0)
 const formSchb      = ref(0)
 const formAbb       = ref(0)
-const formMagisch   = ref(false)
+const formMagisch      = ref(false)
+const formSpezialwaffe = ref(false)
 
 watch(searchQuery, (val) => {
   if (!val) {
@@ -71,6 +72,7 @@ watch(searchQuery, (val) => {
     formSchb.value      = 0
     formAbb.value       = 0
     formMagisch.value   = false
+    formSpezialwaffe.value = false
   }
 })
 
@@ -94,6 +96,7 @@ function selectItem(item: EquipmentItem): void {
   formSchb.value      = item.schb ?? 0
   formAbb.value       = item.abb ?? 0
   formMagisch.value   = !!item.magisch
+  formSpezialwaffe.value = !!(item.spezialwaffe ?? character.value?.weaponSpecializations?.includes(item.name))
 }
 
 function addItem(): void {
@@ -115,7 +118,8 @@ function addItem(): void {
       anb:       formAnb.value || undefined,
       schb:      formSchb.value || undefined,
       abb:       formAbb.value || undefined,
-      magisch:   formMagisch.value || undefined,
+      magisch:      formMagisch.value || undefined,
+      spezialwaffe: formSpezialwaffe.value || undefined,
     },
   ]
   searchQuery.value = ''
@@ -131,7 +135,8 @@ function addItem(): void {
   formAnb.value       = 0
   formSchb.value      = 0
   formAbb.value       = 0
-  formMagisch.value   = false
+  formMagisch.value      = false
+  formSpezialwaffe.value = false
 }
 
 function removeItem(idx: number): void {
@@ -252,7 +257,9 @@ onMounted(async () => {
           <label class="checkbox-label">{{ UI.equipLabelMagisch }}
             <input v-model="formMagisch" type="checkbox" />
           </label>
-          <div></div>
+          <label class="checkbox-label">{{ UI.equipLabelSpezialwaffe }}
+            <input v-model="formSpezialwaffe" type="checkbox" />
+          </label>
           <label>{{ UI.equipLabelSaveAP }}
             <input v-model.number="formSaveAP" type="number" min="0" class="num-input" />
           </label>

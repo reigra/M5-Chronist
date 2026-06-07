@@ -165,7 +165,8 @@ export const UI = {
   equipLabelAnb:        'Angriffs Bonus',
   equipLabelSchb:       'Schadens Bonus',
   equipLabelAbb:        'Abwehr Bonus',
-  equipLabelMagisch:    'Magisch',
+  equipLabelMagisch:      'Magisch',
+  equipLabelSpezialwaffe: 'Spezialwaffe',
 
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',
