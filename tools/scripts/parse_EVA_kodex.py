@@ -84,6 +84,9 @@ def parse_fertigkeit(el: ET.Element):
         'linkedProperty': attr(dp, 'Attribut'),
         'notes': ''
     }
+
+    if attr(el, 'Typ') == 'Waffengruppe':
+        skill['bonusKey'] = 'AbB' if name in ('Parierwaffen', 'Schilde') else 'AnB'
     
     ung = attr(dp, 'EWungelernt')
     if ung:

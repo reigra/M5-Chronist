@@ -578,7 +578,7 @@ onMounted(async () => {
             <option v-for="s in availableSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
           <label class="fw-label">{{ UI.colFw }}
-            <input v-model.number="skillFwToAdd" type="number" min="1" max="18" class="fw-input" />
+            <input v-model.number="skillFwToAdd" type="number"  class="fw-input" />
           </label>
           <button type="button" class="btn-add" :disabled="!skillToAdd" @click="addSkill">{{ UI.add }}</button>
         </div>
