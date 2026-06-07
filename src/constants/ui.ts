@@ -138,6 +138,27 @@ export const UI = {
   epAvailable: 'EP verfügbar:',
   esTotal:     'ES gesamt',
 
+  // ── Ausrüstungs-Ansicht (EquipmentView) ─────────────────────────────────────
+  navEquipment:         'Ausrüstung',
+  equipHeader:          'Ausrüstung',
+  equipColName:         'Name',
+  equipColGroup:        'Gruppe',
+  equipColLocation:     'Ort',
+  equipColPrice:        'Preis (GS)',
+  equipColWeight:       'Gewicht (kg)',
+  equipEmpty:           'Keine Ausrüstung vorhanden.',
+  equipSearchPlaceholder: 'Name eingeben oder suchen…',
+  equipAddCustom:       '— Eigenen Gegenstand eingeben —',
+  equipAddBtn:          'Hinzufügen',
+  equipSaveBtn:         'Speichern',
+  equipCancelBtn:       'Abbrechen',
+  equipLabelName:       'Name',
+  equipLabelGroup:      'Gruppe',
+  equipLabelLocation:   'Ort',
+  equipLabelDesc:       'Beschreibung',
+  equipLabelPrice:      'Preis (GS)',
+  equipLabelWeight:     'Gewicht (kg)',
+
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',
   emptySkillsForm:    'Noch keine Fertigkeiten hinzugefügt.',

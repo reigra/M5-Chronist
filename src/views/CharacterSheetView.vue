@@ -160,6 +160,7 @@ onMounted(async () => {
             class="btn-nav"
           >{{ UI.spells }}</router-link>
           <router-link :to="{ name: 'character-edit', params: { id: character.id } }" class="btn-nav">{{ UI.navEdit }}</router-link>
+          <router-link :to="{ name: 'equipment', params: { id: character.id } }" class="btn-nav">{{ UI.navEquipment }}</router-link>
           <button
             class="btn-nav"
             :disabled="!browserSupported"

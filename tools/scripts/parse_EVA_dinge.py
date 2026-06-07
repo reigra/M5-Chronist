@@ -24,6 +24,7 @@ def parse_ding(el: ET.Element) -> dict:
         'name': name,
         'group': group,
         'description': attr(el, 'desc'),
+        'location': attr(el, 'ort'),
         'price': price,
         'weight': weight,
     }
