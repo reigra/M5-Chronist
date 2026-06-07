@@ -57,22 +57,32 @@ const formAbb       = ref(0)
 const formMagisch      = ref(false)
 const formSpezialwaffe = ref(false)
 
+const editingIndex = ref<number | null>(null)
+const isEditing = computed(() => editingIndex.value !== null)
+
+function resetForm(): void {
+  searchQuery.value = ''
+  showDropdown.value = false
+  formGroup.value = ''
+  formLocation.value = ''
+  formDescription.value = ''
+  formPrice.value = 0
+  formWeight.value = 0
+  formWaffe.value     = false
+  formDamage.value    = ''
+  formWaffentyp.value = ''
+  formSaveAP.value    = 0
+  formAnb.value       = 0
+  formSchb.value      = 0
+  formAbb.value       = 0
+  formMagisch.value   = false
+  formSpezialwaffe.value = false
+}
+
 watch(searchQuery, (val) => {
   if (!val) {
-    formGroup.value = ''
-    formLocation.value = ''
-    formDescription.value = ''
-    formPrice.value = 0
-    formWeight.value = 0
-    formWaffe.value     = false
-    formDamage.value    = ''
-    formWaffentyp.value = ''
-    formSaveAP.value    = 0
-    formAnb.value       = 0
-    formSchb.value      = 0
-    formAbb.value       = 0
-    formMagisch.value   = false
-    formSpezialwaffe.value = false
+    resetForm()
+    editingIndex.value = null
   }
 })
 
@@ -99,44 +109,62 @@ function selectItem(item: EquipmentItem): void {
   formSpezialwaffe.value = !!(item.spezialwaffe ?? character.value?.weaponSpecializations?.includes(item.name))
 }
 
+function buildItem(): EquipmentItem {
+  return {
+    id: searchQuery.value.trim(),
+    name: searchQuery.value.trim(),
+    group: formGroup.value,
+    description: formDescription.value,
+    location: formLocation.value,
+    price: formPrice.value,
+    weight: formWeight.value,
+    waffe:     formWaffe.value || undefined,
+    damage:    formDamage.value || undefined,
+    waffentyp: formWaffentyp.value || undefined,
+    saveAP:    formSaveAP.value || undefined,
+    anb:       formAnb.value || undefined,
+    schb:      formSchb.value || undefined,
+    abb:       formAbb.value || undefined,
+    magisch:      formMagisch.value || undefined,
+    spezialwaffe: formSpezialwaffe.value || undefined,
+  }
+}
+
 function addItem(): void {
   if (!searchQuery.value.trim()) return
-  inventory.value = [
-    ...inventory.value,
-    {
-      id: searchQuery.value.trim(),
-      name: searchQuery.value.trim(),
-      group: formGroup.value,
-      description: formDescription.value,
-      location: formLocation.value,
-      price: formPrice.value,
-      weight: formWeight.value,
-      waffe:     formWaffe.value || undefined,
-      damage:    formDamage.value || undefined,
-      waffentyp: formWaffentyp.value || undefined,
-      saveAP:    formSaveAP.value || undefined,
-      anb:       formAnb.value || undefined,
-      schb:      formSchb.value || undefined,
-      abb:       formAbb.value || undefined,
-      magisch:      formMagisch.value || undefined,
-      spezialwaffe: formSpezialwaffe.value || undefined,
-    },
-  ]
-  searchQuery.value = ''
-  formGroup.value = ''
-  formLocation.value = ''
-  formDescription.value = ''
-  formPrice.value = 0
-  formWeight.value = 0
-  formWaffe.value     = false
-  formDamage.value    = ''
-  formWaffentyp.value = ''
-  formSaveAP.value    = 0
-  formAnb.value       = 0
-  formSchb.value      = 0
-  formAbb.value       = 0
-  formMagisch.value      = false
-  formSpezialwaffe.value = false
+  const item = buildItem()
+  if (editingIndex.value !== null) {
+    inventory.value = inventory.value.map((it, i) => i === editingIndex.value ? item : it)
+  } else {
+    inventory.value = [...inventory.value, item]
+  }
+  editingIndex.value = null
+  resetForm()
+}
+
+function editItem(idx: number): void {
+  const item = inventory.value[idx]
+  searchQuery.value = item.name
+  formGroup.value = item.group
+  formLocation.value = item.location
+  formDescription.value = item.description
+  formPrice.value = item.price
+  formWeight.value = item.weight
+  formWaffe.value     = !!(item.waffe ?? item.waffentyp)
+  formDamage.value    = item.damage ?? ''
+  formWaffentyp.value = item.waffentyp ?? ''
+  formSaveAP.value    = item.saveAP ?? 0
+  formAnb.value       = item.anb ?? 0
+  formSchb.value      = item.schb ?? 0
+  formAbb.value       = item.abb ?? 0
+  formMagisch.value   = !!item.magisch
+  formSpezialwaffe.value = !!(item.spezialwaffe ?? character.value?.weaponSpecializations?.includes(item.name))
+  editingIndex.value = idx
+}
+
+function cancelEdit(): void {
+  editingIndex.value = null
+  resetForm()
 }
 
 function removeItem(idx: number): void {
@@ -210,6 +238,7 @@ onMounted(async () => {
               <th>{{ UI.equipColPrice }}</th>
               <th>{{ UI.equipColWeight }}</th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -219,6 +248,7 @@ onMounted(async () => {
               <td>{{ item.location }}</td>
               <td>{{ item.price }}</td>
               <td>{{ item.weight }}</td>
+              <td><button type="button" class="btn-edit" @click="editItem(idx)">✎</button></td>
               <td><button type="button" class="btn-remove" @click="removeItem(idx)">✕</button></td>
             </tr>
           </tbody>
@@ -292,9 +322,12 @@ onMounted(async () => {
           </label>
         </div>
 
-        <button class="btn-add" :disabled="!searchQuery.trim()" @click="addItem">
-          {{ UI.equipAddBtn }}
-        </button>
+        <div class="action-row">
+          <button class="btn-add" :disabled="!searchQuery.trim()" @click="addItem">
+            {{ isEditing ? UI.equipUpdateBtn : UI.equipAddBtn }}
+          </button>
+          <button v-if="isEditing" class="btn-cancel" @click="cancelEdit">{{ UI.cancel }}</button>
+        </div>
       </section>
 
       <div class="form-actions">
@@ -378,6 +411,15 @@ onMounted(async () => {
 }
 
 .equip-table th { background: #f0f0f0; font-weight: 600; }
+
+.btn-edit {
+  background: none;
+  border: none;
+  color: #2a4a7a;
+  cursor: pointer;
+  font-size: 0.9em;
+  padding: 0.1rem 0.3rem;
+}
 
 .btn-remove {
   background: none;
@@ -488,6 +530,20 @@ onMounted(async () => {
 }
 
 .num-input { width: 8rem; text-align: right; }
+
+.action-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.action-row .btn-cancel {
+  padding: 0.35rem 0.85rem;
+  background: #fff;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  cursor: pointer;
+}
 
 .btn-add {
   align-self: flex-start;

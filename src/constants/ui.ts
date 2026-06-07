@@ -150,6 +150,8 @@ export const UI = {
   equipSearchPlaceholder: 'Name eingeben oder suchen…',
   equipAddCustom:       '— Eigenen Gegenstand eingeben —',
   equipAddBtn:          'Hinzufügen',
+  equipEditBtn:         'Bearbeiten',
+  equipUpdateBtn:       'Aktualisieren',
   equipSaveBtn:         'Speichern',
   equipCancelBtn:       'Abbrechen',
   equipLabelName:       'Name',
