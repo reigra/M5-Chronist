@@ -2,7 +2,7 @@ In diesem Archiv sind die Scripte die  gebraucht werden um die Regeldateien zu e
 
 Zum erstellen die create-rules-files.cmd ausführen. 
 Wenn alles funktioniert, werden die EVA Files runtergeladen und daraus die Rule-Files erstellt. 
-Wenn Python nicht gefunden wird, wird das runtergeladen und installiert. Den UAC-Dialog bestätigen.
+Wenn Python nicht gefunden wird, Python installieren oder über den Windows Store beziehen. Anschließend das Script nochmal starten.
 
 Am Ende sollten drei eva_*.json im Verzeichnis rules sein.
 
@@ -17,5 +17,5 @@ Oben unter "+ Neuer Charakter" kannst du jetzt einen Charakter eingeben.
 
 Falls du einen Fehler findest oder was fehlt, kannst du unter https://gitlab.com/silbaer/magusng-pwa/-/work_items?sort=created_date&state=opened&first_page_size=20 oben rechts ein neues Issue erstellen.
 
-Gold, PP und Ausrüstung fehlen noch. Ebenso eine vernünftige Druckversion.
+PP und Ausrüstung fehlen noch. Ebenso eine vernünftige Druckversion.
 

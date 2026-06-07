@@ -49,33 +49,33 @@ echo.
 
 if not exist "%ResultDir%" mkdir "%ResultDir%"
 
-REM 4. parse_kodex.py
-echo [4/6] Running parse_kodex.py...
-python "%ScriptDir%scripts\parse_kodex.py" "%SourceDir%\m5kodex.xml" "%ResultDir%\eva_kodex.json"
+REM 4. parse_EVA_kodex.py
+echo [4/6] Running parse_EVA_kodex.py...
+python "%ScriptDir%scripts\parse_EVA_kodex.py" "%SourceDir%\m5kodex.xml" "%ResultDir%\eva_kodex.json"
 if errorlevel 1 (
-    echo   -^> parse_kodex.py fehlgeschlagen
+    echo   -^> parse_EVA_kodex.py fehlgeschlagen
     del "%TempZip%" 2>nul
     exit /b 1
 )
 echo   -^> Wrote "%ResultDir%\eva_kodex.json"
 echo.
 
-REM 5. parse_arkanum.py
-echo [5/6] Running parse_arkanum.py...
-python "%ScriptDir%scripts\parse_arkanum.py" "%SourceDir%\m5arkanum.xml" "%ResultDir%\eva_arkanum.json"
+REM 5. parse_EVA_arkanum.py
+echo [5/6] Running parse_EVA_arkanum.py...
+python "%ScriptDir%scripts\parse_EVA_arkanum.py" "%SourceDir%\m5arkanum.xml" "%ResultDir%\eva_arkanum.json"
 if errorlevel 1 (
-    echo   -^> parse_arkanum.py fehlgeschlagen
+    echo   -^> parse_EVA_arkanum.py fehlgeschlagen
     del "%TempZip%" 2>nul
     exit /b 1
 )
 echo   -^> Wrote "%ResultDir%\eva_arkanum.json"
 echo.
 
-REM 6. parse_dinge.py
-echo [6/6] Running parse_dinge.py...
-python "%ScriptDir%scripts\parse_dinge.py" "%SourceDir%\dinge.xml" "%ResultDir%\eva_dinge.json"
+REM 6. parse_EVA_dinge.py
+echo [6/6] Running parse_EVA_dinge.py...
+python "%ScriptDir%scripts\parse_EVA_dinge.py" "%SourceDir%\dinge.xml" "%ResultDir%\eva_dinge.json"
 if errorlevel 1 (
-    echo   -^> parse_dinge.py fehlgeschlagen
+    echo   -^> parse_EVA_dinge.py fehlgeschlagen
     del "%TempZip%" 2>nul
     exit /b 1
 )

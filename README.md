@@ -56,9 +56,9 @@ Einfach `tools/create-rules-files.cmd` doppelklicken. Das Skript lädt automatis
 4. Führe die Python-Skripte aus:
 
    ```bash
-   python3 tools/scripts/parse_kodex.py tools/EVA/m5kodex.xml tools/rules/eva_kodex.json
-   python3 tools/scripts/parse_arkanum.py tools/EVA/m5arkanum.xml tools/rules/eva_arkanum.json
-   python3 tools/scripts/parse_dinge.py tools/EVA/dinge.xml tools/rules/eva_dinge.json
+   python3 tools/scripts/parse_EVA_kodex.py tools/EVA/m5kodex.xml tools/rules/eva_kodex.json
+   python3 tools/scripts/parse_EVA_arkanum.py tools/EVA/m5arkanum.xml tools/rules/eva_arkanum.json
+   python3 tools/scripts/parse_EVA_dinge.py tools/EVA/dinge.xml tools/rules/eva_dinge.json
    ```
 
 5. Lade die erzeugten JSON-Dateien unter "Regeln verwalten" in der PWA hoch
