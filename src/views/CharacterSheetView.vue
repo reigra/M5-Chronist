@@ -249,7 +249,7 @@ onMounted(async () => {
       <!-- ── Waffenfertigkeiten ── -->
       <section v-if="weaponRows.length > 0" class="card">
         <h2>{{ UI.secWeaponSkills }}</h2>
-        <div class="skill-grid">
+        <div class="skill-grid skill-grid--weapons">
           <div v-for="row in weaponRows" :key="row.name" class="skill-row">
             <span>{{ row.name }}</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
@@ -260,7 +260,7 @@ onMounted(async () => {
       <!-- ── Gelernte Fertigkeiten ── -->
       <section v-if="learnedRows.length > 0" class="card">
         <h2>{{ UI.secSkills }}</h2>
-        <div class="skill-grid">
+        <div class="skill-grid skill-grid--learned">
           <div v-for="row in learnedRows" :key="row.name" class="skill-row">
             <span>{{ row.name }}</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
@@ -271,7 +271,7 @@ onMounted(async () => {
       <!-- ── Ungelernte Fertigkeiten ── -->
       <section v-if="unlearnedRows.length > 0" class="card">
         <h2>{{ UI.secUnlearnedSkills }}</h2>
-        <div class="skill-grid">
+        <div class="skill-grid skill-grid--unlearned">
           <div v-for="row in unlearnedRows" :key="row.name" class="skill-row skill-row--unlearned">
             <span>{{ row.name }}*</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
@@ -434,8 +434,19 @@ onMounted(async () => {
 
 .skill-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 0 1.5rem;
+}
+
+.skill-grid--weapons {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.skill-grid--learned {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.skill-grid--unlearned {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .skill-row {
