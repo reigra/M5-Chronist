@@ -1,3 +1,5 @@
+import type { EquipmentItem } from './Equipment'
+
 /**
  * CharacterSkill — a skill as it is stored on a character.
  */
@@ -92,6 +94,8 @@ export interface Character {
   weaponSpecializations?: string[]
   /** Spezialgebiet des Magiers (spellGroup-Key, nur für Typ "Ma") */
   spellSpecialization?: string
+  /** Ausrüstungsgegenstände, die der Charakter besitzt */
+  inventory?: EquipmentItem[]
   /** Beschreibende Eigenschaften (optional, für Rückwärtskompatibilität) */
   personalia?: CharacterPersonalia
   /** ISO date string when the character was created */

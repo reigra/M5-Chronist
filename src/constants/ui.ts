@@ -39,12 +39,16 @@ export const UI = {
     'Das Importieren von Regeln erfordert einen Chromium-basierten Browser (Chrome, Edge oder Opera).',
 
   // ── Abschnitts-Überschriften ─────────────────────────────────────────────────
-  secIdentity:    'Identität',
-  secPersonalia:  'Personalia',
-  secExperience:  'Erfahrung',
-  secProps:       'Eigenschaften',
-  secBoni:        'Boni',
-  secSkills:      'Fertigkeiten',
+  secIdentity:            'Identität',
+  secPersonalia:          'Personalia',
+  secIdentityPersonalia:  'Identität, Personalia & Spezialisierungen',
+  secExperience:          'Erfahrung',
+  secProps:               'Eigenschaften',
+  secBoni:                'Boni',
+  secPropsBoni:           'Eigenschaften & Boni',
+  secWeaponSkills:    'Waffenfertigkeiten',
+  secSkills:          'Fertigkeiten',
+  secUnlearnedSkills: 'Ungelernte Fertigkeiten',
 
   // ── Spalten- und Feldbezeichner ──────────────────────────────────────────────
   colSkill:    'Fertigkeit',
@@ -88,6 +92,7 @@ export const UI = {
   labelGG:          'GG (Göttergunst)',
   labelSG:          'SG (Schicksalsgunst)',
 
+  geschlechtOptions: ['männlich', 'weiblich'] as const,
   haendigkeitOptions: ['rechts', 'links', 'beidhändig'] as const,
 
   // ── Eigenschafts-Labels (Charakterbogen) ─────────────────────────────────────
@@ -136,6 +141,38 @@ export const UI = {
   epAvailable: 'EP verfügbar:',
   esTotal:     'ES gesamt',
 
+  // ── Ausrüstungs-Ansicht (EquipmentView) ─────────────────────────────────────
+  navEquipment:         'Ausrüstung',
+  equipHeader:          'Ausrüstung',
+  equipColName:         'Name',
+  equipColGroup:        'Gruppe',
+  equipColLocation:     'Ort',
+  equipColPrice:        'Preis (GS)',
+  equipColWeight:       'Gewicht (kg)',
+  equipEmpty:           'Keine Ausrüstung vorhanden.',
+  equipSearchPlaceholder: 'Name eingeben oder suchen…',
+  equipAddCustom:       '— Eigenen Gegenstand eingeben —',
+  equipAddBtn:          'Hinzufügen',
+  equipEditBtn:         'Bearbeiten',
+  equipUpdateBtn:       'Aktualisieren',
+  equipSaveBtn:         'Speichern',
+  equipCancelBtn:       'Abbrechen',
+  equipLabelName:       'Name',
+  equipLabelGroup:      'Gruppe',
+  equipLabelLocation:   'Ort',
+  equipLabelDesc:       'Beschreibung',
+  equipLabelPrice:      'Preis (GS)',
+  equipLabelWeight:     'Gewicht (kg)',
+  equipLabelWaffe:      'Waffe',
+  equipLabelDamage:     'Schaden',
+  equipLabelWaffentyp:  'Waffentyp',
+  equipLabelSaveAP:     'AP-Schutz',
+  equipLabelAnb:        'Angriffs Bonus',
+  equipLabelSchb:       'Schadens Bonus',
+  equipLabelAbb:        'Abwehr Bonus',
+  equipLabelMagisch:      'Magisch',
+  equipLabelSpezialwaffe: 'Spezialwaffe',
+
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',
   emptySkillsForm:    'Noch keine Fertigkeiten hinzugefügt.',
@@ -178,6 +215,7 @@ export const UI = {
   advGradBased:         'Grad-basiert',
   advNotAdvanceable:    'nicht steigerbar',
   advLearnNewSkill:     'Neue Fertigkeit lernen',
+  advLearnWeaponSkill:  'Neue Waffenfertigkeit lernen',
   advChooseInstance:    'Spezialisierung:',
   advChoosePlaceholder: '— bitte wählen —',
 

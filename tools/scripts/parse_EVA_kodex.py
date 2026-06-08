@@ -40,6 +40,8 @@ def parse_tekosten(el: ET.Element) -> dict:
         'advancementCosts': advancement_costs
     }
 
+SKIP_SKILLS = {'AP verbessern'}
+
 def parse_name_value_list(raw: str) -> list:
     if not raw:
         return []
@@ -73,6 +75,7 @@ def parse_fertigkeit(el: ET.Element):
     skill = {
         'id': name,
         'name': name,
+        'typ': attr(el, 'Typ'),
         'groups': [normalize_group_name(attr(a, 'sWert')) for a in assocs],
         'learnCost': learn_cost,
         'advancementCosts': tek['advancementCosts'],
@@ -81,6 +84,9 @@ def parse_fertigkeit(el: ET.Element):
         'linkedProperty': attr(dp, 'Attribut'),
         'notes': ''
     }
+
+    if attr(el, 'Typ') == 'Waffengruppe':
+        skill['bonusKey'] = 'AnB' if not name in ('Parierwaffen', 'Schilde') else ''
     
     ung = attr(dp, 'EWungelernt')
     if ung:
@@ -107,6 +113,39 @@ def parse_fertigkeit(el: ET.Element):
                 }
                 
     return skill, multi_instance_info
+
+def parse_angeborene_fertigkeit(el: ET.Element):
+    name = attr(el, 'Name')
+    dp = get_child(el, 'Dynprops')
+
+    skill = {
+        'id': name,
+        'name': name,
+        'typ': 'angeboreneFertigkeit',
+        'groups': [],
+        'learnCost': 0,
+        'advancementCosts': [],
+        'baseValue': 0,
+        'maxValue': 0,
+        'linkedProperty': attr(dp, 'Attribut'),
+        'notes': '',
+    }
+
+    aw = attr(dp, 'Anfangswert').strip()
+    if aw:
+        try:
+            skill['baseValue'] = int(aw)
+        except ValueError:
+            pass
+
+    ung = attr(dp, 'EWungelernt')
+    if ung:
+        try:
+            skill['unlearnedValue'] = int(ung)
+        except ValueError:
+            pass
+
+    return skill
 
 def parse_klasse(el: ET.Element) -> dict:
     name = attr(el, 'Name')
@@ -273,11 +312,19 @@ def parse_kodex_document(xml_path: str) -> dict:
     multi_instance_skills = []
     
     for el in lernstoffe:
-        if attr(el, 'Typ') == 'Fertigkeit':
+        name = attr(el, 'Name')
+        if name in SKIP_SKILLS:
+            continue
+
+        typ = attr(el, 'Typ')
+        if typ == 'Fertigkeit' or typ == 'Waffengruppe':
             skill, multi_info = parse_fertigkeit(el)
             skills.append(skill)
             if multi_info:
                 multi_instance_skills.append(multi_info)
+        elif typ == 'angeboreneFertigkeit':
+            skill = parse_angeborene_fertigkeit(el)
+            skills.append(skill)
                 
     types = [parse_klasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Klasse']
     races = [parse_rasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Rasse']

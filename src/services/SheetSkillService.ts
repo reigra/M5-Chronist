@@ -8,6 +8,7 @@ export interface SheetSkillRow {
   displayEw: number
   linkedProperty: string
   unlearned: boolean
+  isWeapon: boolean
 }
 
 /**
@@ -76,6 +77,7 @@ export class SheetSkillService {
             displayEw: cs.value + propertyBonus + bonusValue,
             linkedProperty: linkedProperty ?? '—',
             unlearned: false,
+            isWeapon: false,
           })
         }
         continue
@@ -93,6 +95,7 @@ export class SheetSkillService {
           displayEw: computeEw(character, baseSkill, cs.value),
           linkedProperty: baseSkill.linkedProperty ?? '—',
           unlearned: false,
+          isWeapon: false,
         })
         continue
       }
@@ -106,6 +109,7 @@ export class SheetSkillService {
         displayEw: computeEw(character, skill, cs.value),
         linkedProperty: skill.linkedProperty ?? '—',
         unlearned: false,
+        isWeapon: skill.typ === 'Waffengruppe',
       })
     }
 
@@ -116,6 +120,7 @@ export class SheetSkillService {
         displayEw: s.unlearnedValue as number,
         linkedProperty: s.linkedProperty ?? '—',
         unlearned: true,
+        isWeapon: s.typ === 'Waffengruppe',
       }))
 
     return [...learnedRows, ...unlearnedRows].sort((a, b) => a.name.localeCompare(b.name))
