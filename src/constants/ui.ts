@@ -92,6 +92,7 @@ export const UI = {
   labelGG:          'GG (Göttergunst)',
   labelSG:          'SG (Schicksalsgunst)',
 
+  geschlechtOptions: ['männlich', 'weiblich'] as const,
   haendigkeitOptions: ['rechts', 'links', 'beidhändig'] as const,
 
   // ── Eigenschafts-Labels (Charakterbogen) ─────────────────────────────────────

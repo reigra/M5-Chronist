@@ -464,7 +464,10 @@ onMounted(async () => {
 
           <div class="form-pair">
             <label for="p-geschlecht">{{ UI.labelGeschlecht }}</label>
-            <input id="p-geschlecht" v-model="geschlecht" type="text" />
+            <select id="p-geschlecht" v-model="geschlecht">
+              <option value="">—</option>
+              <option v-for="opt in UI.geschlechtOptions" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
           </div>
 
           <div class="form-pair">
