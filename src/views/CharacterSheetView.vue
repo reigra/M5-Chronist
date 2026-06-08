@@ -175,22 +175,15 @@ onMounted(async () => {
         {{ UI.sheetUnsupportedType }}
       </div>
 
-      <!-- ── Identity ── -->
+      <!-- ── Identität, Personalia & Spezialisierungen ── -->
       <section class="card">
-        <h2>{{ UI.secIdentity }}</h2>
+        <h2>{{ UI.secIdentityPersonalia }}</h2>
         <dl class="prop-list">
           <dt>{{ UI.labelPlayer }}</dt>    <dd>{{ character.player }}</dd>
           <dt>{{ UI.labelRace }}</dt>      <dd>{{ raceName }}</dd>
           <dt>{{ UI.labelType }}</dt>      <dd>{{ typeName }}</dd>
           <dt>{{ UI.labelOrigin }}</dt>    <dd>{{ originName }}</dd>
           <dt>{{ UI.labelStatus }}</dt>    <dd>{{ statusName }}</dd>
-        </dl>
-      </section>
-
-      <!-- ── Personalia ── -->
-      <section class="card">
-        <h2>{{ UI.secPersonalia }}</h2>
-        <dl class="prop-list">
           <dt>{{ UI.labelGeschlecht }}</dt>  <dd>{{ character.personalia?.geschlecht  ?? UI.notApplicable }}</dd>
           <dt>{{ UI.labelHaendigkeit }}</dt> <dd>{{ character.personalia?.haendigkeit ?? UI.notApplicable }}</dd>
           <dt>{{ UI.labelAlter }}</dt>       <dd>{{ character.personalia?.alter       ?? UI.notApplicable }}</dd>
@@ -200,6 +193,18 @@ onMounted(async () => {
           <dt>{{ UI.labelGlaube }}</dt>      <dd>{{ character.personalia?.glaube      ?? UI.notApplicable }}</dd>
           <dt>{{ UI.labelGG }}</dt>          <dd>{{ character.personalia?.gg          ?? UI.notApplicable }}</dd>
           <dt>{{ UI.labelSG }}</dt>          <dd>{{ character.personalia?.sg          ?? UI.notApplicable }}</dd>
+          <template v-if="hasSpecializations">
+            <template v-if="(character.weaponSpecializations?.length ?? 0) > 0">
+              <dt v-for="(_, i) in character.weaponSpecializations" :key="'ws-dt-' + i">
+                {{ UI.labelWeaponSpec }} {{ (character.weaponSpecializations!.length > 1) ? i + 1 : '' }}
+              </dt>
+              <dd v-for="(spec, i) in character.weaponSpecializations" :key="'ws-dd-' + i">{{ spec }}</dd>
+            </template>
+            <template v-if="character.spellSpecialization">
+              <dt>{{ UI.labelSpellSpec }}</dt>
+              <dd>{{ (UI.spellGroupNames as Record<string, string>)[character.spellSpecialization] ?? character.spellSpecialization }}</dd>
+            </template>
+          </template>
         </dl>
       </section>
 
@@ -215,29 +220,22 @@ onMounted(async () => {
         </dl>
       </section>
 
-      <!-- ── Eigenschaften ── -->
+      <!-- ── Eigenschaften & Boni ── -->
       <section class="card">
-        <h2>{{ UI.secProps }}</h2>
+        <h2>{{ UI.secPropsBoni }}</h2>
         <dl class="prop-list prop-list--wide">
-          <dt>{{ UI.propSt }}</dt>  <dd>{{ character.properties.St }}</dd>
-          <dt>{{ UI.propGs }}</dt>  <dd>{{ character.properties.Gs }}</dd>
-          <dt>{{ UI.propGw }}</dt>  <dd>{{ character.properties.Gw }}</dd>
-          <dt>{{ UI.propKo }}</dt>  <dd>{{ character.properties.Ko }}</dd>
-          <dt>{{ UI.propIn }}</dt>  <dd>{{ character.properties.In }}</dd>
-          <dt>{{ UI.propZt }}</dt>  <dd>{{ character.properties.Zt }}</dd>
-          <dt>{{ UI.propPa }}</dt>  <dd>{{ character.properties.pA }}</dd>
-          <dt>{{ UI.propWk }}</dt>  <dd>{{ character.properties.Wk }}</dd>
-          <dt>{{ UI.propAu }}</dt>  <dd>{{ character.properties.Au }}</dd>
-          <dt>{{ UI.propLp }}</dt>  <dd>{{ character.properties.LP }}</dd>
-          <dt>{{ UI.propAp }}</dt>  <dd>{{ character.properties.AP }}</dd>
-          <dt>{{ UI.propB }}</dt>   <dd>{{ character.properties.B }}</dd>
-        </dl>
-      </section>
-
-      <!-- ── Boni ── -->
-      <section class="card">
-        <h2>{{ UI.secBoni }}</h2>
-        <dl class="prop-list prop-list--wide">
+          <dt>{{ UI.propSt }}</dt>    <dd>{{ character.properties.St }}</dd>
+          <dt>{{ UI.propGs }}</dt>    <dd>{{ character.properties.Gs }}</dd>
+          <dt>{{ UI.propGw }}</dt>    <dd>{{ character.properties.Gw }}</dd>
+          <dt>{{ UI.propKo }}</dt>    <dd>{{ character.properties.Ko }}</dd>
+          <dt>{{ UI.propIn }}</dt>    <dd>{{ character.properties.In }}</dd>
+          <dt>{{ UI.propZt }}</dt>    <dd>{{ character.properties.Zt }}</dd>
+          <dt>{{ UI.propPa }}</dt>    <dd>{{ character.properties.pA }}</dd>
+          <dt>{{ UI.propWk }}</dt>    <dd>{{ character.properties.Wk }}</dd>
+          <dt>{{ UI.propAu }}</dt>    <dd>{{ character.properties.Au }}</dd>
+          <dt>{{ UI.propLp }}</dt>    <dd>{{ character.properties.LP }}</dd>
+          <dt>{{ UI.propAp }}</dt>    <dd>{{ character.properties.AP }}</dd>
+          <dt>{{ UI.propB }}</dt>     <dd>{{ character.properties.B }}</dd>
           <dt>{{ UI.propAusb }}</dt>  <dd>{{ character.boni.AusB }}</dd>
           <dt>{{ UI.propSchb }}</dt>  <dd>{{ character.boni.SchB }}</dd>
           <dt>{{ UI.propAnb }}</dt>   <dd>{{ character.boni.AnB }}</dd>
@@ -251,64 +249,34 @@ onMounted(async () => {
       <!-- ── Waffenfertigkeiten ── -->
       <section v-if="weaponRows.length > 0" class="card">
         <h2>{{ UI.secWeaponSkills }}</h2>
-        <table class="skill-table">
-          <thead>
-            <tr>
-              <th>{{ UI.colSkill }}</th>
-              <th>{{ UI.colEw }}</th>
-              <th>{{ UI.colAttr }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in weaponRows" :key="row.name">
-              <td>{{ row.name }}</td>
-              <td>{{ row.displayEw }}</td>
-              <td>{{ row.linkedProperty }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="skill-grid">
+          <div v-for="row in weaponRows" :key="row.name" class="skill-row">
+            <span>{{ row.name }}</span>
+            <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+          </div>
+        </div>
       </section>
 
       <!-- ── Gelernte Fertigkeiten ── -->
       <section v-if="learnedRows.length > 0" class="card">
         <h2>{{ UI.secSkills }}</h2>
-        <table class="skill-table">
-          <thead>
-            <tr>
-              <th>{{ UI.colSkill }}</th>
-              <th>{{ UI.colEw }}</th>
-              <th>{{ UI.colAttr }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in learnedRows" :key="row.name">
-              <td>{{ row.name }}</td>
-              <td>{{ row.displayEw }}</td>
-              <td>{{ row.linkedProperty }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="skill-grid">
+          <div v-for="row in learnedRows" :key="row.name" class="skill-row">
+            <span>{{ row.name }}</span>
+            <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+          </div>
+        </div>
       </section>
 
       <!-- ── Ungelernte Fertigkeiten ── -->
       <section v-if="unlearnedRows.length > 0" class="card">
         <h2>{{ UI.secUnlearnedSkills }}</h2>
-        <table class="skill-table">
-          <thead>
-            <tr>
-              <th>{{ UI.colSkill }}</th>
-              <th>{{ UI.colEw }}</th>
-              <th>{{ UI.colAttr }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in unlearnedRows" :key="row.name" class="row-unlearned">
-              <td>{{ row.name }}*</td>
-              <td>{{ row.displayEw }}</td>
-              <td>{{ row.linkedProperty }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="skill-grid">
+          <div v-for="row in unlearnedRows" :key="row.name" class="skill-row skill-row--unlearned">
+            <span>{{ row.name }}*</span>
+            <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+          </div>
+        </div>
       </section>
 
       <!-- ── Spells ── -->
@@ -331,27 +299,6 @@ onMounted(async () => {
           </tbody>
         </table>
           <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
-      </section>
-
-      <!-- ── Spezialisierungen ── -->
-      <section v-if="hasSpecializations" class="card">
-        <h2>{{ UI.secSpecializations }}</h2>
-        <dl class="prop-list">
-          <template v-if="(character.weaponSpecializations?.length ?? 0) > 0">
-            <dt
-              v-for="(_, i) in character.weaponSpecializations"
-              :key="'ws-dt-' + i"
-            >{{ UI.labelWeaponSpec }} {{ (character.weaponSpecializations!.length > 1) ? i + 1 : '' }}</dt>
-            <dd
-              v-for="(spec, i) in character.weaponSpecializations"
-              :key="'ws-dd-' + i"
-            >{{ spec }}</dd>
-          </template>
-          <template v-if="character.spellSpecialization">
-            <dt>{{ UI.labelSpellSpec }}</dt>
-            <dd>{{ (UI.spellGroupNames as Record<string, string>)[character.spellSpecialization] ?? character.spellSpecialization }}</dd>
-          </template>
-        </dl>
       </section>
 
       <!-- ── Footer ── -->
@@ -469,21 +416,42 @@ onMounted(async () => {
 .prop-list dd { margin: 0; font-weight: 600; }
 
 .skill-table {
-  width: 100%;
+  width: auto;
   border-collapse: collapse;
 }
 
-.skill-table th,
 .skill-table td {
-  text-align: left;
-  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+  padding: 0.35rem 1rem 0.35rem 0;
   border-bottom: 1px solid #eee;
   font-size: 0.9em;
 }
 
-.skill-table th { background: #f0f0f0; font-weight: 600; }
+.skill-table td:last-child {
+  text-align: right;
+  padding: 0.35rem 0;
+}
 
-.row-unlearned td { font-style: italic; }
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0 1.5rem;
+}
+
+.skill-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+}
+
+.skill-row span:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.skill-row--unlearned { font-style: italic; }
 
 .empty-hint { color: #888; font-style: italic; margin: 0; }
 

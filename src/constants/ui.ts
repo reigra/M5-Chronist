@@ -39,11 +39,13 @@ export const UI = {
     'Das Importieren von Regeln erfordert einen Chromium-basierten Browser (Chrome, Edge oder Opera).',
 
   // ── Abschnitts-Überschriften ─────────────────────────────────────────────────
-  secIdentity:        'Identität',
-  secPersonalia:      'Personalia',
-  secExperience:      'Erfahrung',
-  secProps:           'Eigenschaften',
-  secBoni:            'Boni',
+  secIdentity:            'Identität',
+  secPersonalia:          'Personalia',
+  secIdentityPersonalia:  'Identität, Personalia & Spezialisierungen',
+  secExperience:          'Erfahrung',
+  secProps:               'Eigenschaften',
+  secBoni:                'Boni',
+  secPropsBoni:           'Eigenschaften & Boni',
   secWeaponSkills:    'Waffenfertigkeiten',
   secSkills:          'Fertigkeiten',
   secUnlearnedSkills: 'Ungelernte Fertigkeiten',
