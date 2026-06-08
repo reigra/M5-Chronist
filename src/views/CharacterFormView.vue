@@ -417,78 +417,98 @@ onMounted(async () => {
       <!-- ── Identity ── -->
       <section class="card">
         <h2>{{ UI.secIdentity }}</h2>
+        <div class="form-grid form-grid--identity">
 
-        <label>{{ UI.labelName }} *
-          <input v-model="name" type="text" required :placeholder="UI.formCharNamePlaceholder" />
-        </label>
+          <label class="form-field">{{ UI.labelName }} *
+            <input v-model="name" type="text" required :placeholder="UI.formCharNamePlaceholder" />
+          </label>
 
-        <label>{{ UI.labelPlayer }}
-          <input v-model="player" type="text" :placeholder="UI.formPlayerNamePlaceholder" />
-        </label>
+          <label class="form-field">{{ UI.labelPlayer }}
+            <input v-model="player" type="text" :placeholder="UI.formPlayerNamePlaceholder" />
+          </label>
 
-        <label>{{ UI.labelRace }} *
-          <select v-model="raceId" required>
-            <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-            <option v-for="r in rules?.races" :key="r.id" :value="r.id">{{ r.name }}</option>
-          </select>
-        </label>
+          <label class="form-field">{{ UI.labelRace }} *
+            <select v-model="raceId" required>
+              <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="r in rules?.races" :key="r.id" :value="r.id">{{ r.name }}</option>
+            </select>
+          </label>
 
-        <label>{{ UI.labelType }} *
-          <select v-model="typeId" required>
-            <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-            <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
-          </select>
-        </label>
+          <label class="form-field">{{ UI.labelType }} *
+            <select v-model="typeId" required>
+              <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+          </label>
 
-        <label>{{ UI.labelOrigin }}
-          <select v-model="originId">
-            <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-            <option v-for="o in rules?.origins" :key="o.id" :value="o.id">{{ o.name }}</option>
-          </select>
-        </label>
+          <label class="form-field">{{ UI.labelOrigin }}
+            <select v-model="originId">
+              <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="o in rules?.origins" :key="o.id" :value="o.id">{{ o.name }}</option>
+            </select>
+          </label>
 
-        <label>{{ UI.labelSocialStatus }}
-          <select v-model="statusId">
-            <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-            <option v-for="s in rules?.socialStatuses" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
-        </label>
+          <label class="form-field">{{ UI.labelSocialStatus }}
+            <select v-model="statusId">
+              <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="s in rules?.socialStatuses" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+          </label>
+        </div>
       </section>
 
       <!-- ── Personalia ── -->
       <section class="card">
         <h2>{{ UI.secPersonalia }}</h2>
-        <div class="prop-grid prop-grid--wide">
+        <div class="form-grid form-grid--personalia">
 
-          <label for="p-geschlecht">{{ UI.labelGeschlecht }}</label>
-          <input id="p-geschlecht" v-model="geschlecht" type="text" />
+          <div class="form-pair">
+            <label for="p-geschlecht">{{ UI.labelGeschlecht }}</label>
+            <input id="p-geschlecht" v-model="geschlecht" type="text" />
+          </div>
 
-          <label for="p-haendigkeit">{{ UI.labelHaendigkeit }}</label>
-          <select id="p-haendigkeit" v-model="haendigkeit">
-            <option value="">—</option>
-            <option v-for="opt in UI.haendigkeitOptions" :key="opt" :value="opt">{{ opt }}</option>
-          </select>
+          <div class="form-pair">
+            <label for="p-haendigkeit">{{ UI.labelHaendigkeit }}</label>
+            <select id="p-haendigkeit" v-model="haendigkeit">
+              <option value="">—</option>
+              <option v-for="opt in UI.haendigkeitOptions" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+          </div>
 
-          <label for="p-alter">{{ UI.labelAlter }}</label>
-          <input id="p-alter" v-model.number="alter" type="number" min="1" max="999" />
+          <div class="form-pair">
+            <label for="p-alter">{{ UI.labelAlter }}</label>
+            <input id="p-alter" v-model.number="alter" type="number" min="1" max="999" />
+          </div>
 
-          <label for="p-groesse">{{ UI.labelGroesse }}</label>
-          <input id="p-groesse" v-model.number="groesse" type="number" min="1" max="300" />
+          <div class="form-pair">
+            <label for="p-groesse">{{ UI.labelGroesse }}</label>
+            <input id="p-groesse" v-model.number="groesse" type="number" min="1" max="300" />
+          </div>
 
-          <label for="p-gewicht">{{ UI.labelGewicht }}</label>
-          <input id="p-gewicht" v-model.number="gewicht" type="number" min="1" max="999" />
+          <div class="form-pair">
+            <label for="p-gewicht">{{ UI.labelGewicht }}</label>
+            <input id="p-gewicht" v-model.number="gewicht" type="number" min="1" max="999" />
+          </div>
 
-          <label for="p-gestalt">{{ UI.labelGestalt }}</label>
-          <input id="p-gestalt" v-model="gestalt" type="text" />
+          <div class="form-pair">
+            <label for="p-gestalt">{{ UI.labelGestalt }}</label>
+            <input id="p-gestalt" v-model="gestalt" type="text" />
+          </div>
 
-          <label for="p-glaube">{{ UI.labelGlaube }}</label>
-          <input id="p-glaube" v-model="glaube" type="text" />
+          <div class="form-pair">
+            <label for="p-glaube">{{ UI.labelGlaube }}</label>
+            <input id="p-glaube" v-model="glaube" type="text" />
+          </div>
 
-          <label for="p-gg">{{ UI.labelGG }}</label>
-          <input id="p-gg" v-model.number="gg" type="number" min="0" max="99" />
+          <div class="form-pair">
+            <label for="p-gg">{{ UI.labelGG }}</label>
+            <input id="p-gg" v-model.number="gg" type="number" min="0" max="99" />
+          </div>
 
-          <label for="p-sg">{{ UI.labelSG }}</label>
-          <input id="p-sg" v-model.number="sg" type="number" min="0" max="99" />
+          <div class="form-pair">
+            <label for="p-sg">{{ UI.labelSG }}</label>
+            <input id="p-sg" v-model.number="sg" type="number" min="0" max="99" />
+          </div>
 
         </div>
       </section>
@@ -496,47 +516,127 @@ onMounted(async () => {
       <!-- ── Experience ── -->
       <section class="card">
         <h2>{{ UI.secExperience }}</h2>
-        <label>{{ UI.formEsTotalLabel }}
-          <input v-model.number="totalEs" type="number" min="0" max="999999" class="es-input" />
-        </label>
-        <label>{{ UI.formEpAvailLabel }}
-          <input v-model.number="availableEp" type="number" min="0" max="999999" class="es-input" />
-        </label>
-        <label>{{ UI.formGoldLabel }}
-          <input v-model.number="gold" type="number" min="0" max="999999" class="es-input" />
-        </label>
+        <div class="form-grid form-grid--experience">
+          <label class="form-field">{{ UI.formEsTotalLabel }}
+            <input v-model.number="totalEs" type="number" min="0" max="999999" class="es-input" />
+          </label>
+          <label class="form-field">{{ UI.formEpAvailLabel }}
+            <input v-model.number="availableEp" type="number" min="0" max="999999" class="es-input" />
+          </label>
+          <label class="form-field">{{ UI.formGoldLabel }}
+            <input v-model.number="gold" type="number" min="0" max="999999" class="es-input" />
+          </label>
+        </div>
       </section>
 
       <!-- ── Eigenschaften ── -->
       <section class="card">
         <h2>{{ UI.secProps }}</h2>
-        <div class="prop-grid">
-          <label for="p-st">{{ UI.propAbbrSt }}</label>    <input id="p-st" v-model.number="St" type="number" min="1"  max="100" />
-          <label for="p-gs">{{ UI.propAbbrGs }}</label>    <input id="p-gs" v-model.number="Gs" type="number" min="1"  max="100" />
-          <label for="p-gw">{{ UI.propAbbrGw }}</label>    <input id="p-gw" v-model.number="Gw" type="number" min="1"  max="100" />
-          <label for="p-ko">{{ UI.propAbbrKo }}</label>    <input id="p-ko" v-model.number="Ko" type="number" min="1"  max="100" />
-          <label for="p-in">{{ UI.propAbbrIn }}</label>    <input id="p-in" v-model.number="In" type="number" min="1"  max="100" />
-          <label for="p-zt">{{ UI.propAbbrZt }}</label>    <input id="p-zt" v-model.number="Zt" type="number" min="1"  max="100" />
-          <label for="p-pa">{{ UI.propAbbrPa }}</label>    <input id="p-pa" v-model.number="pA" type="number" min="-2" max="100" />
-          <label for="p-wk">{{ UI.propAbbrWk }}</label>    <input id="p-wk" v-model.number="Wk" type="number" min="-2" max="100" />
-          <label for="p-au">{{ UI.propAbbrAu }}</label>    <input id="p-au" v-model.number="Au" type="number" min="-2" max="100" />
-          <label for="p-lp">{{ UI.propAbbrLp }}</label>    <input id="p-lp" v-model.number="LP" type="number" min="1"  max="100" />
-          <label for="p-ap">{{ UI.propAbbrAp }}</label>    <input id="p-ap" v-model.number="AP" type="number" min="1"  max="100" />
-          <label for="p-b">{{ UI.propAbbrB }}</label>      <input id="p-b"  v-model.number="B"  type="number" min="1"  max="100" />
+        <div class="form-grid form-grid--props">
+
+          <div class="form-pair">
+            <label for="p-st">{{ UI.propAbbrSt }}</label>
+            <input id="p-st" v-model.number="St" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-gs">{{ UI.propAbbrGs }}</label>
+            <input id="p-gs" v-model.number="Gs" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-gw">{{ UI.propAbbrGw }}</label>
+            <input id="p-gw" v-model.number="Gw" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-ko">{{ UI.propAbbrKo }}</label>
+            <input id="p-ko" v-model.number="Ko" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-in">{{ UI.propAbbrIn }}</label>
+            <input id="p-in" v-model.number="In" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-zt">{{ UI.propAbbrZt }}</label>
+            <input id="p-zt" v-model.number="Zt" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-pa">{{ UI.propAbbrPa }}</label>
+            <input id="p-pa" v-model.number="pA" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-wk">{{ UI.propAbbrWk }}</label>
+            <input id="p-wk" v-model.number="Wk" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-au">{{ UI.propAbbrAu }}</label>
+            <input id="p-au" v-model.number="Au" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-lp">{{ UI.propAbbrLp }}</label>
+            <input id="p-lp" v-model.number="LP" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-ap">{{ UI.propAbbrAp }}</label>
+            <input id="p-ap" v-model.number="AP" type="number" min="1" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-b">{{ UI.propAbbrB }}</label>
+            <input id="p-b" v-model.number="B" type="number" min="1" max="100" />
+          </div>
+
         </div>
       </section>
 
       <!-- ── Boni ── -->
       <section class="card">
         <h2>{{ UI.secBoni }}</h2>
-        <div class="prop-grid">
-          <label for="p-ausb">{{ UI.propAbbrAusb }}</label>  <input id="p-ausb"  v-model.number="AusB"  type="number" min="-2" max="100" />
-          <label for="p-schb">{{ UI.propAbbrSchb }}</label>  <input id="p-schb"  v-model.number="SchB"  type="number" min="-2" max="100" />
-          <label for="p-anb">{{ UI.propAbbrAnb }}</label>    <input id="p-anb"   v-model.number="AnB"   type="number" min="-2" max="100" />
-          <label for="p-abb">{{ UI.propAbbrAbb }}</label>    <input id="p-abb"   v-model.number="AbB"   type="number" min="-2" max="100" />
-          <label for="p-zaub">{{ UI.propAbbrZaub }}</label>  <input id="p-zaub"  v-model.number="ZauB"  type="number" min="-2" max="100" />
-          <label for="p-resbg">{{ UI.propAbbrResbg }}</label><input id="p-resbg" v-model.number="ResBg" type="number" min="-2" max="100" />
-          <label for="p-resbk">{{ UI.propAbbrResbk }}</label><input id="p-resbk" v-model.number="ResBk" type="number" min="-2" max="100" />
+        <div class="form-grid form-grid--props">
+
+          <div class="form-pair">
+            <label for="p-ausb">{{ UI.propAbbrAusb }}</label>
+            <input id="p-ausb" v-model.number="AusB" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-schb">{{ UI.propAbbrSchb }}</label>
+            <input id="p-schb" v-model.number="SchB" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-anb">{{ UI.propAbbrAnb }}</label>
+            <input id="p-anb" v-model.number="AnB" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-abb">{{ UI.propAbbrAbb }}</label>
+            <input id="p-abb" v-model.number="AbB" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-zaub">{{ UI.propAbbrZaub }}</label>
+            <input id="p-zaub" v-model.number="ZauB" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-resbg">{{ UI.propAbbrResbg }}</label>
+            <input id="p-resbg" v-model.number="ResBg" type="number" min="-2" max="100" />
+          </div>
+
+          <div class="form-pair">
+            <label for="p-resbk">{{ UI.propAbbrResbk }}</label>
+            <input id="p-resbk" v-model.number="ResBk" type="number" min="-2" max="100" />
+          </div>
+
         </div>
       </section>
 
@@ -589,42 +689,44 @@ onMounted(async () => {
       <!-- ── Spezialisierungen ── -->
       <section v-if="canHaveWeaponSpec || canHaveSpellSpec" class="card">
         <h2>{{ UI.secSpecializations }}</h2>
+        <div class="form-grid form-grid--specs">
 
-        <template v-if="canHaveWeaponSpec">
-          <label>{{ UI.labelWeaponSpec }} 1
-            <select v-model="weaponSpec1">
-              <option value="">{{ UI.formSelectPlaceholder }}</option>
-              <option v-for="w in allWeapons" :key="w.id" :value="w.id">
-                {{ w.name }} ({{ w.waffentyp }})
-              </option>
-            </select>
-          </label>
-          <label v-if="weaponSlotCount >= 2">{{ UI.labelWeaponSpec }} 2
-            <select v-model="weaponSpec2">
-              <option value="">{{ UI.formSelectPlaceholder }}</option>
-              <option v-for="w in allWeapons" :key="w.id" :value="w.id">
-                {{ w.name }} ({{ w.waffentyp }})
-              </option>
-            </select>
-          </label>
-          <label v-if="weaponSlotCount >= 3">{{ UI.labelWeaponSpec }} 3
-            <select v-model="weaponSpec3">
-              <option value="">{{ UI.formSelectPlaceholder }}</option>
-              <option v-for="w in allWeapons" :key="w.id" :value="w.id">
-                {{ w.name }} ({{ w.waffentyp }})
-              </option>
-            </select>
-          </label>
-        </template>
+          <template v-if="canHaveWeaponSpec">
+            <label class="form-field">{{ UI.labelWeaponSpec }} 1
+              <select v-model="weaponSpec1">
+                <option value="">{{ UI.formSelectPlaceholder }}</option>
+                <option v-for="w in allWeapons" :key="w.id" :value="w.id">
+                  {{ w.name }} ({{ w.waffentyp }})
+                </option>
+              </select>
+            </label>
+            <label v-if="weaponSlotCount >= 2" class="form-field">{{ UI.labelWeaponSpec }} 2
+              <select v-model="weaponSpec2">
+                <option value="">{{ UI.formSelectPlaceholder }}</option>
+                <option v-for="w in allWeapons" :key="w.id" :value="w.id">
+                  {{ w.name }} ({{ w.waffentyp }})
+                </option>
+              </select>
+            </label>
+            <label v-if="weaponSlotCount >= 3" class="form-field">{{ UI.labelWeaponSpec }} 3
+              <select v-model="weaponSpec3">
+                <option value="">{{ UI.formSelectPlaceholder }}</option>
+                <option v-for="w in allWeapons" :key="w.id" :value="w.id">
+                  {{ w.name }} ({{ w.waffentyp }})
+                </option>
+              </select>
+            </label>
+          </template>
 
-        <label v-if="canHaveSpellSpec">{{ UI.labelSpellSpec }}
-          <select v-model="spellSpecialization">
-            <option value="">{{ UI.formSelectPlaceholder }}</option>
-            <option v-for="g in spellSpecGroups" :key="g" :value="g">
-              {{ (UI.spellGroupNames as Record<string, string>)[g] ?? g }}
-            </option>
-          </select>
-        </label>
+          <label v-if="canHaveSpellSpec" class="form-field">{{ UI.labelSpellSpec }}
+            <select v-model="spellSpecialization">
+              <option value="">{{ UI.formSelectPlaceholder }}</option>
+              <option v-for="g in spellSpecGroups" :key="g" :value="g">
+                {{ (UI.spellGroupNames as Record<string, string>)[g] ?? g }}
+              </option>
+            </select>
+          </label>
+        </div>
       </section>
 
       <!-- ── Spells ── -->
@@ -717,33 +819,48 @@ input, select {
   font-size: 1rem;
 }
 
-.prop-grid {
+.form-grid {
   display: grid;
-  grid-template-columns: max-content 3.5rem max-content 3.5rem max-content 3.5rem;
-  column-gap: 0.5rem;
-  row-gap: 0.5rem;
-  align-items: center;
+  gap: 0.5rem 1.25rem;
 }
 
-.prop-grid label {
-  display: block;
-  font-size: 0.9em;
+.form-grid--identity {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.form-grid--personalia {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.form-grid--experience {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.form-grid--props {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+
+.form-grid--specs {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85em;
   color: #555;
-  white-space: nowrap;
-  text-align: right;
 }
 
-/* Extra left spacing before the 2nd and 3rd column groups */
-.prop-grid label:nth-child(6n+3),
-.prop-grid label:nth-child(6n+5) {
-  padding-left: 1.5rem;
+.form-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-.prop-grid input[type="number"] {
-  width: 3.5rem;
-  padding: 0.25rem 0.35rem;
-  text-align: right;
-  font-size: 0.95rem;
+.form-pair label {
+  font-size: 0.85em;
+  color: #555;
 }
 
 .skill-table {
