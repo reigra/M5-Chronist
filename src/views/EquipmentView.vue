@@ -167,6 +167,18 @@ function cancelEdit(): void {
   resetForm()
 }
 
+function itemNameDisplay(item: EquipmentItem): string {
+  let name = item.name
+  if (item.magisch) name += '*'
+  const schb = item.schb
+  const anb = item.anb
+  if ((schb ?? 0) !== 0 || (anb ?? 0) !== 0) {
+    const fmt = (v: number | undefined) => v !== undefined && v < 0 ? `${v}` : `+${v ?? 0}`
+    name += ` (${fmt(schb)}/${fmt(anb)})`
+  }
+  return name
+}
+
 function removeItem(idx: number): void {
   inventory.value = inventory.value.filter((_, i) => i !== idx)
 }
@@ -233,9 +245,8 @@ onMounted(async () => {
           <thead>
             <tr>
               <th>{{ UI.equipColName }}</th>
-              <th>{{ UI.equipColGroup }}</th>
+              <th>{{ UI.equipLabelDesc }}</th>
               <th>{{ UI.equipColLocation }}</th>
-              <th>{{ UI.equipColPrice }}</th>
               <th>{{ UI.equipColWeight }}</th>
               <th></th>
               <th></th>
@@ -243,10 +254,9 @@ onMounted(async () => {
           </thead>
           <tbody>
             <tr v-for="(item, idx) in inventory" :key="idx">
-              <td>{{ item.name }}</td>
-              <td>{{ item.group }}</td>
+              <td>{{ itemNameDisplay(item) }}</td>
+              <td>{{ item.description || '—' }}</td>
               <td>{{ item.location }}</td>
-              <td>{{ item.price }}</td>
               <td>{{ item.weight }}</td>
               <td><button type="button" class="btn-edit" @click="editItem(idx)">✎</button></td>
               <td><button type="button" class="btn-remove" @click="removeItem(idx)">✕</button></td>
