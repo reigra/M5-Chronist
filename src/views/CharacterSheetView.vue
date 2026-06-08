@@ -178,72 +178,184 @@ onMounted(async () => {
       <!-- ── Identität, Personalia & Spezialisierungen ── -->
       <section class="card">
         <h2>{{ UI.secIdentityPersonalia }}</h2>
-        <dl class="prop-list">
-          <dt>{{ UI.labelPlayer }}</dt>    <dd>{{ character.player }}</dd>
-          <dt>{{ UI.labelRace }}</dt>      <dd>{{ raceName }}</dd>
-          <dt>{{ UI.labelType }}</dt>      <dd>{{ typeName }}</dd>
-          <dt>{{ UI.labelOrigin }}</dt>    <dd>{{ originName }}</dd>
-          <dt>{{ UI.labelStatus }}</dt>    <dd>{{ statusName }}</dd>
-          <dt>{{ UI.labelGeschlecht }}</dt>  <dd>{{ character.personalia?.geschlecht  ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelHaendigkeit }}</dt> <dd>{{ character.personalia?.haendigkeit ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelAlter }}</dt>       <dd>{{ character.personalia?.alter       ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelGroesse }}</dt>     <dd>{{ character.personalia?.groesse     ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelGewicht }}</dt>     <dd>{{ character.personalia?.gewicht     ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelGestalt }}</dt>     <dd>{{ character.personalia?.gestalt     ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelGlaube }}</dt>      <dd>{{ character.personalia?.glaube      ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelGG }}</dt>          <dd>{{ character.personalia?.gg          ?? UI.notApplicable }}</dd>
-          <dt>{{ UI.labelSG }}</dt>          <dd>{{ character.personalia?.sg          ?? UI.notApplicable }}</dd>
+        <div class="prop-grid prop-grid--identity">
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelPlayer }}</span>
+            <span class="prop-value">{{ character.player }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelRace }}</span>
+            <span class="prop-value">{{ raceName }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelType }}</span>
+            <span class="prop-value">{{ typeName }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelOrigin }}</span>
+            <span class="prop-value">{{ originName }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelStatus }}</span>
+            <span class="prop-value">{{ statusName }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGeschlecht }}</span>
+            <span class="prop-value">{{ character.personalia?.geschlecht ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelHaendigkeit }}</span>
+            <span class="prop-value">{{ character.personalia?.haendigkeit ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelAlter }}</span>
+            <span class="prop-value">{{ character.personalia?.alter ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGroesse }}</span>
+            <span class="prop-value">{{ character.personalia?.groesse ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGewicht }}</span>
+            <span class="prop-value">{{ character.personalia?.gewicht ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGestalt }}</span>
+            <span class="prop-value">{{ character.personalia?.gestalt ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGlaube }}</span>
+            <span class="prop-value">{{ character.personalia?.glaube ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGG }}</span>
+            <span class="prop-value">{{ character.personalia?.gg ?? UI.notApplicable }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelSG }}</span>
+            <span class="prop-value">{{ character.personalia?.sg ?? UI.notApplicable }}</span>
+          </div>
           <template v-if="hasSpecializations">
-            <template v-if="(character.weaponSpecializations?.length ?? 0) > 0">
-              <dt v-for="(_, i) in character.weaponSpecializations" :key="'ws-dt-' + i">
-                {{ UI.labelWeaponSpec }} {{ (character.weaponSpecializations!.length > 1) ? i + 1 : '' }}
-              </dt>
-              <dd v-for="(spec, i) in character.weaponSpecializations" :key="'ws-dd-' + i">{{ spec }}</dd>
-            </template>
-            <template v-if="character.spellSpecialization">
-              <dt>{{ UI.labelSpellSpec }}</dt>
-              <dd>{{ (UI.spellGroupNames as Record<string, string>)[character.spellSpecialization] ?? character.spellSpecialization }}</dd>
-            </template>
+            <div v-for="(spec, i) in (character.weaponSpecializations ?? [])" :key="'ws-' + i" class="prop-row">
+              <span class="prop-label">{{ UI.labelWeaponSpec }}{{ (character.weaponSpecializations!.length > 1) ? ' ' + (i + 1) : '' }}</span>
+              <span class="prop-value">{{ spec }}</span>
+            </div>
+            <div v-if="character.spellSpecialization" class="prop-row">
+              <span class="prop-label">{{ UI.labelSpellSpec }}</span>
+              <span class="prop-value">{{ (UI.spellGroupNames as Record<string, string>)[character.spellSpecialization] ?? character.spellSpecialization }}</span>
+            </div>
           </template>
-        </dl>
+        </div>
       </section>
 
       <!-- ── Experience ── -->
       <section class="card">
         <h2>{{ UI.secExperience }}</h2>
-        <dl class="prop-list">
-          <dt>{{ UI.labelGrad }}</dt>              <dd>{{ grad }}</dd>
-          <dt>{{ UI.labelEsTotal }}</dt>           <dd>{{ character.totalEs }}</dd>
-          <dt>{{ UI.labelEpAvail }}</dt>           <dd>{{ character.availableEp }}</dd>
-          <dt>{{ UI.labelGold }}</dt>              <dd>{{ character.gold ?? 0 }}</dd>
-          <dt>{{ UI.labelNextGrad }}</dt>          <dd>{{ nextGradEs }} {{ UI.unitEs }}</dd>
-        </dl>
+        <div class="prop-grid prop-grid--experience">
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGrad }}</span>
+            <span class="prop-value">{{ grad }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelEsTotal }}</span>
+            <span class="prop-value">{{ character.totalEs }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelEpAvail }}</span>
+            <span class="prop-value">{{ character.availableEp }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelGold }}</span>
+            <span class="prop-value">{{ character.gold ?? 0 }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.labelNextGrad }}</span>
+            <span class="prop-value">{{ nextGradEs }} {{ UI.unitEs }}</span>
+          </div>
+        </div>
       </section>
 
       <!-- ── Eigenschaften & Boni ── -->
       <section class="card">
         <h2>{{ UI.secPropsBoni }}</h2>
-        <dl class="prop-list prop-list--wide">
-          <dt>{{ UI.propSt }}</dt>    <dd>{{ character.properties.St }}</dd>
-          <dt>{{ UI.propGs }}</dt>    <dd>{{ character.properties.Gs }}</dd>
-          <dt>{{ UI.propGw }}</dt>    <dd>{{ character.properties.Gw }}</dd>
-          <dt>{{ UI.propKo }}</dt>    <dd>{{ character.properties.Ko }}</dd>
-          <dt>{{ UI.propIn }}</dt>    <dd>{{ character.properties.In }}</dd>
-          <dt>{{ UI.propZt }}</dt>    <dd>{{ character.properties.Zt }}</dd>
-          <dt>{{ UI.propPa }}</dt>    <dd>{{ character.properties.pA }}</dd>
-          <dt>{{ UI.propWk }}</dt>    <dd>{{ character.properties.Wk }}</dd>
-          <dt>{{ UI.propAu }}</dt>    <dd>{{ character.properties.Au }}</dd>
-          <dt>{{ UI.propLp }}</dt>    <dd>{{ character.properties.LP }}</dd>
-          <dt>{{ UI.propAp }}</dt>    <dd>{{ character.properties.AP }}</dd>
-          <dt>{{ UI.propB }}</dt>     <dd>{{ character.properties.B }}</dd>
-          <dt>{{ UI.propAusb }}</dt>  <dd>{{ character.boni.AusB }}</dd>
-          <dt>{{ UI.propSchb }}</dt>  <dd>{{ character.boni.SchB }}</dd>
-          <dt>{{ UI.propAnb }}</dt>   <dd>{{ character.boni.AnB }}</dd>
-          <dt>{{ UI.propAbb }}</dt>   <dd>{{ character.boni.AbB }}</dd>
-          <dt>{{ UI.propZaub }}</dt>  <dd>{{ character.boni.ZauB }}</dd>
-          <dt>{{ UI.propResbg }}</dt> <dd>{{ character.boni.ResBg }}</dd>
-          <dt>{{ UI.propResbk }}</dt> <dd>{{ character.boni.ResBk }}</dd>
-        </dl>
+        <div class="prop-grid prop-grid--props">
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propSt }}</span>
+            <span class="prop-value">{{ character.properties.St }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propGs }}</span>
+            <span class="prop-value">{{ character.properties.Gs }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propGw }}</span>
+            <span class="prop-value">{{ character.properties.Gw }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propKo }}</span>
+            <span class="prop-value">{{ character.properties.Ko }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propIn }}</span>
+            <span class="prop-value">{{ character.properties.In }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propZt }}</span>
+            <span class="prop-value">{{ character.properties.Zt }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propPa }}</span>
+            <span class="prop-value">{{ character.properties.pA }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propWk }}</span>
+            <span class="prop-value">{{ character.properties.Wk }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propAu }}</span>
+            <span class="prop-value">{{ character.properties.Au }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propLp }}</span>
+            <span class="prop-value">{{ character.properties.LP }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propAp }}</span>
+            <span class="prop-value">{{ character.properties.AP }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propB }}</span>
+            <span class="prop-value">{{ character.properties.B }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propAusb }}</span>
+            <span class="prop-value">{{ character.boni.AusB }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propSchb }}</span>
+            <span class="prop-value">{{ character.boni.SchB }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propAnb }}</span>
+            <span class="prop-value">{{ character.boni.AnB }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propAbb }}</span>
+            <span class="prop-value">{{ character.boni.AbB }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propZaub }}</span>
+            <span class="prop-value">{{ character.boni.ZauB }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propResbg }}</span>
+            <span class="prop-value">{{ character.boni.ResBg }}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">{{ UI.propResbk }}</span>
+            <span class="prop-value">{{ character.boni.ResBk }}</span>
+          </div>
+        </div>
       </section>
 
       <!-- ── Waffenfertigkeiten ── -->
@@ -401,19 +513,40 @@ onMounted(async () => {
   color: #555;
 }
 
-.prop-list {
+.prop-grid {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin: 0;
+  gap: 0.25rem 1.5rem;
 }
 
-.prop-list--wide {
-  grid-template-columns: repeat(2, max-content 1fr);
+.prop-grid--identity {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
-.prop-list dt { color: #666; font-size: 0.9em; }
-.prop-list dd { margin: 0; font-weight: 600; }
+.prop-grid--experience {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.prop-grid--props {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.prop-row {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.15rem 0;
+}
+
+.prop-label {
+  color: #666;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.prop-value {
+  font-weight: 600;
+  margin-left: auto;
+  text-align: right;
+}
 
 .skill-table {
   width: auto;
