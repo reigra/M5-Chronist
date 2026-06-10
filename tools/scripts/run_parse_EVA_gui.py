@@ -120,7 +120,9 @@ def main():
     parser.add_argument("--xml-dir", default=os.path.join(TOOLS_DIR, "EVA"),
                         help="Verzeichnis mit den XML-Eingabedateien (Default: tools/EVA)")
     parser.add_argument("--json-dir", default=os.path.join(TOOLS_DIR, "rules"),
-                        help="Verzeichnis f\u00fcr die JSON-Ausgabedateien (Default: tools/rules)")
+                        help="Verzeichnis für die JSON-Ausgabedateien (Default: tools/rules)")
+    parser.add_argument("--notes-file",
+                        help="Optionale Textdatei, die nach dem Parsen im Fenster angezeigt wird")
     args = parser.parse_args()
 
     xml_dir = os.path.abspath(args.xml_dir)
@@ -153,6 +155,16 @@ def main():
 
             cleanup()
             dialog.append(f"\n\u2713 Fertig \u2013 JSON-Dateien in: {json_dir}\n")
+
+            if args.notes_file:
+                notes_path = os.path.abspath(args.notes_file)
+                if os.path.isfile(notes_path):
+                    with open(notes_path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    dialog.append(f"\n\u2500\u2500\u2500 Notizen ({args.notes_file}) \u2500\u2500\u2500\n\n")
+                    dialog.append(content + "\n")
+                else:
+                    dialog.append(f"\n! Notiz-Datei nicht gefunden: {args.notes_file}\n")
 
         except Exception as e:
             dialog.append(f"\n\u2717 FEHLER: {e}\n")

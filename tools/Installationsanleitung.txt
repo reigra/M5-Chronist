@@ -1,0 +1,19 @@
+Das ZIP einfach irgendwohin entpacken, z.B. nach Dokumente\MagusNG
+
+Start-Installation.cmd erstellt die Regeldateien (*,json)
+
+Es wird ein Chromebasierter Browser benötigt. Firefox geht leider nicht.
+Man kann die App installieren (oben rechts in der Adresszeile). Dann kann man sie direkt aus dem Startmenü / Desktop ausführen.
+Die App läuft komplett im Browser und funktioniert auch offline.
+Alle Daten werden lokal auf dem eigenen Rechner gespeichert. Es wird nichts auf irgendwelchen Servern gespeichert.
+
+1. https://magusng-pwa-823c6f.gitlab.io/ aufrufen. 
+2, Auf der Seite ist ein Button [Regeln verwalten]
+3. Dort drauf klicken und dann können die Regldateien (*.json) aus dem Verzeichnis rules geladen werden
+4. Anschließend oben liks in der Headerzeile auf + Neuer Charakter klicken
+
+
+Falls du einen Fehler findest oder was fehlt, kannst du unter https://gitlab.com/silbaer/magusng-pwa/-/work_items?sort=created_date&state=opened&first_page_size=20 oben rechts ein neues Issue erstellen.
+
+PPs fehlen noch. Ebenso eine vernünftige Druckversion.
+

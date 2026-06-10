@@ -7,6 +7,7 @@ set "ResultDir=%ScriptDir%rules"
 
 echo === MagusNG EVA-Parser (GUI) ===
 echo.
+echo Bitte warten....
 
 REM Python check
 python --version >nul 2>&1
@@ -17,11 +18,12 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
 python --version
 echo.
 
 REM GUI-Wrapper starten
-python "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%"
+python "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%" --notes-file "%ScriptDir%Installationsanleitung.txt"
 if errorlevel 1 (
     echo.
     echo Fehler beim Parsen.
