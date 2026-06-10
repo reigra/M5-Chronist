@@ -1,0 +1,34 @@
+@echo off
+setlocal
+
+set "ScriptDir=%~dp0"
+set "SourceDir=%ScriptDir%EVA"
+set "ResultDir=%ScriptDir%rules"
+
+echo === MagusNG EVA-Parser (GUI) ===
+echo.
+
+REM Python check
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo Python ist nicht installiert.
+    echo Bitte Python installieren oder ueber den Windows Store beziehen...
+    start python
+    pause
+    exit /b 1
+)
+python --version
+echo.
+
+REM GUI-Wrapper starten
+python "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%"
+if errorlevel 1 (
+    echo.
+    echo Fehler beim Parsen.
+    pause
+    exit /b 1
+)
+
+echo.
+echo === Fertig ===
+rem pause
