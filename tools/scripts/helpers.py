@@ -3,22 +3,22 @@ import xml.etree.ElementTree as ET
 # ── Mappings ──────────────────────────────────────────────────────────────────
 
 SPELL_GROUP_MAP = {
-    'Beherrschen': 'Beherr.',
-    'Bewegen': 'Beweg.',
-    'Erkennen': 'Erkenn.',
-    'Erschaffen': 'Erschaff.',
-    'Formen': 'Formen',
-    'Verändern': 'Veränd.',
-    'Zerstören': 'Zerstören',
-    'Wundertat': 'Wunder',
-    'Zauberlied': 'Lied',
-    'Dweomer': 'Dweom.',
+    # 'Beherrschen': 'Beherr.',
+    # 'Bewegen': 'Beweg.',
+    # 'Erkennen': 'Erkenn.',
+    # 'Erschaffen': 'Erschaff.',
+    # 'Formen': 'Formen',
+    # 'Verändern': 'Veränd.',
+    # 'Zerstören': 'Zerstören',
+    # 'Wundertat': 'Wunder',
+    # 'Zauberlied': 'Lied',
+    # 'Dweomer': 'Dweom.',
 }
 
 SPELL_GROUP_KEYS = set(SPELL_GROUP_MAP.keys())
 
 GROUP_NAME_MAP = {
-    'Halbwelt': 'Halbw.',
+    # 'Halbwelt': 'Halbw.',
 }
 
 def normalize_group_name(name: str) -> str:

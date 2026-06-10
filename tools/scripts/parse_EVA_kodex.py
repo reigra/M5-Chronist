@@ -294,9 +294,7 @@ def parse_stand(el: ET.Element) -> dict:
         if extrale:
             parts = [p.strip() for p in extrale.split(',')]
             group = parts[0]
-            if group == 'Halbwelt':
-                group = 'Halbw.'
-                
+                            
             starting_skills = {'group': group}
             
             if len(parts) > 1:
