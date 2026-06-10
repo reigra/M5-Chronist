@@ -118,6 +118,12 @@ def parse_angeborene_fertigkeit(el: ET.Element):
     name = attr(el, 'Name')
     dp = get_child(el, 'Dynprops')
 
+    BONUS_KEY_OVERRIDE = {
+        'Zaubern': 'ZauB',
+        'Abwehr': 'AbB',
+        'Raufen': 'AnB',
+    }
+
     skill = {
         'id': name,
         'name': name,
@@ -127,9 +133,13 @@ def parse_angeborene_fertigkeit(el: ET.Element):
         'advancementCosts': [],
         'baseValue': 0,
         'maxValue': 0,
-        'linkedProperty': attr(dp, 'Attribut'),
         'notes': '',
     }
+
+    if name in BONUS_KEY_OVERRIDE:
+        skill['bonusKey'] = BONUS_KEY_OVERRIDE[name]
+    else:
+        skill['linkedProperty'] = attr(dp, 'Attribut')
 
     aw = attr(dp, 'Anfangswert').strip()
     if aw:
