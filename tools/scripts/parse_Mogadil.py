@@ -211,6 +211,43 @@ def build_cost_patterns(rows: list[dict], cost_columns: list[str]):
     return patterns, seen
 
 
+def _compact_arrays(json_str: str) -> str:
+    """Collapse specific JSON arrays to single lines.
+
+    - costColumns, advancementCosts, groups, values (flat arrays) → one line
+    - costPatterns (nested) → each inner array on one line
+    """
+    def _compact_flat(m):
+        inner = re.sub(r'[\r\n]+\s*', ' ', m.group(2).strip())
+        return m.group(1) + inner + m.group(3)
+
+    json_str = re.sub(
+        r'("(?:costColumns|advancementCosts|groups|values)":\s*\[)([^\[\]]*?)(\])',
+        _compact_flat,
+        json_str,
+    )
+
+    start = json_str.find('"costPatterns"')
+    if start != -1:
+        colon = json_str.index(':', start)
+        arr_start = json_str.index('[', colon)
+        depth = 0
+        arr_end = arr_start
+        for i in range(arr_start, len(json_str)):
+            if json_str[i] == '[':
+                depth += 1
+            elif json_str[i] == ']':
+                depth -= 1
+                if depth == 0:
+                    arr_end = i + 1
+                    break
+        inner = json_str[arr_start:arr_end]
+        inner = re.sub(r'\[([^\[\]]*)\]', lambda x: '[' + re.sub(r'\s+', ' ', x.group(1).strip()) + ']', inner)
+        json_str = json_str[:arr_start] + inner + json_str[arr_end:]
+
+    return json_str
+
+
 def main():
     pdf_path = PDF_PATH
     version = extract_version(pdf_path)
@@ -270,8 +307,10 @@ def main():
     }
 
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+    json_str = json.dumps(output, ensure_ascii=False, indent=2)
+    json_str = _compact_arrays(json_str)
     with open(OUT_PATH, 'w', encoding='utf-8') as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+        f.write(json_str)
 
     print(f'\nDone. {len(skills)} skills written to {OUT_PATH}')
     if skipped:
