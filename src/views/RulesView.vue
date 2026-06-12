@@ -405,21 +405,20 @@ onMounted(loadList)
 
 .btn-reorder {
   padding: 0.5rem 1.25rem;
-  border: 1px dashed #2a4a7a;
+  border: 1px solid #aaa;
   border-radius: 3px;
   cursor: pointer;
   background: #fff;
-  color: #2a4a7a;
 }
 
 .btn-reorder:hover {
-  background: #eef3fa;
+  background: #f0f0f0;
 }
 
 .btn-reorder--active {
   background: #2a4a7a;
   color: #fff;
-  border-style: solid;
+  border-color: #2a4a7a;
 }
 
 .btn-reorder--active:hover {

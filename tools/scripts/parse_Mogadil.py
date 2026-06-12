@@ -29,7 +29,7 @@ try:
     import pdfplumber
 except ImportError:
     print('pdfplumber nicht gefunden — installiere automatisch ...')
-    cmd = [sys.executable, '-m', 'pip', 'install', 'pdfplumber', '-q']
+    cmd = [sys.executable, '-m', 'pip', 'install', 'pdfplumber', '-q', '--no-warn-script-location']
     try:
         subprocess.check_call(cmd)
     except subprocess.CalledProcessError:
