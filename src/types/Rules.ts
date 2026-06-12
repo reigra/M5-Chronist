@@ -31,9 +31,8 @@ export interface RulebookMetadata {
   id: string
   title: string
   version: string
-  isCore: boolean
-  /** Wenn true: diese Quelle überschreibt andere Quellen (höchste Priorität). */
-  houseRule?: boolean
+  /** Numerische Priorität: niedriger Wert = höhere Priorität (0 = höchste). */
+  priority?: number
   createdAt: string
   notes: string
 }

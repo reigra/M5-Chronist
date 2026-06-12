@@ -54,7 +54,7 @@ def parse_dinge_document(xml_path: str) -> dict:
         'id': 'eva-weapons',
         'title': 'Waffen & Ausrüstung (EVA)',
         'version': '1.0.0',
-        'isCore': True,
+        'priority': 1,
         'createdAt': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
         'notes': 'Automatisch konvertiert aus dinge.xml (EVA-Charaktersoftware) via Python'
     }

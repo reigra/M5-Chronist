@@ -13,8 +13,8 @@ export interface StoredSource {
   id: string
   title: string
   version: string
-  /** Spiegelt metadata.houseRule wider — für schnellen Zugriff ohne data zu lesen. */
-  houseRule: boolean
+  /** Numerische Priorität (aus metadata.priority übernommen). */
+  priority: number
   enabled: boolean
   data: RulebookData
 }
@@ -26,8 +26,8 @@ export interface SourceSummary {
   id: string
   title: string
   version: string
-  /** True wenn diese Quelle als Hausregel markiert ist. */
-  houseRule: boolean
+  /** Numerische Priorität dieser Quelle. */
+  priority: number
   enabled: boolean
 }
 
@@ -106,7 +106,7 @@ export class RulesStorage {
         id:        data.metadata.id,
         title:     data.metadata.title,
         version:   data.metadata.version ?? '?',
-        houseRule: data.metadata.houseRule ?? false,
+        priority:  data.metadata.priority ?? 999,
         enabled:   true,
         data,
       }
@@ -119,7 +119,7 @@ export class RulesStorage {
         tx.onerror    = () => { db.close(); reject(tx.error) }
       })
 
-      imported.push({ id: entry.id, title: entry.title, version: entry.version, houseRule: entry.houseRule, enabled: true })
+      imported.push({ id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true })
     }
 
     return imported
@@ -142,7 +142,7 @@ export class RulesStorage {
             id:        s.id,
             title:     s.title,
             version:   s.version,
-            houseRule: s.houseRule ?? false,
+            priority:  s.priority ?? 999,
             enabled:   s.enabled,
           }))
         )
@@ -321,12 +321,15 @@ export class RulesStorage {
 
   /**
    * Ordnungszahl für die Lade-Reihenfolge.
-   * Hausregeln zuerst (0), dann Core-Quellen (1), dann alle anderen (2).
+   * Niedriger Wert = höhere Priorität (zuerst geladen = gewinnt bei Konflikten).
+   * Fallback für alte Einträge ohne priority-Feld.
    */
   private priorityOf(entry: StoredSource): number {
-    if (entry.houseRule)             return 0
-    if (entry.data.metadata.isCore)  return 1
-    return 2
+    if (entry.priority !== undefined) return entry.priority
+    // Rückwärtskompatibilität für vor priority importierte Einträge
+    if ((entry as any).houseRule)                return 0
+    if ((entry.data.metadata as any).isCore)     return 1
+    return 999
   }
 
   /**

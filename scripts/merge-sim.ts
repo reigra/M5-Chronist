@@ -18,9 +18,10 @@ interface Source {
 // ── Priority ──
 
 function priorityOf(src: Source): number {
+  if (src.data.metadata?.priority !== undefined) return src.data.metadata.priority
   if (src.data.metadata?.houseRule) return 0
   if (src.data.metadata?.isCore) return 1
-  return 2
+  return 999
 }
 
 // ── Provenance ──
@@ -311,8 +312,7 @@ function main(): void {
 
   console.log('Merge-Reihenfolge (Prio aufsteigend = hohe Prio zuerst):')
   for (const s of sources) {
-    const tag = s.metadata.houseRule ? 'houseRule' : s.metadata.isCore ? 'isCore' : 'normal'
-    console.log(`  [Prio ${s.priority}] ${s.metadata.title.padEnd(25)} (${tag})  ← ${s.file}`)
+    console.log(`  [Prio ${s.priority}] ${s.metadata.title.padEnd(25)}  ← ${s.file}`)
   }
 
   // ── Run merge pipeline ──

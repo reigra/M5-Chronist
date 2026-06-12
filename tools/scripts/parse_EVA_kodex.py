@@ -343,7 +343,7 @@ def parse_kodex_document(xml_path: str) -> dict:
         'id': 'eva-kodex',
         'title': 'M5 Kodex (EVA)',
         'version': '1.0.0',
-        'isCore': True,
+        'priority': 1,
         'createdAt': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
         'notes': 'Automatisch konvertiert aus m5kodex.xml (EVA-Charaktersoftware) via Python'
     }

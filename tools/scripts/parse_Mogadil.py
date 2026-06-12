@@ -343,7 +343,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'id': 'mogadil-lerntabellen',
             'title': 'Mogadil Lerntabellen',
             'version': version,
-            'isCore': False,
+            'priority': 0,
         },
         'costColumns': cost_columns,
         'costPatterns': cost_patterns,
