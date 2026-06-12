@@ -22,9 +22,20 @@ JSON structure for PWA lookup of region-based skill costs:
 import json
 import os
 import re
+import subprocess
 import sys
 
-import camelot
+try:
+    import pdfplumber
+except ImportError:
+    print('pdfplumber nicht gefunden — installiere automatisch ...')
+    cmd = [sys.executable, '-m', 'pip', 'install', 'pdfplumber', '-q']
+    try:
+        subprocess.check_call(cmd)
+    except subprocess.CalledProcessError:
+        cmd.append('--break-system-packages')
+        subprocess.check_call(cmd)
+    import pdfplumber
 
 PDF_PATH = os.path.join(os.path.dirname(__file__), '..', 'Mogadil', 'Lerntabellen_5_8_1.pdf')
 OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'rules', 'mogadil.json')
@@ -38,43 +49,91 @@ def extract_version(pdf_path: str) -> str:
     return 'unknown'
 
 
+def _cell(text):
+    """Normalize a cell value from pdfplumber (None → '')."""
+    return '' if text is None else str(text).strip()
+
+
+def _split_letter(prop: str, letter: str):
+    """If letter is empty but prop ends with a single letter, split it.
+
+    Pdfplumber sometimes merges 'In' and 'F' into 'In F'.
+    """
+    if not letter and ' ' in prop:
+        parts = prop.rsplit(' ', 1)
+        if len(parts[1]) == 1 or parts[1] in ('P-Z',):
+            prop = parts[0]
+            letter = parts[1]
+    return prop, letter
+
+
+def _fix_merged_cells(row: list):
+    """Pdfplumber merges adjacent cost cells in some tables (e.g. '20 20').
+
+    Split such cells and redistribute into None-filled neighbour cells.
+    """
+    out = []
+    i = 0
+    while i < len(row):
+        cell = _cell(row[i])
+        if ' ' in cell and all(p.isdigit() for p in cell.split()):
+            parts = cell.split()
+            out.extend(parts)
+            if i + 1 < len(row) and _cell(row[i + 1]) == '':
+                i += 1
+        else:
+            out.append(cell)
+        i += 1
+    return out
+
+
+def _int_cell(text):
+    """Parse a cell value as int, or None if not parseable."""
+    s = _cell(text)
+    try:
+        return int(s)
+    except ValueError:
+        return None
+
+
 def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
-    tables = camelot.read_pdf(pdf_path, pages='1', flavor='lattice')
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[0]
+        tables = page.extract_tables()
 
     cost_table = None
-    for t in tables:
-        val = str(t.df.iloc[0, 0]).strip()
-        if 'LE' in val or 'TE' in val:
-            cost_table = t
+    for table in tables:
+        if not table:
+            continue
+        first = _cell(table[0][0]) if table[0] else ''
+        if 'LE' in first or 'TE' in first:
+            cost_table = table
             break
 
     if cost_table is None:
         print('ERROR: advancement cost table (LE/TE) not found on page 1')
         print(f'  Found {len(tables)} table(s) on page 1')
-        for i, t in enumerate(tables):
-            print(f'  Table {i}: shape={t.shape}, row0col0={str(t.df.iloc[0,0])!r}')
         sys.exit(1)
 
-    df = cost_table.df
-
     col_headers = []
-    for c in range(1, df.shape[1]):
-        h = str(df.iloc[0, c]).strip()
+    for c in range(1, len(cost_table[0])):
+        h = _cell(cost_table[0][c])
         try:
             col_headers.append(int(h.replace('+', '')))
         except ValueError:
             col_headers.append(None)
 
     result = {}
-    for r in range(1, df.shape[0]):
-        letter = str(df.iloc[r, 0]).strip()
+    for r in range(1, len(cost_table)):
+        row = cost_table[r]
+        letter = _cell(row[0])
         if not letter or len(letter) > 2:
             continue
 
         paren_col = None
         paren_value = None
-        for c in range(1, df.shape[1]):
-            cell = str(df.iloc[r, c]).strip()
+        for c in range(1, len(row)):
+            cell = _cell(row[c])
             m = re.search(r'\((\d+)\)', cell)
             if m:
                 paren_col = c
@@ -94,8 +153,8 @@ def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
         learn_cost = paren_value // 3
 
         advancement_costs = []
-        for c in range(paren_col + 1, df.shape[1]):
-            cell = str(df.iloc[r, c]).strip()
+        for c in range(paren_col + 1, len(row)):
+            cell = _cell(row[c])
             if not cell:
                 continue
             try:
@@ -113,56 +172,46 @@ def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
 
 
 def extract_fertigkeiten_tables(pdf_path: str):
-    """
-    Parse all Fertigkeiten tables across pages 3-10 (4 double-page spreads).
+    with pdfplumber.open(pdf_path) as pdf:
+        pages = pdf.pages[2:10]
+        all_raw_tables = []
+        for page in pages:
+            all_raw_tables.extend(page.extract_tables())
 
-    Each double-page spread has two tables:
-      - Main table (74 rows, 23 or 9 cols): first 73 skills
-      - Continuation table (28 rows, 23 or 7 cols): remaining 27 skills
+    fertig_tables = []
+    for table in all_raw_tables:
+        if not table or not table[0]:
+            continue
+        if len(table[0]) >= 6 and _cell(table[0][0]) == 'Fertigkeiten':
+            fertig_tables.append(table)
 
-    Cost columns per spread:
-      3-4: As..Ge    (20 cols)
-      5-6: Gl..Rm    (20 cols)
-      7-8: Rs..PSKr  (20 cols)
-      9-10: Se, PWs, MS (3 cols)
-
-    Returns (cost_columns, merged_rows) where merged_rows has 100 entries,
-    each with name, property, letter, and costs (63 values).
-    """
-    tables = camelot.read_pdf(pdf_path, pages='3-10', flavor='lattice')
-
-    fertig_indices = [i for i, t in enumerate(tables)
-                      if str(t.df.iloc[0, 0]).strip() == 'Fertigkeiten' and t.shape[1] >= 6]
-
-    # Pair up main + continuation tables per double-page spread
-    blocks = []
-    for i in range(0, len(fertig_indices), 2):
-        blocks.append((fertig_indices[i], fertig_indices[i + 1]))
+    if not fertig_tables:
+        print('ERROR: no Fertigkeiten tables found on pages 3-10')
+        sys.exit(1)
 
     all_cost_headers: list[str] = []
     merged: list[dict] = []
 
-    for block_idx, (main_idx, cont_idx) in enumerate(blocks):
-        main_t = tables[main_idx]
-        cont_t = tables[cont_idx]
+    for block_idx in range(0, len(fertig_tables), 2):
+        main_t = fertig_tables[block_idx]
+        cont_t = fertig_tables[block_idx + 1]
 
-        # Extract cost column headers (skip leading name/property/letter cols)
-        raw_headers = [str(h).strip() for h in main_t.df.iloc[0][3:]]
+        raw_headers = [_cell(h) for h in main_t[0][3:]]
         cost_headers = [h for h in raw_headers if h and h != 'Quelle / Bemerkung']
         all_cost_headers.extend(cost_headers)
         n_cost = len(cost_headers)
 
-        def extract_rows(table) -> list[dict]:
+        def _extract(table_data) -> list[dict]:
             rows = []
-            for i in range(1, len(table.df)):
-                row = list(table.df.iloc[i])
-                name = str(row[0]).strip()
-                if not name:
+            for i in range(1, len(table_data)):
+                row = _fix_merged_cells(table_data[i])
+                name = _cell(row[0])
+                prop = _cell(row[1])
+                letter = _cell(row[2])
+                prop, letter = _split_letter(prop, letter)
+                if not name or not prop or not letter:
                     continue
-                prop = str(row[1]).strip()
-                letter = str(row[2]).strip()
-                costs = [str(row[c]).strip() for c in range(3, min(3 + n_cost, len(row)))]
-                # Pad with empty string if row is shorter than expected
+                costs = [_cell(row[c]) for c in range(3, min(3 + n_cost, len(row)))]
                 while len(costs) < n_cost:
                     costs.append('')
                 rows.append({
@@ -173,8 +222,8 @@ def extract_fertigkeiten_tables(pdf_path: str):
                 })
             return rows
 
-        block_rows = extract_rows(main_t)
-        block_rows.extend(extract_rows(cont_t))
+        block_rows = _extract(main_t)
+        block_rows.extend(_extract(cont_t))
 
         if block_idx == 0:
             merged = block_rows
@@ -192,13 +241,6 @@ def extract_fertigkeiten_tables(pdf_path: str):
 
 
 def build_cost_patterns(rows: list[dict], cost_columns: list[str]):
-    """
-    Find unique cost patterns across all skills.
-
-    Returns (patterns, pattern_ids):
-      patterns: list of 63-element int arrays (one per unique pattern)
-      pattern_ids: dict mapping skill name → pattern index
-    """
     seen = {}
     patterns = []
 
@@ -214,8 +256,8 @@ def build_cost_patterns(rows: list[dict], cost_columns: list[str]):
 def _compact_arrays(json_str: str) -> str:
     """Collapse specific JSON arrays to single lines.
 
-    - costColumns, advancementCosts, groups, values (flat arrays) → one line
-    - costPatterns (nested) → each inner array on one line
+    - costColumns, advancementCosts, groups, values (flat arrays) -> one line
+    - costPatterns (nested) -> each inner array on one line
     """
     def _compact_flat(m):
         inner = re.sub(r'[\r\n]+\s*', ' ', m.group(2).strip())
@@ -263,7 +305,7 @@ def main():
 
     print('Finding unique cost patterns...')
     cost_patterns, pattern_map = build_cost_patterns(all_rows, cost_columns)
-    print(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} × {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
+    print(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} x {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
 
     print('Building skills...')
     skills = []
