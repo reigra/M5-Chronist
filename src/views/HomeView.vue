@@ -136,7 +136,7 @@ async function loadList(): Promise<void> {
       new RulesLoader().load(),
     ])
     characters.value = chars
-    activeSources.value = allSources.filter(s => s.enabled)
+    activeSources.value = allSources.filter(s => s.enabled).sort((a, b) => a.priority - b.priority)
     rules.value = loadedRules
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to load characters.'

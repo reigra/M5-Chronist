@@ -6,10 +6,12 @@ import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-const sources      = ref<SourceSummary[]>([])
-const loading      = ref(true)
-const errorMessage = ref<string | null>(null)
+const sources        = ref<SourceSummary[]>([])
+const loading        = ref(true)
+const errorMessage   = ref<string | null>(null)
 const assetLinks     = ref<AssetLink[]>([])
+const reorderMode    = ref(false)
+const savingPriority = ref(false)
 
 /** True if the current browser supports the File System Access API. */
 const browserSupported = 'showOpenFilePicker' in window
@@ -21,7 +23,7 @@ const browserSupported = 'showOpenFilePicker' in window
  */
 async function loadList(): Promise<void> {
   try {
-    sources.value = await rulesStorage.list()
+    sources.value = (await rulesStorage.list()).sort((a, b) => a.priority - b.priority)
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to load rules.'
   } finally {
@@ -76,6 +78,48 @@ async function removeSource(id: string): Promise<void> {
   }
 }
 
+/**
+ * Swap priorities with the source above, persist both, then reload the list.
+ */
+async function moveUp(index: number): Promise<void> {
+  if (index === 0 || savingPriority.value) return
+  savingPriority.value = true
+  errorMessage.value = null
+  try {
+    const current    = sources.value[index]
+    const above      = sources.value[index - 1]
+    const tempPrio   = current.priority
+    await rulesStorage.updatePriority(current.id, above.priority)
+    await rulesStorage.updatePriority(above.id, tempPrio)
+    await loadList()
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Failed to reorder.'
+  } finally {
+    savingPriority.value = false
+  }
+}
+
+/**
+ * Swap priorities with the source below, persist both, then reload the list.
+ */
+async function moveDown(index: number): Promise<void> {
+  if (index === sources.value.length - 1 || savingPriority.value) return
+  savingPriority.value = true
+  errorMessage.value = null
+  try {
+    const current    = sources.value[index]
+    const below      = sources.value[index + 1]
+    const tempPrio   = current.priority
+    await rulesStorage.updatePriority(current.id, below.priority)
+    await rulesStorage.updatePriority(below.id, tempPrio)
+    await loadList()
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Failed to reorder.'
+  } finally {
+    savingPriority.value = false
+  }
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(loadList)
@@ -101,24 +145,46 @@ onMounted(loadList)
           <tr>
             <th>{{ UI.colTitle }}</th>
             <th>{{ UI.colVersion }}</th>
-            <th>{{ UI.colActive }}</th>
+            <th v-if="!reorderMode">{{ UI.colActive }}</th>
+            <th v-else>{{ UI.rulesReorderCol }}</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="source in sources" :key="source.id" :class="{ 'row-disabled': !source.enabled }">
+          <tr
+            v-for="(source, index) in sources"
+            :key="source.id"
+            :class="{ 'row-disabled': !source.enabled }"
+          >
             <td>{{ source.title }}</td>
             <td class="col-version">{{ source.version }}</td>
-            <td class="col-toggle">
-              <input
-                type="checkbox"
-                :checked="source.enabled"
-                @change="toggleEnabled(source)"
-              />
-            </td>
-            <td class="col-action">
-              <button class="btn-remove" @click="removeSource(source.id)">{{ UI.delete }}</button>
-            </td>
+            <template v-if="!reorderMode">
+              <td class="col-toggle">
+                <input
+                  type="checkbox"
+                  :checked="source.enabled"
+                  @change="toggleEnabled(source)"
+                />
+              </td>
+              <td class="col-action">
+                <button class="btn-remove" @click="removeSource(source.id)">{{ UI.delete }}</button>
+              </td>
+            </template>
+            <template v-else>
+              <td class="col-reorder">
+                <button
+                  class="btn-move"
+                  :disabled="index === 0 || savingPriority"
+                  @click="moveUp(index)"
+                >&#9650;</button>
+                <button
+                  class="btn-move"
+                  :disabled="index === sources.length - 1 || savingPriority"
+                  @click="moveDown(index)"
+                >&#9660;</button>
+              </td>
+              <td></td>
+            </template>
           </tr>
         </tbody>
       </table>
@@ -132,6 +198,13 @@ onMounted(loadList)
           @click="importFiles"
         >
           {{ UI.rulesImportBtn }}
+        </button>
+        <button
+          class="btn-reorder"
+          :class="{ 'btn-reorder--active': reorderMode }"
+          @click="reorderMode = !reorderMode"
+        >
+          {{ reorderMode ? UI.rulesReorderExit : UI.rulesReorderBtn }}
         </button>
       </div>
 
@@ -327,6 +400,54 @@ onMounted(loadList)
 
 .btn-import:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-reorder {
+  padding: 0.5rem 1.25rem;
+  border: 1px dashed #2a4a7a;
+  border-radius: 3px;
+  cursor: pointer;
+  background: #fff;
+  color: #2a4a7a;
+}
+
+.btn-reorder:hover {
+  background: #eef3fa;
+}
+
+.btn-reorder--active {
+  background: #2a4a7a;
+  color: #fff;
+  border-style: solid;
+}
+
+.btn-reorder--active:hover {
+  background: #1e3559;
+}
+
+.col-reorder {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-move {
+  padding: 0.2rem 0.5rem;
+  margin: 0 0.1rem;
+  border: 1px solid #888;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-move:hover:not(:disabled) {
+  background: #eef3fa;
+}
+
+.btn-move:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 

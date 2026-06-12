@@ -5,6 +5,11 @@ const DB_NAME = 'MagusNG-Rules'
 const DB_VERSION = 1
 const STORE = 'sources'
 
+const SPELL_GROUPS = [
+  'Beherrschen', 'Bewegen', 'Dweomer', 'Erkennen', 'Erschaffen',
+  'Formen', 'Verändern', 'Wundertat', 'Zauberlied', 'Zerstören',
+] as const
+
 /**
  * One source entry as stored in IndexedDB.
  * Contains the full rulebook data plus display metadata and an enabled flag.
@@ -106,7 +111,7 @@ export class RulesStorage {
         id:        data.metadata.id,
         title:     data.metadata.title,
         version:   data.metadata.version ?? '?',
-        priority:  data.metadata.priority ?? 999,
+        priority:  await this.nextFreePriority(data.metadata.priority ?? 999),
         enabled:   true,
         data,
       }
@@ -169,6 +174,33 @@ export class RulesStorage {
         const entry = getReq.result as StoredSource | undefined
         if (!entry) { db.close(); resolve(); return }
         entry.enabled = enabled
+        store.put(entry)
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onerror    = () => { db.close(); reject(tx.error) }
+      }
+      getReq.onerror = () => { db.close(); reject(getReq.error) }
+    })
+  }
+
+  /**
+   * Update the priority of a stored source.
+   * Also cleans up the legacy `houseRule` field if present.
+   *
+   * @param id       - The source ID to update.
+   * @param priority - The new priority value.
+   */
+  async updatePriority(id: string, priority: number): Promise<void> {
+    const db = await this.open()
+    return new Promise((resolve, reject) => {
+      const tx      = db.transaction(STORE, 'readwrite')
+      const store   = tx.objectStore(STORE)
+      const getReq  = store.get(id)
+
+      getReq.onsuccess = () => {
+        const entry = getReq.result as StoredSource | undefined
+        if (!entry) { db.close(); resolve(); return }
+        entry.priority = priority
+        delete (entry as any).houseRule
         store.put(entry)
         tx.oncomplete = () => { db.close(); resolve() }
         tx.onerror    = () => { db.close(); reject(tx.error) }
@@ -244,6 +276,22 @@ export class RulesStorage {
         console.warn(
           `[RulesLoader] Typ "${type.id}" hat kein groupCosts — wird als nicht spielbar markiert (isMeta).`
         )
+      }
+    }
+
+    // Derive spellCosts from groupCosts for types that have spell groups but
+    // no explicit spellCosts field. This keeps the JSON type definitions clean
+    // while still providing the SpellsView with the cost data it needs.
+    for (const type of merged.values()) {
+      if (type.spellCosts || !type.groupCosts) continue
+      const sc: Record<string, number> = {}
+      for (const [group, cost] of Object.entries(type.groupCosts)) {
+        if ((SPELL_GROUPS as readonly string[]).includes(group) && cost > 0) {
+          sc[group] = cost
+        }
+      }
+      if (Object.keys(sc).length > 0) {
+        type.spellCosts = sc
       }
     }
 
@@ -330,6 +378,17 @@ export class RulesStorage {
     if ((entry as any).houseRule)                return 0
     if ((entry.data.metadata as any).isCore)     return 1
     return 999
+  }
+
+  /**
+   * Find the next unused priority value >= the requested value.
+   * Ensures all stored sources have distinct priorities so that swapping works.
+   */
+  private async nextFreePriority(wanted: number): Promise<number> {
+    const all = await this.list()
+    const used = new Set(all.map(s => s.priority))
+    while (used.has(wanted)) wanted++
+    return wanted
   }
 
   /**

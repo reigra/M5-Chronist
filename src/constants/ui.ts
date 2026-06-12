@@ -228,6 +228,9 @@ export const UI = {
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',
   rulesImportBtn:      'Regeldateien importieren…',
+  rulesReorderBtn:     'Priorität ändern',
+  rulesReorderExit:    'Fertig',
+  rulesReorderCol:     'Verschieben',
   rulesGithubBtn:      'Von Github laden',
   rulesGithubLoading:  'Wird geladen…',
   rulesGithubSuccess:  (n: number) => `${n} Regelwerk(e) erfolgreich geladen.`,
