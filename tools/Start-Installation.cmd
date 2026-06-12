@@ -23,7 +23,8 @@ python --version
 echo.
 
 REM GUI-Wrapper starten
-python "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%" --notes-file "%ScriptDir%Installationsanleitung.txt"
+rem python "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%" --notes-file "%ScriptDir%Installationsanleitung.txt"
+python "%ScriptDir%scripts\download_parse_rules_gui.py" --notes-file "%ScriptDir%Installationsanleitung.txt"
 if errorlevel 1 (
     echo.
     echo Fehler beim Parsen.

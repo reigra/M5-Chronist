@@ -290,30 +290,33 @@ def _compact_arrays(json_str: str) -> str:
     return json_str
 
 
-def main():
-    pdf_path = PDF_PATH
+def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
+    """Parse the Mogadil Lerntabellen PDF and write the output JSON.
+
+    Returns the full output dict (skills, costColumns, costPatterns, metadata).
+    """
     version = extract_version(pdf_path)
-    print(f'Version: {version}')
+    log(f'Version: {version}')
 
-    print('Parsing advancement cost table (page 1)...')
+    log('Parsing advancement cost table (page 1)...')
     cost_lookup = extract_advancement_costs(pdf_path)
-    print(f'  Found {len(cost_lookup)} cost categories: {", ".join(sorted(cost_lookup.keys()))}')
+    log(f'  Found {len(cost_lookup)} cost categories: {", ".join(sorted(cost_lookup.keys()))}')
 
-    print('Parsing Fertigkeiten tables (pages 3-10)...')
+    log('Parsing Fertigkeiten tables (pages 3-10)...')
     cost_columns, all_rows = extract_fertigkeiten_tables(pdf_path)
-    print(f'  Found {len(all_rows)} skills across {len(cost_columns)} cost columns')
+    log(f'  Found {len(all_rows)} skills across {len(cost_columns)} cost columns')
 
-    print('Finding unique cost patterns...')
+    log('Finding unique cost patterns...')
     cost_patterns, pattern_map = build_cost_patterns(all_rows, cost_columns)
-    print(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} x {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
+    log(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} x {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
 
-    print('Building skills...')
+    log('Building skills...')
     skills = []
     skipped = 0
     for r in all_rows:
         lookup = cost_lookup.get(r['letter'])
         if lookup is None:
-            print(f'  WARN: unknown cost category "{r["letter"]}" for skill "{r["name"]}", skipping')
+            log(f'  WARN: unknown cost category "{r["letter"]}" for skill "{r["name"]}", skipping')
             skipped += 1
             continue
 
@@ -334,7 +337,8 @@ def main():
             'costPatternId': pattern_id,
         })
 
-    skills.sort(key=lambda s: s['name'].casefold())
+    _umlaut_sort = str.maketrans({'ä': 'a', 'ö': 'o', 'ü': 'u', 'Ä': 'A', 'Ö': 'O', 'Ü': 'U', 'ß': 'ss'})
+    skills.sort(key=lambda s: s['name'].translate(_umlaut_sort).casefold())
 
     output = {
         'metadata': {
@@ -348,15 +352,21 @@ def main():
         'skills': skills,
     }
 
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     json_str = json.dumps(output, ensure_ascii=False, indent=2)
     json_str = _compact_arrays(json_str)
-    with open(OUT_PATH, 'w', encoding='utf-8') as f:
+    with open(out_path, 'w', encoding='utf-8') as f:
         f.write(json_str)
 
-    print(f'\nDone. {len(skills)} skills written to {OUT_PATH}')
+    log(f'\nDone. {len(skills)} skills written to {out_path}')
     if skipped:
-        print(f'  ({skipped} skills skipped due to unknown cost category)')
+        log(f'  ({skipped} skills skipped due to unknown cost category)')
+
+    return output
+
+
+def main():
+    parse_mogadil_document(PDF_PATH, OUT_PATH)
 
 
 if __name__ == '__main__':
