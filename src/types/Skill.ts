@@ -35,6 +35,8 @@ export interface Skill {
    * Only present on skills that can be attempted without learning them first.
    * Absent means the skill cannot be used unlearned.
    */
+  /** Index into costPatterns for region-based EP cost lookup (Mogadil system). */
+  costPatternId?: number
   unlearnedValue?: number
   /**
    * Grade-dependent advancement table (Abwehr, Resistenz, Zaubern).

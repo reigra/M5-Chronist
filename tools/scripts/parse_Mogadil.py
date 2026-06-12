@@ -327,13 +327,11 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'id': r['name'],
             'name': r['name'],
             'typ': 'Fertigkeit',
-            'groups': [],
             'learnCost': lookup['learnCost'],
             'advancementCosts': lookup['costs'],
             'baseValue': lookup['baseValue'],
             'maxValue': 18,
             'linkedProperty': r['property'],
-            'notes': '',
             'costPatternId': pattern_id,
         })
 

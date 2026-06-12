@@ -18,28 +18,56 @@ export class AdvancementService {
    * Find the cheapest EP-per-TE cost factor for a skill given a character type.
    *
    * Looks up each of the skill's groups in the type's groupCosts map and returns
-   * the lowest value found. Returns 999 if none of the skill's groups are listed,
+   * the lowest value found. If the skill has no groups but has a costPatternId,
+   * falls back to the Mogadil cost pattern lookup:
+   *   costPatterns[costPatternId][costColumns.indexOf(type.id)]
+   *
+   * Returns 999 if none of the skill's groups are listed and no pattern matches,
    * making that skill effectively unlearnable via normal rules.
    *
-   * @param skill - The skill to evaluate.
-   * @param type  - The character's type.
+   * @param skill        - The skill to evaluate.
+   * @param type         - The character's type.
+   * @param costPatterns - Optional cost pattern matrix (Mogadil system).
+   * @param costColumns  - Optional column labels for the cost pattern matrix.
    */
-  private cheapestGroupCost(skill: Skill, type: CharacterType): number {
+  private cheapestGroupCost(
+    skill: Skill,
+    type: CharacterType,
+    costPatterns?: number[][],
+    costColumns?: string[],
+  ): number {
     const costs = (skill.groups ?? [])
       .map(group => type.groupCosts?.[group])
       .filter((cost): cost is number => cost !== undefined)
-    return costs.length > 0 ? Math.min(...costs) : 999
+    if (costs.length > 0) return Math.min(...costs)
+
+    // Fallback: Mogadil cost pattern lookup
+    if (
+      costPatterns &&
+      costColumns &&
+      skill.costPatternId !== undefined &&
+      costColumns.length > 0
+    ) {
+      const colIdx = costColumns.indexOf(type.id)
+      if (colIdx >= 0 && costPatterns[skill.costPatternId]?.[colIdx] !== undefined) {
+        return costPatterns[skill.costPatternId][colIdx]
+      }
+    }
+
+    return 999
   }
 
   /**
    * Calculate the EP cost to learn a skill from scratch (Lernen).
    *
-   * @param skill - The skill to learn.
-   * @param type  - The character's type.
+   * @param skill        - The skill to learn.
+   * @param type         - The character's type.
+   * @param costPatterns - Optional cost pattern matrix (Mogadil system).
+   * @param costColumns  - Optional column labels for the cost pattern matrix.
    * @returns EP cost as a whole number.
    */
-  learnCost(skill: Skill, type: CharacterType): number {
-    return skill.learnCost * this.cheapestGroupCost(skill, type) * 3
+  learnCost(skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): number {
+    return skill.learnCost * this.cheapestGroupCost(skill, type, costPatterns, costColumns) * 3
   }
 
   /**
@@ -53,14 +81,14 @@ export class AdvancementService {
    * @param type         - The character's type.
    * @returns EP cost, or null if no further advancement is possible.
    */
-  advanceCost(skill: Skill, currentValue: number, type: CharacterType): number | null {
+  advanceCost(skill: Skill, currentValue: number, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): number | null {
     // Angeborene Fertigkeiten (z.B. Raufen, Trinken) haben keine Steigerungstabelle.
     if (!skill.advancementCosts?.length) return null
     if (currentValue >= skill.maxValue) return null
     const stepIndex = currentValue - skill.baseValue
     const teCost = skill.advancementCosts[stepIndex]
     if (teCost === undefined) return null
-    return teCost * this.cheapestGroupCost(skill, type)
+    return teCost * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
   }
 
   /**
@@ -74,8 +102,8 @@ export class AdvancementService {
    * @param type      - The character's type.
    * @throws Error if EP is insufficient or the skill is already known.
    */
-  learnSkill(character: Character, skill: Skill, type: CharacterType): Character {
-    const cost = this.learnCost(skill, type)
+  learnSkill(character: Character, skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): Character {
+    const cost = this.learnCost(skill, type, costPatterns, costColumns)
 
     if (character.availableEp < cost) {
       throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
@@ -103,8 +131,8 @@ export class AdvancementService {
    * @param instanceId - Die vollständige Instanz-ID (z. B. "Sprache:Albisch").
    * @param type       - Der Charaktertyp.
    */
-  learnSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType): Character {
-    const cost = this.learnCost(skill, type)
+  learnSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): Character {
+    const cost = this.learnCost(skill, type, costPatterns, costColumns)
 
     if (character.availableEp < cost) {
       throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
@@ -132,13 +160,13 @@ export class AdvancementService {
    * @param type      - The character's type.
    * @throws Error if EP is insufficient, the skill is not learned, or it is at max.
    */
-  advanceSkill(character: Character, skill: Skill, type: CharacterType): Character {
+  advanceSkill(character: Character, skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): Character {
     const charSkill = character.skills.find(s => s.skillId === skill.id)
     if (!charSkill) {
       throw new Error(`${skill.name} has not been learned yet.`)
     }
 
-    const cost = this.advanceCost(skill, charSkill.value, type)
+    const cost = this.advanceCost(skill, charSkill.value, type, costPatterns, costColumns)
     if (cost === null) {
       throw new Error(`${skill.name} is already at its maximum value.`)
     }
@@ -166,13 +194,13 @@ export class AdvancementService {
    * @param instanceId - Die vollständige Instanz-ID (z. B. "Sprache:Albisch").
    * @param type       - Der Charaktertyp.
    */
-  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType): Character {
+  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): Character {
     const charSkill = character.skills.find(s => s.skillId === instanceId)
     if (!charSkill) {
       throw new Error(`${instanceId} has not been learned yet.`)
     }
 
-    const cost = this.advanceCost(skill, charSkill.value, type)
+    const cost = this.advanceCost(skill, charSkill.value, type, costPatterns, costColumns)
     if (cost === null) {
       throw new Error(`${instanceId} is already at its maximum value.`)
     }

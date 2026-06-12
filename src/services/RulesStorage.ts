@@ -430,6 +430,16 @@ export class RulesStorage {
       }
     }
 
+    // Merge costColumns and costPatterns: first (highest priority) source wins
+    for (const entry of active) {
+      if (entry.data.costColumns && !rules.costColumns) {
+        rules.costColumns = entry.data.costColumns
+      }
+      if (entry.data.costPatterns && !rules.costPatterns) {
+        rules.costPatterns = entry.data.costPatterns
+      }
+    }
+
     return rules
   }
 }

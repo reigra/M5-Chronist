@@ -55,6 +55,8 @@ export interface RulebookData {
   spellDescriptions?: SpellDescription[]
   skillRules?: SkillRulesConfig
   equipment?: EquipmentItem[]
+  costColumns?: string[]
+  costPatterns?: number[][]
 }
 
 /**
@@ -73,4 +75,6 @@ export interface RulesData {
   spellDescriptions: SpellDescription[]
   skillRules?: SkillRulesConfig
   equipment: EquipmentItem[]
+  costColumns?: string[]
+  costPatterns?: number[][]
 }

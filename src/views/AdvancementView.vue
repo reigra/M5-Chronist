@@ -115,7 +115,7 @@ const knownSkillRows = computed(() => {
         }
       }
 
-      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type)
+      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns)
       const maxValue = skill.maxValue ?? null
       return {
         skillId: cs.skillId,
@@ -149,9 +149,9 @@ const learnableSkillRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffengruppe' && s.id !== 'Zaubersprüche' && Array.isArray(s.groups) && s.groups.length > 0 && !s.gradValues?.length)
+    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffengruppe' && s.id !== 'Zaubersprüche' && !s.gradValues?.length && (Array.isArray(s.groups) && s.groups.length > 0 || s.costPatternId !== undefined))
     .map(skill => {
-      const cost = advancementService.learnCost(skill, type)
+      const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
       return {
         skillId: skill.id,
         name: skill.name,
@@ -175,7 +175,7 @@ const learnableWeaponRows = computed(() => {
   return r.skills
     .filter(s => !knownIds.has(s.id) && s.typ === 'Waffengruppe' && !s.gradValues?.length)
     .map(skill => {
-      const cost = advancementService.learnCost(skill, type)
+      const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
       return {
         skillId: skill.id,
         name: skill.name,
@@ -230,7 +230,7 @@ const pendingInstanceOptions = computed(() => {
 function requestLearn(skill: Skill): void {
   const type = charType.value
   if (!type || !rules.value || !rules.value.skillRules) return
-  const cost = advancementService.learnCost(skill, type)
+  const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
   const goldCost = skill.learnCost * 200
   const isMultiInstance = rules.value.skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
   selectedInstance.value = ''
@@ -246,7 +246,7 @@ function requestLearn(skill: Skill): void {
 function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
   const type = charType.value
   if (!type) return
-  const cost = advancementService.advanceCost(skill, currentValue, type)
+  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns)
   if (cost === null) return
   const stepIndex = currentValue - skill.baseValue
   const teCost = skill.advancementCosts[stepIndex] ?? 0
@@ -297,22 +297,22 @@ async function confirmAction(): Promise<void> {
 
   try {
     let updated: Character
-    if (action.type === 'learn') {
-      if (action.isMultiInstance) {
-        const multiRule = rules.value.skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
-        if (!multiRule || !selectedInstance.value) return
-        const fullId = multiRule.idPrefix + selectedInstance.value
-        updated = advancementService.learnSkillInstance(char, action.skill, fullId, type)
+      if (action.type === 'learn') {
+        if (action.isMultiInstance) {
+          const multiRule = rules.value.skillRules.multiInstanceSkills.find(m => m.baseSkillId === action.skill.id)
+          if (!multiRule || !selectedInstance.value) return
+          const fullId = multiRule.idPrefix + selectedInstance.value
+          updated = advancementService.learnSkillInstance(char, action.skill, fullId, type, rules.value?.costPatterns, rules.value?.costColumns)
+        } else {
+          updated = advancementService.learnSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns)
+        }
       } else {
-        updated = advancementService.learnSkill(char, action.skill, type)
+        if (action.instanceId) {
+          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns)
+        } else {
+          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns)
+        }
       }
-    } else {
-      if (action.instanceId) {
-        updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type)
-      } else {
-        updated = advancementService.advanceSkill(char, action.skill, type)
-      }
-    }
 
     updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost }
 
