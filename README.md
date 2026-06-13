@@ -46,7 +46,7 @@ Die Regel-JSONs werden mit Python-Skripten aus den EVA-XML-Dateien erstellt. Die
 
 ### Windows (einfach)
 
-Einfach `tools/create-rules-files.cmd` doppelklicken. Das Skript lädt automatisch die aktuellen EVA-Daten herunter, entpackt sie und erzeugt die JSON-Dateien im Ordner `tools/rules/`.
+Einfach `tools/Start-Installation.cmd` doppelklicken. Das Skript lädt automatisch die aktuellen EVA-Daten herunter, entpackt sie und erzeugt die JSON-Dateien im Ordner `tools/rules/`.
 
 ### Manuell
 

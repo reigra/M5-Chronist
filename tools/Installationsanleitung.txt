@@ -1,6 +1,6 @@
 Das ZIP einfach irgendwohin entpacken, z.B. nach Dokumente\MagusNG
 
-Start-Installation.cmd erstellt die Regeldateien (*,json)
+Start-Installation.cmd erstellt die Regeldateien (*.json)
 
 Es wird ein Chromebasierter Browser benötigt. Firefox geht leider nicht.
 Man kann die App installieren (oben rechts in der Adresszeile). Dann kann man sie direkt aus dem Startmenü / Desktop ausführen.
