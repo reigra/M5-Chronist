@@ -20,6 +20,7 @@ const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
 const browserSupported = 'showSaveFilePicker' in window
+const showSpellDetail = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -85,7 +86,23 @@ const spellRows = computed(() => {
   if (!c || !r) return []
   return (c.spells ?? []).map(id => {
     const spell = r.spells.find(s => s.id === id)
-    return { id, name: spell?.name ?? id, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
+    if (!spell) return { id, name: id, level: 0, spellGroup: '—' }
+
+    const desc = spell.shortDescription || r.spellDescriptions?.find(d => d.id === id)?.description || ''
+    return {
+      id,
+      name: spell.name,
+      level: spell.level,
+      spellGroup: spell.spellGroup,
+      spellType: spell.spellType,
+      apCost: spell.apCost,
+      castingTime: spell.castingTime,
+      range: spell.range,
+      targetType: spell.targetType,
+      effectArea: spell.effectArea,
+      duration: spell.duration,
+      displayDescription: desc,
+    }
   }).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
 
@@ -393,8 +410,13 @@ onMounted(async () => {
 
       <!-- ── Spells ── -->
       <section v-if="isCaster" class="card">
-        <h2>{{ UI.spells }}</h2>
-        <table v-if="spellRows.length > 0" class="skill-table">
+        <div class="section-header">
+          <h2>{{ UI.spells }}</h2>
+          <button v-if="spellRows.length > 0" class="btn-toggle" @click="showSpellDetail = !showSpellDetail">
+            {{ showSpellDetail ? UI.spellOverviewView : UI.spellDetailView }}
+          </button>
+        </div>
+        <table v-if="!showSpellDetail && spellRows.length > 0" class="skill-table">
           <thead>
             <tr>
               <th>{{ UI.colLevel }}</th>
@@ -410,7 +432,16 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
-          <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
+        <div v-else-if="showSpellDetail && spellRows.length > 0" class="spell-detail-list">
+          <div v-for="row in spellRows" :key="row.id" class="spell-detail-item">
+            <div class="spell-detail-line1">
+              <span class="spell-name">{{ row.name }}</span>
+              <span class="spell-meta">{{ row.spellType }} | AP: {{ row.apCost }} | {{ row.castingTime }} | {{ row.range }} | {{ row.targetType }} | {{ row.effectArea }} | {{ row.duration }}</span>
+            </div>
+            <div v-if="row.displayDescription" class="spell-detail-line2">{{ row.displayDescription }}</div>
+          </div>
+        </div>
+        <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
       </section>
 
       <!-- ── Footer ── -->
@@ -506,11 +537,65 @@ onMounted(async () => {
 }
 
 .card h2 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #555;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.btn-toggle {
+  padding: 0.2rem 0.6rem;
+  background: #fff;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8em;
+  color: #555;
+}
+
+.btn-toggle:hover {
+  background: #e8e8e8;
+}
+
+.spell-detail-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+}
+
+.spell-detail-item:last-child {
+  border-bottom: none;
+}
+
+.spell-detail-line1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.spell-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.spell-meta {
+  color: #666;
+  white-space: normal;
+}
+
+.spell-detail-line2 {
+  margin-top: 0.2rem;
+  color: #444;
+  font-size: 0.95em;
+  line-height: 1.4;
 }
 
 .prop-grid {

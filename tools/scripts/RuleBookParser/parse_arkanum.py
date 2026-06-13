@@ -246,7 +246,7 @@ class SpellData:
     def to_description_entry(self) -> dict:
         """Convert to the spell-descriptions.json schema format."""
         return {
-            "spellId":     self.name,
+            "id":          self.name,
             "description": self.description.strip(),
         }
 

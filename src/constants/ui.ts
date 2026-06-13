@@ -226,6 +226,8 @@ export const UI = {
   spellsEpAfter:   'EP danach:',
   spellsKnown:     'Bekannte Zaubersprüche',
   spellsLearnNew:  'Neuen Zauberspruch lernen',
+  spellDetailView:  'Details',
+  spellOverviewView: 'Übersicht',
 
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',
