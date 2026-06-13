@@ -101,7 +101,13 @@ def parse_fertigkeit(el: ET.Element):
     if zusaetze_el is not None:
         zus_str = attr(zusaetze_el, 'Zus')
         if zus_str:
-            values = [v.strip() for v in zus_str.split(',') if v.strip()]
+            seen = set()
+            values = []
+            for v in zus_str.split(','):
+                v = v.strip()
+                if v and v not in seen:
+                    seen.add(v)
+                    values.append(v)
             if values:
                 multi_instance_info = {
                     'baseSkillId': name,
