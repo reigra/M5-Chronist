@@ -15,6 +15,7 @@ export const UI = {
   notApplicable: '—',
   unitEp:        'EP',
   unitEs:        'ES',
+  selectPlaceholder: 'Bitte auswählen …',
 
   // ── App-Navigation ───────────────────────────────────────────────────────────
   appBrand:   'MagusNG',
@@ -172,6 +173,7 @@ export const UI = {
   equipLabelAbb:        'Abwehr Bonus',
   equipLabelMagisch:      'Magisch',
   equipLabelSpezialwaffe: 'Spezialwaffe',
+  equipLabelSkill:       'Fertigkeit',
 
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',

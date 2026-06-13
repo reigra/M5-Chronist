@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
@@ -61,6 +61,8 @@ const skills = ref<CharacterSkill[]>([])
 
 /** The skill ID selected in the "add skill" dropdown. */
 const skillToAdd = ref('')
+const skillSearchQuery = ref('')
+const skillShowDropdown = ref(false)
 
 /** FW for the skill being added. */
 const skillFwToAdd = ref(12)
@@ -70,6 +72,8 @@ const spells = ref<string[]>([])
 
 /** The spell ID selected in the "add spell" dropdown. */
 const spellToAdd = ref('')
+const spellSearchQuery = ref('')
+const spellShowDropdown = ref(false)
 
 /** Waffenspezialisierungen (bis zu 3, nur für Kämpfer/KampfZauberer) */
 const weaponSpec1 = ref('')
@@ -146,6 +150,18 @@ const availableSpells = computed(() => {
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
 
+const skillFiltered = computed(() => {
+  const q = skillSearchQuery.value.toLowerCase()
+  if (!q) return availableSkills.value
+  return availableSkills.value.filter(s => s.name.toLowerCase().includes(q))
+})
+
+const spellFiltered = computed(() => {
+  const q = spellSearchQuery.value.toLowerCase()
+  if (!q) return availableSpells.value
+  return availableSpells.value.filter(s => s.name.toLowerCase().includes(q))
+})
+
 /** Learned spells with display data, sorted by level then name. */
 const spellRows = computed(() => {
   const r = rules.value
@@ -210,6 +226,32 @@ const allWeapons = computed(() =>
     .filter(e => e.waffentyp)
     .sort((a, b) => a.name.localeCompare(b.name))
 )
+
+const closeSkillDropdown = (): void => {
+  setTimeout(() => { skillShowDropdown.value = false }, 200)
+}
+const closeSpellDropdown = (): void => {
+  setTimeout(() => { spellShowDropdown.value = false }, 200)
+}
+
+function selectSkill(item: { id: string; name: string }): void {
+  skillToAdd.value = item.id
+  skillSearchQuery.value = item.name
+  skillShowDropdown.value = false
+}
+
+function selectSpell(spell: { id: string; name: string }): void {
+  spellToAdd.value = spell.id
+  spellSearchQuery.value = spell.name
+  spellShowDropdown.value = false
+}
+
+watch(skillSearchQuery, (val) => {
+  if (!val) skillToAdd.value = ''
+})
+watch(spellSearchQuery, (val) => {
+  if (!val) spellToAdd.value = ''
+})
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Populate all form fields from an existing character. */
@@ -327,6 +369,7 @@ function addSkill(): void {
   const fw = skillFwToAdd.value ?? (ruleSkill?.baseValue ?? 12)
   skills.value = [...skills.value, { skillId: sid, value: fw }]
   skillToAdd.value = ''
+  skillSearchQuery.value = ''
   skillFwToAdd.value = ruleSkill?.baseValue ?? 12
 }
 
@@ -341,6 +384,7 @@ function addSpell(): void {
   if (!sid) return
   spells.value = [...spells.value, sid]
   spellToAdd.value = ''
+  spellSearchQuery.value = ''
 }
 
 /** Remove a spell from the character's spell list. */
@@ -678,10 +722,19 @@ onMounted(async () => {
 
         <!-- Fertigkeit hinzufügen -->
         <div class="add-skill-row">
-          <select v-model="skillToAdd" class="skill-select">
-            <option value="" disabled>{{ UI.formAddSkillPlaceholder }}</option>
-            <option v-for="s in availableSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
+          <div class="search-wrapper">
+            <input v-model="skillSearchQuery" type="text" :placeholder="UI.formAddSkillPlaceholder"
+              class="skill-select"
+              @focus="skillShowDropdown = true"
+              @input="skillShowDropdown = true"
+              @blur="closeSkillDropdown" />
+            <ul v-if="skillShowDropdown && skillFiltered.length > 0" class="search-dropdown">
+              <li v-for="s in skillFiltered" :key="s.id"
+                @mousedown.prevent="selectSkill(s)" class="search-dropdown-item">
+                {{ s.name }}
+              </li>
+            </ul>
+          </div>
           <label class="fw-label">{{ UI.colFw }}
             <input v-model.number="skillFwToAdd" type="number"  class="fw-input" />
           </label>
@@ -754,12 +807,19 @@ onMounted(async () => {
         <p v-else class="empty-hint">{{ UI.emptySpellsForm }}</p>
 
         <div class="add-skill-row">
-          <select v-model="spellToAdd" class="skill-select">
-            <option value="" disabled>{{ UI.formAddSpellPlaceholder }}</option>
-            <option v-for="s in availableSpells" :key="s.id" :value="s.id">
-              {{ s.name }} -  ({{ UI.colLevel }} {{ s.level }}) 
-            </option>
-          </select>
+          <div class="search-wrapper">
+            <input v-model="spellSearchQuery" type="text" :placeholder="UI.formAddSpellPlaceholder"
+              class="skill-select"
+              @focus="spellShowDropdown = true"
+              @input="spellShowDropdown = true"
+              @blur="closeSpellDropdown" />
+            <ul v-if="spellShowDropdown && spellFiltered.length > 0" class="search-dropdown">
+              <li v-for="s in spellFiltered" :key="s.id"
+                @mousedown.prevent="selectSpell(s)" class="search-dropdown-item">
+                {{ s.name }} <span class="search-dropdown-group">({{ UI.colLevel }} {{ s.level }})</span>
+              </li>
+            </ul>
+          </div>
           <button type="button" class="btn-add" :disabled="!spellToAdd" @click="addSpell">{{ UI.add }}</button>
         </div>
       </section>
@@ -902,6 +962,34 @@ input, select {
 }
 
 .skill-select { flex: 1; min-width: 12rem; }
+
+.search-wrapper { position: relative; flex: 1; min-width: 12rem; }
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.search-dropdown-item {
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+.search-dropdown-item:hover { background: #e8f0ff; }
+
+.search-dropdown-group { color: #888; font-size: 0.85em; }
 
 .fw-label {
   flex-direction: row;
