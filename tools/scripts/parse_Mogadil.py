@@ -101,17 +101,61 @@ def _int_cell(text):
         return None
 
 
+def _parse_advancement_row(row: list, col_headers: list) -> dict | None:
+    """Parse one LE/TE row into {baseValue, learnCost, costs} or None."""
+    letter = _cell(row[0])
+    if not letter or len(letter) > 2:
+        return None
+
+    paren_col = None
+    paren_value = None
+    for c in range(1, len(row)):
+        cell = _cell(row[c])
+        m = re.search(r'\((\d+)\)', cell)
+        if m:
+            paren_col = c
+            paren_value = int(m.group(1))
+            break
+
+    if paren_col is None:
+        return None
+
+    header_idx = paren_col - 1
+    if header_idx >= len(col_headers) or col_headers[header_idx] is None:
+        return None
+
+    base_value = col_headers[header_idx]
+    learn_cost = paren_value // 3
+
+    advancement_costs = []
+    for c in range(paren_col + 1, len(row)):
+        cell = _cell(row[c])
+        if not cell:
+            continue
+        try:
+            advancement_costs.append(int(cell))
+        except ValueError:
+            pass
+
+    return {
+        'baseValue': base_value,
+        'learnCost': learn_cost,
+        'costs': advancement_costs,
+    }
+
+
 def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
     with pdfplumber.open(pdf_path) as pdf:
         page = pdf.pages[0]
         tables = page.extract_tables()
 
+    # ---- Main LE/TE table (A-L, W-Z) ----
     cost_table = None
     for table in tables:
         if not table:
             continue
         first = _cell(table[0][0]) if table[0] else ''
-        if 'LE' in first or 'TE' in first:
+        if first == 'LE/TE':
             cost_table = table
             break
 
@@ -134,44 +178,67 @@ def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
         letter = _cell(row[0])
         if not letter or len(letter) > 2:
             continue
+        parsed = _parse_advancement_row(row, col_headers)
+        if parsed:
+            result[letter] = parsed
+        else:
+            print(f'  WARN: no parenthesized value found in row "{letter}", skipping')
 
-        paren_col = None
-        paren_value = None
-        for c in range(1, len(row)):
-            cell = _cell(row[c])
+    # ---- TE table (P/M, S) ----
+    te_table = None
+    for table in tables:
+        if not table or not table[0]:
+            continue
+        first = _cell(table[0][0])
+        if first == 'TE' and len(table[0]) > 1 and _cell(table[0][1]) == '+1':
+            te_table = table
+            break
+
+    if te_table is not None and len(te_table) >= 3:
+        te_headers = []
+        for c in range(1, len(te_table[0])):
+            h = _cell(te_table[0][c])
+            try:
+                te_headers.append(int(h.replace('+', '')))
+            except ValueError:
+                te_headers.append(None)
+
+        # P/M row — paren column is always col 1 in this table.
+        # pdfplumber does NOT capture cost cells in P/M's row; they appear
+        # in the S row below because of PDF layout.  Use those as fallback.
+        pm_row = te_table[1]
+        pm_paren = None
+        for c in range(1, len(pm_row)):
+            cell = _cell(pm_row[c])
             m = re.search(r'\((\d+)\)', cell)
             if m:
-                paren_col = c
-                paren_value = int(m.group(1))
+                pm_paren = int(m.group(1))
                 break
 
-        if paren_col is None:
-            print(f'  WARN: no parenthesized value found in row "{letter}", skipping')
-            continue
+        if pm_paren is not None and len(te_headers) > 0 and te_headers[0] is not None:
+            pm_base = te_headers[0]
+            pm_learn = pm_paren // 3
+            pm_costs: list[int] = []
+            # costs live in the S row (index 2), cols 2+ in the TE table
+            s_row = te_table[2]
+            for c in range(2, len(s_row)):
+                cell = _cell(s_row[c])
+                if not cell:
+                    continue
+                try:
+                    pm_costs.append(int(cell))
+                except ValueError:
+                    pass
+            result['P/M'] = {
+                'baseValue': pm_base,
+                'learnCost': pm_learn,
+                'costs': pm_costs,
+            }
 
-        header_idx = paren_col - 1
-        if header_idx >= len(col_headers) or col_headers[header_idx] is None:
-            print(f'  WARN: invalid base column index {header_idx} for row "{letter}", skipping')
-            continue
-
-        base_value = col_headers[header_idx]
-        learn_cost = paren_value // 3
-
-        advancement_costs = []
-        for c in range(paren_col + 1, len(row)):
-            cell = _cell(row[c])
-            if not cell:
-                continue
-            try:
-                advancement_costs.append(int(cell))
-            except ValueError:
-                pass
-
-        result[letter] = {
-            'baseValue': base_value,
-            'learnCost': learn_cost,
-            'costs': advancement_costs,
-        }
+        # S row
+        s_raw = _parse_advancement_row(te_table[2], te_headers)
+        if s_raw:
+            result['S'] = s_raw
 
     return result
 
@@ -523,6 +590,69 @@ def _compact_arrays(json_str: str) -> str:
     return json_str
 
 
+def extract_weapon_skills(pdf_path: str) -> dict[str, list[str]]:
+    """Parse the 'Lernen und Steigern von Waffenfertigkeiten' section on page 1.
+
+    Returns {letter: [weapon_name, ...]} mapping.
+    """
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[0]
+        text = page.extract_text()
+
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+
+    # Find the start of the weapon skills section
+    start = None
+    for i, line in enumerate(lines):
+        if 'Waffenfertigkeiten' in line:
+            start = i
+            break
+    if start is None:
+        print('  WARN: Waffenfertigkeiten section not found on page 1')
+        return {}
+
+    # Collect raw lines until the next section.
+    # Continuation lines without a colon are kept ONLY if they contain a comma
+    # (weapon names wrapping across lines).
+    raw: list[list[str]] = []  # each entry is [letter, [segments...]]
+    current_letter = None
+    for line in lines[start + 1:]:
+        m = re.match(r'^([A-Z](?:/[A-Z])?):\s*(.*)', line)
+        if m:
+            letter = m.group(1)
+            rest = m.group(2)
+            raw.append([letter, [rest]])
+            current_letter = letter
+        elif current_letter is not None and raw and ',' in line:
+            raw[-1][1].append(line)
+        elif current_letter is not None and raw and not line[0].isalpha():
+            # Wurf-range continuation (e.g. "81 - 85 Konstitution") — skip
+            pass
+        else:
+            break  # reached next section or non-weapon heading
+
+    # Strip Wurf-table data from each segment independently,
+    # then join and split into weapon names.
+    _wurf = re.compile(r'\d+\s*-\s*\d+\s+\S+(?:\s+\S+)*')
+
+    def _clean_rest(text: str) -> str:
+        """Remove Wurf ranges and parenthetical notes."""
+        text = _wurf.sub('', text)
+        text = re.sub(r'\s*\([^)]*\)\s*', ' ', text)
+        return text.strip()
+
+    result: dict[str, list[str]] = {}
+    for letter, segments in raw:
+        combined = ' '.join(_clean_rest(s) for s in segments)
+        weapons = [w.strip() for w in combined.split(',') if w.strip()]
+        if weapons:
+            result[letter] = weapons
+        else:
+            print(f'  WARN: no weapons found for letter "{letter}" in "{combined}"')
+
+    return result
+
+
 def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     """Parse the Mogadil Lerntabellen PDF and write the output JSON.
 
@@ -574,7 +704,17 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     log('Building skills...')
     skills = []
     skipped = 0
+    waffen_pattern_id = None
+    waffen_property = 'Gs'  # default, overridden if "Waffen" entry exists
+
     for r in all_rows:
+        if r['name'] == 'Waffen':
+            key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
+            waffen_pattern_id = pattern_map.get(key)
+            waffen_property = r['property']
+            log(f'  Found "Waffen" entry, patternId={waffen_pattern_id}, property={waffen_property}')
+            continue
+
         lookup = cost_lookup.get(r['letter'])
         if lookup is None:
             log(f'  WARN: unknown cost category "{r["letter"]}" for skill "{r["name"]}", skipping')
@@ -595,6 +735,33 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'linkedProperty': r['property'],
             'costPatternId': pattern_id,
         })
+
+    # Add weapon skills from the "Lernen und Steigern von Waffenfertigkeiten" section
+    if waffen_pattern_id is not None:
+        wpn_skills = extract_weapon_skills(pdf_path)
+        if wpn_skills:
+            log(f'  Adding {sum(len(v) for v in wpn_skills.values())} weapon skills...')
+            for letter, names in sorted(wpn_skills.items()):
+                lookup = cost_lookup.get(letter)
+                if lookup is None:
+                    log(f'  WARN: no advancement costs for weapon letter "{letter}", skipping')
+                    skipped += len(names)
+                    continue
+                for name in names:
+                    max_val = lookup['baseValue'] + len(lookup['costs'])
+                    skills.append({
+                        'id': name,
+                        'name': name,
+                        'typ': 'Waffenfertigkeit',
+                        'learnCost': lookup['learnCost'],
+                        'advancementCosts': lookup['costs'],
+                        'baseValue': lookup['baseValue'],
+                        'maxValue': max_val,
+                        'linkedProperty': waffen_property,
+                        'costPatternId': waffen_pattern_id,
+                    })
+    else:
+        log('  WARN: no "Waffen" entry found, weapon skills will be skipped')
 
     _umlaut_sort = str.maketrans({'ä': 'a', 'ö': 'o', 'ü': 'u', 'Ä': 'A', 'Ö': 'O', 'Ü': 'U', 'ß': 'ss'})
     skills.sort(key=lambda s: s['name'].translate(_umlaut_sort).casefold())
