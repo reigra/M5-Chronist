@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
-import type { Character, CharacterSkill } from '../types/Character'
+import type { Character, CharacterSkill, CharacterSpell } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ const skillShowDropdown = ref(false)
 const skillFwToAdd = ref(12)
 
 /** Spell IDs currently on the character being edited. */
-const spells = ref<string[]>([])
+const spells = ref<CharacterSpell[]>([])
 
 /** The spell ID selected in the "add spell" dropdown. */
 const spellToAdd = ref('')
@@ -145,7 +145,7 @@ const availableSpells = computed(() => {
   const t = r.types.find(x => x.id === typeId.value)
   if (!t?.spellCosts) return []
   const groups = new Set(Object.keys(t.spellCosts))
-  const learned = new Set(spells.value)
+  const learned = new Set(spells.value.map(s => s.spellId))
   return r.spells
     .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
@@ -166,11 +166,11 @@ const spellFiltered = computed(() => {
 /** Learned spells with display data, sorted by level then name. */
 const spellRows = computed(() => {
   const r = rules.value
-  if (!r) return spells.value.map(id => ({ id, name: id, level: 0, spellGroup: '—' }))
+  if (!r) return spells.value.map(s => ({ id: s.spellId, name: s.spellId, level: 0, spellGroup: '—', pp: s.pp ?? 0 }))
   return spells.value
-    .map(id => {
-      const spell = r.spells.find(s => s.id === id)
-      return { id, name: spell?.name ?? id, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
+    .map(s => {
+      const spell = r.spells.find(sp => sp.id === s.spellId)
+      return { id: s.spellId, name: spell?.name ?? s.spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—', pp: s.pp ?? 0 }
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
@@ -368,7 +368,7 @@ function addSkill(): void {
   const baseSkillId = multiRule ? multiRule.baseSkillId : sid
   const ruleSkill = r?.skills.find(s => s.id === baseSkillId)
   const fw = skillFwToAdd.value ?? (ruleSkill?.baseValue ?? 12)
-  skills.value = [...skills.value, { skillId: sid, value: fw }]
+  skills.value = [...skills.value, { skillId: sid, value: fw, pp: 0 }]
   skillToAdd.value = ''
   skillSearchQuery.value = ''
   skillFwToAdd.value = ruleSkill?.baseValue ?? 12
@@ -383,14 +383,14 @@ function removeSkill(skillId: string): void {
 function addSpell(): void {
   const sid = spellToAdd.value
   if (!sid) return
-  spells.value = [...spells.value, sid]
+  spells.value = [...spells.value, { spellId: sid, pp: 0 }]
   spellToAdd.value = ''
   spellSearchQuery.value = ''
 }
 
 /** Remove a spell from the character's spell list. */
 function removeSpell(spellId: string): void {
-  spells.value = spells.value.filter(id => id !== spellId)
+  spells.value = spells.value.filter(s => s.spellId !== spellId)
 }
 
 /** Validate required fields. Returns an error message or null. */
@@ -695,7 +695,7 @@ onMounted(async () => {
         <!-- Vorhandene Fertigkeiten -->
         <table v-if="skillRows.length > 0" class="skill-table">
           <thead>
-            <tr><th>{{ UI.colSkill }}</th><th>{{ UI.colFw }}</th><th></th></tr>
+            <tr><th>{{ UI.colSkill }}</th><th>{{ UI.colFw }}</th><th>{{ UI.colPp }}</th><th></th></tr>
           </thead>
           <tbody>
             <tr v-for="row in skillRows" :key="row.skillId">
@@ -710,6 +710,18 @@ onMounted(async () => {
                   @change="e => {
                     const idx = skills.findIndex(s => s.skillId === row.skillId)
                     if (idx !== -1) skills[idx] = { ...skills[idx], value: Number((e.target as HTMLInputElement).value) }
+                  }"
+                />
+              </td>
+              <td>
+                <input
+                  :value="row.pp ?? 0"
+                  type="number"
+                  min="0"
+                  class="pp-input"
+                  @change="e => {
+                    const idx = skills.findIndex(s => s.skillId === row.skillId)
+                    if (idx !== -1) skills[idx] = { ...skills[idx], pp: Number((e.target as HTMLInputElement).value) }
                   }"
                 />
               </td>
@@ -792,13 +804,25 @@ onMounted(async () => {
 
         <table v-if="spellRows.length > 0" class="skill-table">
           <thead>
-            <tr><th>{{ UI.colLevel }}</th><th>{{ UI.labelName }}</th><th>{{ UI.colGroup }}</th><th></th></tr>
+            <tr><th>{{ UI.colLevel }}</th><th>{{ UI.labelName }}</th><th>{{ UI.colGroup }}</th><th>{{ UI.colPp }}</th><th></th></tr>
           </thead>
           <tbody>
             <tr v-for="row in spellRows" :key="row.id">
               <td>{{ row.level }}</td>
               <td>{{ row.name }}</td>
               <td>{{ row.spellGroup }}</td>
+              <td>
+                <input
+                  :value="row.pp"
+                  type="number"
+                  min="0"
+                  class="pp-input"
+                  @change="e => {
+                    const idx = spells.findIndex(s => s.spellId === row.id)
+                    if (idx !== -1) spells[idx] = { ...spells[idx], pp: Number((e.target as HTMLInputElement).value) }
+                  }"
+                />
+              </td>
               <td>
                 <button type="button" class="btn-remove" @click="removeSpell(row.id)">✕</button>
               </td>
@@ -944,6 +968,7 @@ input, select {
 .skill-table th { background: #f0f0f0; }
 
 .fw-input { width: 4rem; text-align: right; }
+.pp-input { width: 3rem; text-align: right; }
 .es-input  { width: 7rem; text-align: right; }
 
 .btn-remove {

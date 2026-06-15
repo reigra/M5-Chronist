@@ -54,6 +54,7 @@ export const UI = {
   // ── Spalten- und Feldbezeichner ──────────────────────────────────────────────
   colSkill:    'Fertigkeit',
   colFw:       'FW',
+  colPp:       'PP',
   colEw:       'EW',
   colAttr:     'Eigenschaft',
   colLevel:    'Stufe',

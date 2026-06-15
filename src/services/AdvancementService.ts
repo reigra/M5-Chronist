@@ -115,7 +115,7 @@ export class AdvancementService {
     return {
       ...character,
       availableEp: character.availableEp - cost,
-      skills: [...character.skills, { skillId: skill.id, value: skill.baseValue }],
+      skills: [...character.skills, { skillId: skill.id, value: skill.baseValue, pp: 0 }],
       updatedAt: new Date().toISOString(),
     }
   }
@@ -144,7 +144,7 @@ export class AdvancementService {
     return {
       ...character,
       availableEp: character.availableEp - cost,
-      skills: [...character.skills, { skillId: instanceId, value: skill.baseValue }],
+      skills: [...character.skills, { skillId: instanceId, value: skill.baseValue, pp: 0 }],
       updatedAt: new Date().toISOString(),
     }
   }

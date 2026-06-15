@@ -57,9 +57,10 @@ const learnedSpellRows = computed(() => {
   if (!c || !r) return []
   const learned = c.spells ?? []
   return learned
-    .map(id => {
-      const spell = r.spells.find(s => s.id === id)
-      return { id, name: spell?.name ?? id, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
+    .map(s => {
+      const spellId = typeof s === 'string' ? s : s.spellId
+      const spell = r.spells.find(sp => sp.id === spellId)
+      return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
@@ -75,7 +76,7 @@ const learnableSpellRows = computed(() => {
   if (!c || !r || !type?.spellCosts) return []
 
   const groups = new Set(Object.keys(type.spellCosts))
-  const learned = new Set(c.spells ?? [])
+  const learned = new Set((c.spells ?? []).map(s => typeof s === 'string' ? s : s.spellId))
 
   return r.spells
     .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
@@ -126,7 +127,7 @@ async function confirmLearn(): Promise<void> {
 
   const updated: Character = {
     ...char,
-    spells: [...(char.spells ?? []), action.spell.id],
+    spells: [...(char.spells ?? []), { spellId: action.spell.id, pp: 0 }],
     availableEp: char.availableEp - action.epCost,
     gold: (char.gold ?? 0) - action.goldCost,
     updatedAt: new Date().toISOString(),

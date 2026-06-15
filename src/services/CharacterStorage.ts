@@ -115,6 +115,19 @@ export class CharacterStorage {
       }
     }
 
+    // Migrate skills: add pp if missing
+    if (Array.isArray(raw.skills)) {
+      raw.skills = raw.skills.map((s: any) => s.pp === undefined ? { ...s, pp: 0 } : s)
+    }
+
+    // Migrate spells: convert string[] to CharacterSpell[], add pp if missing
+    if (Array.isArray(raw.spells)) {
+      raw.spells = raw.spells.map((s: any) => {
+        if (typeof s === 'string') return { spellId: s, pp: 0 }
+        return s.pp === undefined ? { ...s, pp: 0 } : s
+      })
+    }
+
     return raw
   }
 
@@ -157,7 +170,7 @@ export class CharacterStorage {
 
     const file = await fileHandle.getFile()
     const text = await file.text()
-    return JSON.parse(text) as Character
+    return CharacterStorage.migrate(JSON.parse(text)) as Character
   }
 
   /**
@@ -224,7 +237,7 @@ export class CharacterStorage {
 
     const file = await fileHandle.getFile()
     const text = await file.text()
-    const character = JSON.parse(text) as Character
+    const character = CharacterStorage.migrate(JSON.parse(text)) as Character
     await this.save(character)
     return character
   }

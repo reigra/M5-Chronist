@@ -85,13 +85,14 @@ const hasSpecializations = computed(() =>
 const spellRows = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return []
-  return (c.spells ?? []).map(id => {
-    const spell = r.spells.find(s => s.id === id)
-    if (!spell) return { id, name: id, level: 0, spellGroup: '—' }
+  return (c.spells ?? []).map(s => {
+    const spellId = typeof s === 'string' ? s : s.spellId
+    const spell = r.spells.find(sp => sp.id === spellId)
+    if (!spell) return { id: spellId, name: spellId, level: 0, spellGroup: '—', pp: typeof s === 'string' ? 0 : (s.pp ?? 0) }
 
-    const desc = spell.shortDescription || r.spellDescriptions?.find(d => d.id === id)?.description || ''
+    const desc = spell.shortDescription || r.spellDescriptions?.find(d => d.id === spellId)?.description || ''
     return {
-      id,
+      id: spellId,
       name: spell.name,
       level: spell.level,
       spellGroup: spell.spellGroup,
@@ -103,6 +104,7 @@ const spellRows = computed(() => {
       effectArea: spell.effectArea,
       duration: spell.duration,
       displayDescription: desc,
+      pp: typeof s === 'string' ? 0 : (s.pp ?? 0),
     }
   }).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
@@ -117,6 +119,46 @@ const skillRows = computed(() => {
 const weaponRows = computed(() => skillRows.value.filter(r => r.isWeapon))
 const learnedRows = computed(() => skillRows.value.filter(r => !r.isWeapon && !r.unlearned))
 const unlearnedRows = computed(() => skillRows.value.filter(r => r.unlearned))
+
+/** Adjust PP for a learned skill and persist. */
+async function adjustPp(skillId: string, delta: number): Promise<void> {
+  const c = character.value
+  if (!c) return
+  const idx = c.skills.findIndex(s => s.skillId === skillId)
+  if (idx === -1) return
+  const current = c.skills[idx].pp ?? 0
+  if (current + delta < 0) return
+  const updated = {
+    ...c,
+    skills: c.skills.map(s =>
+      s.skillId === skillId ? { ...s, pp: Math.max(0, (s.pp ?? 0) + delta) } : s,
+    ),
+    updatedAt: new Date().toISOString(),
+  }
+  await characterStorage.save(updated)
+  character.value = updated
+}
+
+/** Adjust PP for a spell and persist. */
+async function adjustSpellPp(spellId: string, delta: number): Promise<void> {
+  const c = character.value
+  if (!c) return
+  const idx = c.spells.findIndex(s => (typeof s === 'string' ? s : s.spellId) === spellId)
+  if (idx === -1) return
+  const current = (typeof c.spells[idx] === 'string' ? 0 : (c.spells[idx] as any).pp) ?? 0
+  if (current + delta < 0) return
+  const updated = {
+    ...c,
+    spells: c.spells.map(s => {
+      const sid = typeof s === 'string' ? s : s.spellId
+      if (sid !== spellId) return s
+      return { spellId: sid, pp: Math.max(0, ((typeof s === 'string' ? 0 : (s as any).pp) ?? 0) + delta) }
+    }),
+    updatedAt: new Date().toISOString(),
+  }
+  await characterStorage.save(updated)
+  character.value = updated
+}
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -380,9 +422,14 @@ onMounted(async () => {
       <section v-if="weaponRows.length > 0" class="card">
         <h2>{{ UI.secWeaponSkills }}</h2>
         <div class="skill-grid skill-grid--weapons">
-          <div v-for="row in weaponRows" :key="row.name" class="skill-row">
+          <div v-for="row in weaponRows" :key="row.name" class="skill-row skill-row--with-pp">
             <span>{{ row.name }}</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+            <span class="pp-control">
+              <button type="button" class="btn-pp" :disabled="(row.pp ?? 0) <= 0" @click="adjustPp(row.skillId, -1)">−</button>
+              <span class="pp-value">{{ UI.colPp }} {{ row.pp ?? 0 }}</span>
+              <button type="button" class="btn-pp" @click="adjustPp(row.skillId, 1)">+</button>
+            </span>
           </div>
         </div>
       </section>
@@ -391,9 +438,14 @@ onMounted(async () => {
       <section v-if="learnedRows.length > 0" class="card">
         <h2>{{ UI.secSkills }}</h2>
         <div class="skill-grid skill-grid--learned">
-          <div v-for="row in learnedRows" :key="row.name" class="skill-row">
+          <div v-for="row in learnedRows" :key="row.name" class="skill-row skill-row--with-pp">
             <span>{{ row.name }}</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+            <span class="pp-control">
+              <button type="button" class="btn-pp" :disabled="(row.pp ?? 0) <= 0" @click="adjustPp(row.skillId, -1)">−</button>
+              <span class="pp-value">{{ UI.colPp }} {{ row.pp ?? 0 }}</span>
+              <button type="button" class="btn-pp" @click="adjustPp(row.skillId, 1)">+</button>
+            </span>
           </div>
         </div>
       </section>
@@ -402,9 +454,12 @@ onMounted(async () => {
       <section v-if="unlearnedRows.length > 0" class="card">
         <h2>{{ UI.secUnlearnedSkills }}</h2>
         <div class="skill-grid skill-grid--unlearned">
-          <div v-for="row in unlearnedRows" :key="row.name" class="skill-row skill-row--unlearned">
+          <div v-for="row in unlearnedRows" :key="row.name" class="skill-row skill-row--with-pp skill-row--unlearned">
             <span>{{ row.name }}*</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+            <span class="pp-control">
+              <span class="pp-value">{{ UI.colPp }} —</span>
+            </span>
           </div>
         </div>
       </section>
@@ -423,6 +478,8 @@ onMounted(async () => {
               <th>{{ UI.colLevel }}</th>
               <th>{{ UI.labelName }}</th>
               <th>{{ UI.colGroup }}</th>
+              <th>{{ UI.colPp }}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -430,6 +487,11 @@ onMounted(async () => {
               <td>{{ row.level }}</td>
               <td>{{ row.name }}</td>
               <td>{{ row.spellGroup }}</td>
+              <td class="pp-cell">{{ row.pp ?? 0 }}</td>
+              <td class="pp-control">
+                <button type="button" class="btn-pp" :disabled="(row.pp ?? 0) <= 0" @click="adjustSpellPp(row.id, -1)">−</button>
+                <button type="button" class="btn-pp" @click="adjustSpellPp(row.id, 1)">+</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -682,6 +744,55 @@ onMounted(async () => {
 }
 
 .skill-row--unlearned { font-style: italic; }
+
+.skill-row--with-pp {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pp-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pp-value {
+  font-size: 0.85em;
+  color: #666;
+  white-space: nowrap;
+}
+
+.btn-pp {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-pp:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-pp:hover:not(:disabled) {
+  background: #e8e8e8;
+}
+
+.pp-cell {
+  text-align: center !important;
+  font-weight: 600;
+}
 
 .empty-hint { color: #888; font-style: italic; margin: 0; }
 
