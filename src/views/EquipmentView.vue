@@ -32,7 +32,7 @@ const availableEquipment = computed(() => {
 })
 
 const weaponSkills = computed<Skill[]>(() => {
-  return rules.value?.skills.filter(s => s.typ === 'Waffengruppe') ?? []
+  return rules.value?.skills.filter(s => s.typ === 'Waffenfertigkeit') ?? []
 })
 
 const searchQuery = ref('')

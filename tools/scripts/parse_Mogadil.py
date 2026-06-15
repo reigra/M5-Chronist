@@ -37,6 +37,22 @@ except ImportError:
         subprocess.check_call(cmd)
     import pdfplumber
 
+SOURCE_MAP: dict[str, str] = {
+    'ARK': 'Das Arkanum',
+    'ARS': 'Ars Armorum',
+    'Era': 'Cuanscadan - Tor nach Erainn',
+    'Esc': 'Die Pyramiden von Eschar',
+    'KOD': 'Der Kodex',
+    'KTP': 'KanThaiPan - Unter dem Schirm des Jadekaisers',
+    'Küs': 'Das Spiel der großen Häuser',
+    'MAN': 'Das Manual',
+    'Mor': 'Moravod - Tor zur Anderswelt',
+    'MYS': 'Das Mysterium',
+    'Raw': 'Das Erbe der Löwensöhne',
+    'Wae': 'Waeland - Die Krieger des Nordens',
+    'ZwQ': 'Die Meister von Feuer und Stein',
+}
+
 PDF_DIR = os.path.join(os.path.dirname(__file__), '..', 'Mogadil')
 _MOGADIL_FILES = [f for f in os.listdir(PDF_DIR) if f.startswith('Lerntabellen_') and f.endswith('.pdf')]
 if not _MOGADIL_FILES:
@@ -90,6 +106,22 @@ def _fix_merged_cells(row: list):
             out.append(cell)
         i += 1
     return out
+
+
+def _resolve_source(source_raw: str) -> str:
+    """Replace known abbreviations in a "Quelle / Bemerkung" cell with full book names.
+
+    "KOD S.101"                        → "Der Kodex S.101"
+    "ARK Das Arkanum"                  → "Das Arkanum"  (already has full name)
+    "Mor S.132, Era S.42, Esc S.133"  → "Moravod - Tor zur Anderswelt S.132, Cuanscadan - Tor nach Erainn S.42, Die Pyramiden von Eschar S.133"
+    """
+    if not source_raw:
+        return ''
+    # Replace abbreviations only when they appear as whole words (word boundaries)
+    result = source_raw
+    for abbr, full in sorted(SOURCE_MAP.items(), key=lambda x: -len(x[0])):
+        result = re.sub(rf'\b{re.escape(abbr)}\b', full, result)
+    return result
 
 
 def _int_cell(text):
@@ -514,12 +546,16 @@ def extract_fertigkeiten_tables(pdf_path: str):
                 costs = [_cell(row[c]) for c in range(3, min(3 + n_cost, len(row)))]
                 while len(costs) < n_cost:
                     costs.append('')
-                rows.append({
+                entry: dict = {
                     'name': name,
                     'property': prop,
                     'letter': letter,
                     'costs': costs,
-                })
+                }
+                # Capture "Quelle / Bemerkung" cell when present (last block only)
+                if len(row) > 3 + n_cost:
+                    entry['source_raw'] = _cell(row[3 + n_cost])
+                rows.append(entry)
             return rows
 
         block_rows = _extract(main_t)
@@ -532,6 +568,9 @@ def extract_fertigkeiten_tables(pdf_path: str):
                 if m['name'] != b['name']:
                     print(f'  WARN: skill mismatch at {idx}: "{m["name"]}" vs "{b["name"]}"')
                 m['costs'].extend(b['costs'])
+                # Carry over source from the last block (which has the Quelle column)
+                if b.get('source_raw'):
+                    m['source_raw'] = b['source_raw']
 
     for m in merged:
         if len(m['costs']) != len(all_cost_headers):
@@ -724,6 +763,8 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
         key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
         pattern_id = pattern_map[key]
 
+        source_raw = r.get('source_raw', '')
+        source = _resolve_source(source_raw) if source_raw else ''
         skills.append({
             'id': r['name'],
             'name': r['name'],
@@ -734,6 +775,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'maxValue': 18,
             'linkedProperty': r['property'],
             'costPatternId': pattern_id,
+            'source': source,
         })
 
     # Add weapon skills from the "Lernen und Steigern von Waffenfertigkeiten" section

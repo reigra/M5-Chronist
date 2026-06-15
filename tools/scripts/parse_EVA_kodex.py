@@ -72,10 +72,13 @@ def parse_fertigkeit(el: ET.Element):
         except ValueError:
             pass
             
+    typ_raw = attr(el, 'Typ')
+    if typ_raw == 'Waffengruppe':
+        typ_raw = 'Waffenfertigkeit'
     skill = {
         'id': name,
         'name': name,
-        'typ': attr(el, 'Typ'),
+        'typ': typ_raw,
         'groups': [normalize_group_name(attr(a, 'sWert')) for a in assocs],
         'learnCost': learn_cost,
         'advancementCosts': tek['advancementCosts'],

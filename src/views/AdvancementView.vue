@@ -149,7 +149,7 @@ const learnableSkillRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffengruppe' && s.id !== 'Zaubersprüche' && !s.gradValues?.length && (Array.isArray(s.groups) && s.groups.length > 0 || s.costPatternId !== undefined))
+    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffenfertigkeit' && s.id !== 'Zaubersprüche' && !s.gradValues?.length && (Array.isArray(s.groups) && s.groups.length > 0 || s.costPatternId !== undefined))
     .map(skill => {
       const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
       return {
@@ -173,7 +173,7 @@ const learnableWeaponRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.typ === 'Waffengruppe' && !s.gradValues?.length)
+    .filter(s => !knownIds.has(s.id) && s.typ === 'Waffenfertigkeit' && !s.gradValues?.length)
     .map(skill => {
       const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
       return {
