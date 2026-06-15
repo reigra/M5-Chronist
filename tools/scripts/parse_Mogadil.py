@@ -37,7 +37,12 @@ except ImportError:
         subprocess.check_call(cmd)
     import pdfplumber
 
-PDF_PATH = os.path.join(os.path.dirname(__file__), '..', 'Mogadil', 'Lerntabellen_5_8_1.pdf')
+PDF_DIR = os.path.join(os.path.dirname(__file__), '..', 'Mogadil')
+_MOGADIL_FILES = [f for f in os.listdir(PDF_DIR) if f.startswith('Lerntabellen_') and f.endswith('.pdf')]
+if not _MOGADIL_FILES:
+    raise FileNotFoundError(f'No Lerntabellen_*.pdf found in {PDF_DIR}')
+_MOGADIL_FILES.sort(reverse=True)
+PDF_PATH = os.path.join(PDF_DIR, _MOGADIL_FILES[0])
 OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'rules', 'mogadil.json')
 
 
@@ -169,6 +174,234 @@ def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
         }
 
     return result
+
+
+def _clean_type_name(raw: str) -> str:
+    """Strip trailing parenthetical notes from a type name (e.g. 'Bestienjäger (As/Hx, ehem.To)' → 'Bestienjäger')."""
+    return re.sub(r'\s*\([^)]*\)\s*$', '', raw).strip()
+
+
+def extract_type_names(pdf_path: str, cost_columns: list[str], log=print) -> list[dict]:
+    """Extract type abbreviation→name mapping from footers on even PDF pages (4, 6, 8, 10).
+
+    The footer on each even page lists the type names corresponding to the table columns on that page.
+    Entries may include an explicit abbreviation prefix (e.g. 'Bb Barbar') or just a plain name (e.g. 'Assassine').
+    Parenthetical notes like '(Kr/Hl)' are stripped from the name.
+    """
+    with pdfplumber.open(pdf_path) as pdf:
+        types_by_id: dict[str, str] = {}
+
+        for page_num in range(3, len(pdf.pages), 2):  # 0-indexed: 3=page 4, 5=page 6, ...
+            if page_num >= len(pdf.pages):
+                break
+            page = pdf.pages[page_num]
+            text = page.extract_text()
+            if not text:
+                continue
+
+            lines = [l.strip() for l in text.strip().split('\n') if l.strip()]
+
+            # Column abbreviations for this page (from the 'Fertigkeiten' table header).
+            # Filter out non-abbreviation metadata like 'Quelle', '/', 'Bemerkung'.
+            col_set = set(cost_columns)
+            page_columns: list[str] = []
+            for line in lines:
+                if line.startswith('Fertigkeiten '):
+                    page_columns = [c for c in line.split()[1:] if c in col_set]
+                    break
+            if not page_columns:
+                log(f'  WARN: no Fertigkeiten header on page {page_num + 1}')
+                continue
+
+            # Footer lines: text after the 'Kampftechniken' line, before version/hinweis.
+            # Kampftechniken data rows (Kampfkunst, Fechtkunst, Schießkunst, KiDo) contain digits — skip them.
+            footer_lines: list[str] = []
+            capture = False
+            for line in lines:
+                if line.startswith('Kampftechniken'):
+                    capture = True
+                    continue
+                if capture:
+                    if line.startswith('Mogadil, Version') or line.startswith('Hinweis:'):
+                        continue
+                    if re.search(r'\d', line):
+                        continue
+                    footer_lines.append(line)
+
+            # Split entries on commas, but NOT commas inside parentheses
+            raw_entries: list[str] = []
+            for line in footer_lines:
+                parts = re.split(r',\s*(?![^()]*\))', line)
+                for p in parts:
+                    p = p.strip()
+                    if p:
+                        raw_entries.append(p)
+
+            remaining = list(page_columns)
+
+            # Phase 1: entries with explicit abbreviation prefix (e.g. "Bb Barbar")
+            pending: list[str] = []
+            for entry in raw_entries:
+                matched = False
+                for abbr in sorted(remaining, key=len, reverse=True):
+                    if entry.startswith(abbr + ' '):
+                        name = _clean_type_name(entry[len(abbr):].strip())
+                        if name:
+                            types_by_id[abbr] = name
+                            remaining.remove(abbr)
+                            matched = True
+                            break
+                if not matched:
+                    pending.append(entry)
+
+            # Phase 2: plain names that start with a remaining abbreviation (e.g. "Waldläufer" → "Wa")
+            still_pending: list[str] = []
+            for entry in pending:
+                matched = False
+                for abbr in sorted(remaining, key=len, reverse=True):
+                    if entry.startswith(abbr):
+                        types_by_id[abbr] = _clean_type_name(entry)
+                        remaining.remove(abbr)
+                        matched = True
+                        break
+                if not matched:
+                    still_pending.append(entry)
+
+            # Phase 3: sequential fallback for remaining names
+            for name in still_pending:
+                if not remaining:
+                    break
+                abbr = remaining.pop(0)
+                types_by_id[abbr] = _clean_type_name(name)
+
+            if remaining:
+                log(f'  WARN: page {page_num + 1}: {len(remaining)} unmapped column(s): {", ".join(remaining)}')
+
+    # Reorder to match cost_columns
+    result: list[dict] = []
+    for col in cost_columns:
+        if col in types_by_id:
+            result.append({'id': col, 'name': types_by_id[col]})
+        else:
+            log(f'  WARN: no type name found for abbreviation "{col}"')
+
+    return result
+
+
+def _parse_group_cost(s: str) -> int | None:
+    """Parse a cost value from a table cell. Handles '120*', '120°'."""
+    s = s.strip().rstrip('*°')
+    try:
+        return int(s)
+    except ValueError:
+        return None
+
+
+def extract_type_costs(pdf_path: str, cost_columns: list[str], log=print) -> tuple[dict[str, dict[str, int]], dict[str, dict[str, int]]]:
+    """Extract Zaubersprüche into spellCosts and Kampftechniken into fightCosts per type.
+
+    Returns (spell_costs, fight_costs) where each is
+      { type_id: { group_name: cost, ... }, ... }
+    Only includes rows that have at least one cost value.
+    """
+    col_set = set(cost_columns)
+    spell_costs: dict[str, dict[str, int]] = {}
+    fight_costs: dict[str, dict[str, int]] = {}
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_num in range(3, len(pdf.pages), 2):
+            if page_num >= len(pdf.pages):
+                break
+            page = pdf.pages[page_num]
+            tables = page.extract_tables()
+
+            fertig_table = None
+            kt_table = None
+            for table in tables:
+                if not table or not table[0]:
+                    continue
+                h0 = _cell(table[0][0])
+                if h0 == 'Fertigkeiten':
+                    fertig_table = table
+                elif h0 == 'Kampftechniken':
+                    kt_table = table
+
+            # Column abbreviations for this page (from Kampftechniken header, fallback Fertigkeiten header)
+            page_columns: list[str] = []
+            if kt_table:
+                page_columns = [_cell(c) for c in kt_table[0][1:] if _cell(c) in col_set]
+            if not page_columns and fertig_table:
+                page_columns = [_cell(c) for c in fertig_table[0][3:] if _cell(c) in col_set]
+            if not page_columns:
+                continue
+
+            n_cols = len(page_columns)
+
+            # ---- Zaubersprüche section (inside Fertigkeiten table) → spellCosts ----
+            if fertig_table:
+                zaub_start = None
+                for ri, row in enumerate(fertig_table):
+                    if row and row[0] and _cell(row[0]).startswith('Zaubersprü'):
+                        zaub_start = ri + 1
+                        break
+
+                if zaub_start:
+                    for ri in range(zaub_start, len(fertig_table)):
+                        row = fertig_table[ri]
+                        name = _cell(row[0]) if row else ''
+                        if not name or name.startswith('*'):
+                            continue
+
+                        cost_cells = row[3:3 + n_cols] if row else []
+                        if not any(c is not None for c in cost_cells):
+                            continue
+
+                        for ci, cell in enumerate(cost_cells):
+                            if cell is None:
+                                continue
+                            cost_str = _cell(cell)
+                            if not cost_str:
+                                continue
+                            cost = _parse_group_cost(cost_str)
+                            if cost is None or cost <= 0:
+                                continue
+                            type_id = page_columns[ci]
+                            if type_id not in spell_costs:
+                                spell_costs[type_id] = {}
+                            spell_costs[type_id][name] = cost
+
+            # ---- Kampftechniken table → fightCosts ----
+            if kt_table and len(kt_table) > 1:
+                kt_header = [_cell(c) for c in kt_table[0][1:]]
+                col_map: list[tuple[int, str]] = []
+                for ci, abbr in enumerate(kt_header):
+                    if abbr in col_set:
+                        col_map.append((ci, abbr))
+
+                for ri in range(1, len(kt_table)):
+                    row = kt_table[ri]
+                    name = _cell(row[0]) if row else ''
+                    if not name:
+                        continue
+
+                    for data_ci, type_id in col_map:
+                        cell = row[data_ci + 1] if data_ci + 1 < len(row) else None
+                        if cell is None:
+                            continue
+                        cost_str = _cell(cell)
+                        if not cost_str:
+                            continue
+                        try:
+                            cost = int(cost_str)
+                        except ValueError:
+                            continue
+                        if cost <= 0:
+                            continue
+                        if type_id not in fight_costs:
+                            fight_costs[type_id] = {}
+                        fight_costs[type_id][name] = cost
+
+    return spell_costs, fight_costs
 
 
 def extract_fertigkeiten_tables(pdf_path: str):
@@ -306,6 +539,34 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     cost_columns, all_rows = extract_fertigkeiten_tables(pdf_path)
     log(f'  Found {len(all_rows)} skills across {len(cost_columns)} cost columns')
 
+    log('Extracting type names from page footers...')
+    types = extract_type_names(pdf_path, cost_columns, log)
+    log(f'  Found {len(types)} / {len(cost_columns)} type names')
+
+    log('Extracting spell costs (Zaubersprüche) and fight costs (Kampftechniken)...')
+    spell_costs, fight_costs = extract_type_costs(pdf_path, cost_columns, log)
+    log(f'  spellCosts for {sum(1 for v in spell_costs.values() if v)} types')
+    log(f'  fightCosts for {sum(1 for v in fight_costs.values() if v)} types')
+
+    # Merge spellCosts/fightCosts into types; add any types missing a name (e.g. "Vo").
+    # Rebuild in cost_columns order.
+    types_by_id = {t['id']: t for t in types}
+    for type_id, costs in spell_costs.items():
+        if type_id in types_by_id:
+            types_by_id[type_id]['spellCosts'] = dict(sorted(costs.items()))
+        else:
+            types_by_id[type_id] = {'id': type_id, 'spellCosts': dict(sorted(costs.items()))}
+    for type_id, costs in fight_costs.items():
+        if type_id in types_by_id:
+            types_by_id[type_id]['fightCosts'] = dict(sorted(costs.items()))
+        else:
+            target = types_by_id.get(type_id)
+            if target:
+                target['fightCosts'] = dict(sorted(costs.items()))
+            else:
+                types_by_id[type_id] = {'id': type_id, 'fightCosts': dict(sorted(costs.items()))}
+    types = [types_by_id[col] for col in cost_columns if col in types_by_id]
+
     log('Finding unique cost patterns...')
     cost_patterns, pattern_map = build_cost_patterns(all_rows, cost_columns)
     log(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} x {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
@@ -347,6 +608,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
         },
         'costColumns': cost_columns,
         'costPatterns': cost_patterns,
+        'types': types,
         'skills': skills,
     }
 

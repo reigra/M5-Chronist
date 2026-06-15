@@ -56,12 +56,13 @@ const statusName = computed(() => {
   return r.socialStatuses.find(x => x.id === c.socialStatusId)?.name ?? c.socialStatusId
 })
 
-/** True if the character type can cast spells. */
+/** True if the character's type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return false
   const t = r.types.find(x => x.id === c.typeId)
-  return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
+  const sc = t?.spellCosts
+  return !!sc && Object.keys(sc).length > 0
 })
 
 /**
@@ -409,7 +410,7 @@ onMounted(async () => {
       </section>
 
       <!-- ── Spells ── -->
-      <section v-if="isCaster" class="card">
+      <section v-if="spellRows.length > 0" class="card">
         <div class="section-header">
           <h2>{{ UI.spells }}</h2>
           <button v-if="spellRows.length > 0" class="btn-toggle" @click="showSpellDetail = !showSpellDetail">

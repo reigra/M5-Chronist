@@ -194,7 +194,8 @@ def parse_klasse(el: ET.Element) -> dict:
                 if v > 0:
                     spell_costs[SPELL_GROUP_MAP[k]] = v
             else:
-                group_costs[normalize_group_name(k)] = v
+                if v > 0:
+                    group_costs[normalize_group_name(k)] = v
                 
     ctype = {
         'id': name,

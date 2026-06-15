@@ -129,12 +129,13 @@ const availableSkills = computed(() => {
   }
   return result.sort((a, b) => a.name.localeCompare(b.name))
 })
-/** True if the selected type can cast spells. */
+/** True if the selected type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const r = rules.value
   if (!r || !typeId.value) return false
   const t = r.types.find(x => x.id === typeId.value)
-  return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
+  const sc = t?.spellCosts
+  return !!sc && Object.keys(sc).length > 0
 })
 
 /** Spells available to add: in the type’s spell groups, not yet on the character. */
@@ -179,7 +180,7 @@ const playableTypes = computed(() => {
   if (!r) return []
   return r.types
     .filter(t => !t.isMeta)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id))
 })
 
 /** For display: look up skill names from rules.
@@ -481,7 +482,7 @@ onMounted(async () => {
           <label class="form-field">{{ UI.labelType }} *
             <select v-model="typeId" required>
               <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-              <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+              <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name ?? t.id }}</option>
             </select>
           </label>
 

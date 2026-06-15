@@ -41,10 +41,11 @@ const charType = computed(() => {
   return r.types.find(t => t.id === c.typeId) ?? null
 })
 
-/** True if the character type can cast spells. */
+/** True if the character type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const t = charType.value
-  return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
+  const sc = t?.spellCosts
+  return !!sc && Object.keys(sc).length > 0
 })
 
 /**
