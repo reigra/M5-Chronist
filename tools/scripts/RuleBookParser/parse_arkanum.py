@@ -36,10 +36,30 @@ except ImportError:
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-PDF_PATH         = str(SCRIPT_DIR / "../../books/Das Arkanum_1402.pdf")
-OUT_SPELLS       = str(SCRIPT_DIR / "../../arkanum/spells.json")
-OUT_DESCRIPTIONS = str(SCRIPT_DIR / "../../arkanum/spell-descriptions.json")
+SCRIPT_DIR   = Path(__file__).resolve().parent
+BASE_DIR     = SCRIPT_DIR / "../.."
+BOOKS_DIR    = BASE_DIR / "books"
+ARKANUM_DIR  = BASE_DIR / "arkanum"
+RULES_DIR    = BASE_DIR / "rules"
+
+sys.path.insert(0, str(SCRIPT_DIR))
+from rulebook_combiner import combine as combine_rulebook
+from pdf_imprint import extract_imprint_version
+
+
+def find_arkanum_pdf() -> str:
+    """Find the first file matching 'Das Arkanum*.pdf' in books/."""
+    matches = list(BOOKS_DIR.glob("Das Arkanum*.pdf"))
+    if not matches:
+        print(f"Error: No 'Das Arkanum*.pdf' found in {BOOKS_DIR}")
+        print("Place the PDF in tools/books/ and try again.")
+        sys.exit(1)
+    return str(matches[0])
+
+
+PDF_PATH         = find_arkanum_pdf()
+OUT_SPELLS       = str(ARKANUM_DIR / "spells.json")
+OUT_DESCRIPTIONS = str(ARKANUM_DIR / "spell-descriptions.json")
 
 # Spell sections: (first_book_page, last_book_page, derive_group_from_text, fixed_group)
 SECTIONS = [
@@ -649,6 +669,8 @@ def process_pdf(dry_run: bool = False, single_page: Optional[int] = None):
     print(f"Opening: {PDF_PATH}")
     with pdfplumber.open(PDF_PATH) as pdf:
         print(f"PDF has {len(pdf.pages)} pages.")
+        book_version = extract_imprint_version(pdf)
+        print(f"Version: {book_version}")
 
         for section in SECTIONS:
             start_page = section[0]
@@ -676,7 +698,9 @@ def process_pdf(dry_run: bool = False, single_page: Optional[int] = None):
             print(json.dumps(s.to_spell_entry(), ensure_ascii=False, indent=2))
         return
 
-    # Write output files
+    # Create output directory and write section files
+    ARKANUM_DIR.mkdir(parents=True, exist_ok=True)
+
     spells_json = {"spells": [s.to_spell_entry() for s in all_spells]}
     desc_json   = {"spellDescriptions": [s.to_description_entry() for s in all_spells]}
 
@@ -690,6 +714,24 @@ def process_pdf(dry_run: bool = False, single_page: Optional[int] = None):
     )
     print(f"\nWritten: {OUT_SPELLS}")
     print(f"Written: {OUT_DESCRIPTIONS}")
+
+    # Write meta.json
+    meta = {
+        "id":      "arkanum",
+        "title":   "Das Arkanum",
+        "version": book_version,
+        "priority":  1,
+        "notes":   "",
+    }
+    (ARKANUM_DIR / "meta.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"Written: {ARKANUM_DIR / 'meta.json'}")
+
+    # Combine into a single rulebook file
+    RULES_DIR.mkdir(parents=True, exist_ok=True)
+    combine_rulebook(str(ARKANUM_DIR), str(RULES_DIR / "arkanum.json"))
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
