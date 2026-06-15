@@ -315,9 +315,13 @@ export class RulesStorage {
     sourceName: string,
     metaOnly = false,
   ): void {
-    // Scalar fields — warn on conflict, keep existing value
+    // Scalar fields — fill undefined/null from source, warn on real conflict
     for (const key of ['name', 'category'] as const) {
-      if (source[key] && target[key] !== source[key] && !metaOnly) {
+      if (source[key] === undefined) continue
+      if (target[key] === undefined || target[key] === null) {
+        if (key === 'name') target.name = source.name!
+        else target.category = source.category!
+      } else if (target[key] !== source[key] && !metaOnly) {
         console.warn(
           `[RulesLoader] Typ "${target.id}".${key}: Kollision ` +
           `("${target[key]}" vs. "${source[key]}" aus "${sourceName}") — ` +

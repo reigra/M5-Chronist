@@ -9,6 +9,7 @@ export const UI = {
   loading:       'Wird geladen…',
   confirm:       'Bestätigen',
   cancel:        'Abbrechen',
+  close:         'Schließen',
   add:           'Hinzufügen',
   delete:        'Löschen',
   learnBtn:      'Lernen',

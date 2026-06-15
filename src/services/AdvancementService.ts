@@ -73,22 +73,25 @@ export class AdvancementService {
   /**
    * Calculate the EP cost to advance a skill by one level (Steigern).
    *
+   * PP (Praktikapunkte) auf dem Skill reduzieren die TE-Kosten 1:1.
    * Returns null if the skill is already at its maximum value or the advancement
    * table does not have an entry for the current step.
    *
    * @param skill        - The skill to advance.
    * @param currentValue - The character's current FW for this skill.
    * @param type         - The character's type.
+   * @param pp           - Power Points available on this skill (reduce TE cost).
    * @returns EP cost, or null if no further advancement is possible.
    */
-  advanceCost(skill: Skill, currentValue: number, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): number | null {
+  advanceCost(skill: Skill, currentValue: number, type: CharacterType, costPatterns?: number[][], costColumns?: string[], pp: number = 0): number | null {
     // Angeborene Fertigkeiten (z.B. Raufen, Trinken) haben keine Steigerungstabelle.
     if (!skill.advancementCosts?.length) return null
     if (currentValue >= skill.maxValue) return null
     const stepIndex = currentValue - skill.baseValue
     const teCost = skill.advancementCosts[stepIndex]
     if (teCost === undefined) return null
-    return teCost * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
+    const teAfterPp = Math.max(0, teCost - pp)
+    return teAfterPp * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
   }
 
   /**
@@ -166,10 +169,23 @@ export class AdvancementService {
       throw new Error(`${skill.name} has not been learned yet.`)
     }
 
-    const cost = this.advanceCost(skill, charSkill.value, type, costPatterns, costColumns)
-    if (cost === null) {
+    // TE-Kosten ohne PP ermitteln, um PP-Verbrauch zu berechnen
+    if (!skill.advancementCosts?.length) {
+      throw new Error(`${skill.name} cannot be advanced.`)
+    }
+    if (charSkill.value >= skill.maxValue) {
       throw new Error(`${skill.name} is already at its maximum value.`)
     }
+    const stepIndex = charSkill.value - skill.baseValue
+    const teCost = skill.advancementCosts[stepIndex]
+    if (teCost === undefined) {
+      throw new Error(`${skill.name} is already at its maximum value.`)
+    }
+
+    const pp = charSkill.pp ?? 0
+    const ppUsed = Math.min(teCost, pp)
+    const cost = (teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
+
     if (character.availableEp < cost) {
       throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
     }
@@ -178,7 +194,7 @@ export class AdvancementService {
       ...character,
       availableEp: character.availableEp - cost,
       skills: character.skills.map(s =>
-        s.skillId === skill.id ? { ...s, value: s.value + 1 } : s,
+        s.skillId === skill.id ? { ...s, value: s.value + 1, pp: Math.max(0, (s.pp ?? 0) - ppUsed) } : s,
       ),
       updatedAt: new Date().toISOString(),
     }
@@ -200,10 +216,22 @@ export class AdvancementService {
       throw new Error(`${instanceId} has not been learned yet.`)
     }
 
-    const cost = this.advanceCost(skill, charSkill.value, type, costPatterns, costColumns)
-    if (cost === null) {
+    if (!skill.advancementCosts?.length) {
+      throw new Error(`${skill.name} cannot be advanced.`)
+    }
+    if (charSkill.value >= skill.maxValue) {
       throw new Error(`${instanceId} is already at its maximum value.`)
     }
+    const stepIndex = charSkill.value - skill.baseValue
+    const teCost = skill.advancementCosts[stepIndex]
+    if (teCost === undefined) {
+      throw new Error(`${instanceId} is already at its maximum value.`)
+    }
+
+    const pp = charSkill.pp ?? 0
+    const ppUsed = Math.min(teCost, pp)
+    const cost = (teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
+
     if (character.availableEp < cost) {
       throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
     }
@@ -212,7 +240,7 @@ export class AdvancementService {
       ...character,
       availableEp: character.availableEp - cost,
       skills: character.skills.map(s =>
-        s.skillId === instanceId ? { ...s, value: s.value + 1 } : s,
+        s.skillId === instanceId ? { ...s, value: s.value + 1, pp: Math.max(0, (s.pp ?? 0) - ppUsed) } : s,
       ),
       updatedAt: new Date().toISOString(),
     }

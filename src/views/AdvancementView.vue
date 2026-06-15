@@ -29,15 +29,20 @@ const errorMessage = ref<string | null>(null)
  * execute the action on confirmation. currentValue is only set for 'advance'.
  * isMultiInstance flags a learn action that requires an instance combobox.
  * instanceId carries the full instance key (e.g. "Sprache:Albisch") for advances.
+ * ppUsed records how many PP were consumed to reduce the cost.
+ * teCost is the raw TE cost before PP reduction.
  */
 interface PendingAction {
   type: 'learn' | 'advance'
   skill: Skill
   cost: number
+  originalCost?: number
   goldCost: number
   currentValue?: number
   isMultiInstance?: boolean
   instanceId?: string
+  ppUsed?: number
+  teCost?: number
 }
 
 const pendingAction = ref<PendingAction | null>(null)
@@ -115,7 +120,10 @@ const knownSkillRows = computed(() => {
         }
       }
 
-      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns)
+      const pp = cs.pp ?? 0
+      const teCost = (!isGradBased && !isNotAdvanceable && skill.advancementCosts) ? (skill.advancementCosts[cs.value - skill.baseValue] ?? 0) : 0
+      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
+      const costWithoutPp = (isGradBased || isNotAdvanceable || pp === 0 || cost === null) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
       const maxValue = skill.maxValue ?? null
       return {
         skillId: cs.skillId,
@@ -124,6 +132,9 @@ const knownSkillRows = computed(() => {
         maxValue,
         isMaxed: maxValue !== null && cs.value >= maxValue,
         cost,
+        pp,
+        teCost,
+        costWithoutPp,
         canAdvance: cost !== null && char.availableEp >= cost,
         isGradBased,
         isNotAdvanceable,
@@ -246,12 +257,16 @@ function requestLearn(skill: Skill): void {
 function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
   const type = charType.value
   if (!type) return
-  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns)
-  if (cost === null) return
+  const charSkill = character.value?.skills.find(s => s.skillId === (instanceId ?? skill.id))
+  const pp = charSkill?.pp ?? 0
   const stepIndex = currentValue - skill.baseValue
   const teCost = skill.advancementCosts[stepIndex] ?? 0
-  const goldCost = teCost * 20
-  pendingAction.value = { type: 'advance', skill, cost, goldCost, currentValue, instanceId }
+  const ppUsed = Math.min(teCost, pp)
+  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
+  if (cost === null) return
+  const originalCost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
+  const goldCost = (teCost - ppUsed) * 20
+  pendingAction.value = { type: 'advance', skill, cost, originalCost: originalCost ?? cost, goldCost, currentValue, instanceId, ppUsed, teCost }
 }
 
 /** Discard the staged action without making any changes. */
@@ -441,7 +456,10 @@ onMounted(async () => {
               </strong>
               {{ UI.advFromFw }} {{ pendingAction.currentValue }}
               {{ UI.advToFw }} {{ (pendingAction.currentValue ?? 0) + 1 }}
-              {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
+              {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>.
+            </p>
+            <p v-if="(pendingAction.ppUsed ?? 0) > 0" class="pp-used-note">
+              PP genutzt: {{ pendingAction.ppUsed }} (spart {{ (pendingAction.originalCost ?? pendingAction.cost) - pendingAction.cost }} EP)
             </p>
             <label class="gold-cost-row">
               {{ UI.advGoldAdvanceCost }}
@@ -467,6 +485,7 @@ onMounted(async () => {
             <tr>
               <th>{{ UI.colSkill }}</th>
               <th>{{ UI.colFw }}</th>
+              <th>{{ UI.colPp }}</th>
               <th>{{ UI.colNextCost }}</th>
               <th></th>
             </tr>
@@ -475,6 +494,9 @@ onMounted(async () => {
             <tr v-for="row in knownSkillRows" :key="row.skillId">
               <td>{{ row.name }}</td>
               <td>{{ row.value }}</td>
+              <td class="pp-cell">
+                <template v-if="!row.isGradBased && !row.isNotAdvanceable">{{ row.pp }}</template>
+              </td>
               <td>
                 <template v-if="row.isGradBased">
                   <span class="tag-grad-based">{{ UI.advGradBased }}</span>
@@ -483,7 +505,16 @@ onMounted(async () => {
                   <span class="tag-not-advanceable">{{ UI.advNotAdvanceable }}</span>
                 </template>
                 <template v-else>
-                  {{ row.isMaxed ? UI.notApplicable : row.cost + ' ' + UI.unitEp }}
+                  <template v-if="row.isMaxed">{{ UI.notApplicable }}</template>
+                  <template v-else>
+                    <template v-if="row.pp > 0 && row.costWithoutPp !== null">
+                      <span class="cost-strikethrough">{{ row.costWithoutPp }} {{ UI.unitEp }}</span>
+                      <span class="cost-pp-reduced">&nbsp;{{ row.cost }} {{ UI.unitEp }}</span>
+                    </template>
+                    <template v-else>
+                      {{ row.cost }} {{ UI.unitEp }}
+                    </template>
+                  </template>
                 </template>
               </td>
               <td>
@@ -818,6 +849,27 @@ button:disabled {
 .hint-grad {
   color: #7ab87a;
   font-size: 0.85em;
+}
+
+.pp-cell {
+  text-align: center;
+}
+
+.cost-strikethrough {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.85em;
+}
+
+.cost-pp-reduced {
+  color: #2a7a2a;
+  font-weight: 600;
+}
+
+.pp-used-note {
+  font-size: 0.9em;
+  color: #2a7a2a;
+  font-style: italic;
 }
 </style>
 
