@@ -9,6 +9,39 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+/**
+ * Add a numeric bonus to a dice damage string.
+ * e.g. "1W6+1" + 3 → "1W6+4", "2W6-2" + 3 → "2W6+1"
+ */
+function addDamageBonus(damage: string, bonus: number): string {
+  if (bonus === 0) return damage
+  const clean = damage.replace(/\s+/g, '')
+  const m = clean.match(/^(\d+)W(\d+)([+-]\d+)?$/i)
+  if (!m) return damage
+  const base = m[3] ? parseInt(m[3], 10) : 0
+  const total = base + bonus
+  if (total === 0) return `${m[1]}W${m[2]}`
+  const sign = total >= 0 ? '+' : ''
+  return `${m[1]}W${m[2]}${sign}${total}`
+}
+
+function weaponTypeSortKey(group: string): number {
+  if (group.includes('Angriff')) return 0
+  if (group.includes('Fern')) return 1
+  if (group.includes('Verteidigung')) return 2
+  return 0
+}
+
+interface CombatRow {
+  name: string
+  ew: number
+  damageDisplay: string | null
+  apSchutz: number | null
+  isDefense: boolean
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const route = useRoute()
@@ -119,6 +152,73 @@ const skillRows = computed(() => {
 const weaponRows = computed(() => skillRows.value.filter(r => r.isWeapon))
 const learnedRows = computed(() => skillRows.value.filter(r => !r.isWeapon && !r.unlearned))
 const unlearnedRows = computed(() => skillRows.value.filter(r => r.unlearned))
+
+/** Weapons from inventory with combat stats. */
+const combatRows = computed((): CombatRow[] => {
+  const c = character.value
+  if (!c) return []
+
+  const rows: (CombatRow & { sortKey: number })[] = []
+
+  const boni = c.boni
+  const hasSkill = (id: string) => c.skills.some(s => s.skillId === id)
+  const skillVal = (id: string) => c.skills.find(s => s.skillId === id)?.value ?? 0
+
+  // ── 1. Feste Fertigkeiten (festgelegte Reihenfolge) ──
+
+  if (hasSkill('Abwehr')) {
+    rows.push({
+      name: 'Abwehr', ew: skillVal('Abwehr') + (boni?.AbB ?? 0),
+      damageDisplay: null, apSchutz: null, isDefense: false, sortKey: 0,
+    })
+  }
+
+  if (hasSkill('Resistenz')) {
+    const v = skillVal('Resistenz')
+    rows.push({ name: 'Resistenz (Geist)', ew: v + (boni?.ResBg ?? 0), damageDisplay: null, apSchutz: null, isDefense: false, sortKey: 1 })
+    rows.push({ name: 'Resistenz (Körper)', ew: v + (boni?.ResBk ?? 0), damageDisplay: null, apSchutz: null, isDefense: false, sortKey: 2 })
+  }
+
+  if (hasSkill('Raufen')) {
+    rows.push({
+      name: 'Raufen', ew: skillVal('Raufen') + (boni?.AnB ?? 0),
+      damageDisplay: addDamageBonus('1W6-4', boni?.SchB ?? 0), apSchutz: null, isDefense: false, sortKey: 3,
+    })
+  }
+
+  // ── 2. Waffen aus Inventar ──
+
+  for (const item of (c.inventory ?? []).filter(i => i.waffe)) {
+    const group = item.group ?? ''
+    const sk = weaponTypeSortKey(group) + 4
+
+    if (group.includes('Verteidigung')) {
+      rows.push({
+        name: item.name, ew: skillVal(item.skillId ?? '') + (item.abb ?? 0),
+        damageDisplay: null, apSchutz: item.saveAP ?? null, isDefense: true, sortKey: sk,
+      })
+      continue
+    }
+
+    const anbTotal = (boni?.AnB ?? 0) + (item.anb ?? 0) + ((item.spezialwaffe ?? false) ? 2 : 0)
+    const ew = skillVal(item.skillId ?? '') + anbTotal
+
+    let damageDisplay: string | null = null
+    if (item.damage) {
+      const schbTotal = group.includes('Angriff')
+        ? (boni?.SchB ?? 0) + (item.schb ?? 0)
+        : (item.schb ?? 0)
+      damageDisplay = addDamageBonus(item.damage, schbTotal)
+    }
+
+    rows.push({ name: item.name, ew, damageDisplay, apSchutz: null, isDefense: false, sortKey: sk })
+  }
+
+  // ── 3. Sortieren ──
+
+  rows.sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name))
+  return rows
+})
 
 /** Adjust PP for a learned skill and persist. */
 async function adjustPp(skillId: string, delta: number): Promise<void> {
@@ -418,6 +518,18 @@ onMounted(async () => {
         </div>
       </section>
 
+      <!-- ── Kampf ── -->
+      <section v-if="combatRows.length > 0" class="card">
+        <h2>{{ UI.secCombat }}</h2>
+        <div class="combat-grid">
+          <template v-for="row in combatRows" :key="row.name">
+            <span class="combat-name">{{ row.name }}</span>
+            <span class="combat-ew">{{ row.ew >= 0 ? '+' + row.ew : row.ew }}</span>
+            <span class="combat-stat">{{ row.damageDisplay ?? (row.apSchutz != null ? '-' + row.apSchutz + ' AP' : '—') }}</span>
+          </template>
+        </div>
+      </section>
+
       <!-- ── Waffenfertigkeiten ── -->
       <section v-if="weaponRows.length > 0" class="card">
         <h2>{{ UI.secWeaponSkills }}</h2>
@@ -454,12 +566,9 @@ onMounted(async () => {
       <section v-if="unlearnedRows.length > 0" class="card">
         <h2>{{ UI.secUnlearnedSkills }}</h2>
         <div class="skill-grid skill-grid--unlearned">
-          <div v-for="row in unlearnedRows" :key="row.name" class="skill-row skill-row--with-pp skill-row--unlearned">
+          <div v-for="row in unlearnedRows" :key="row.name" class="skill-row skill-row--unlearned">
             <span>{{ row.name }}*</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
-            <span class="pp-control">
-              <span class="pp-value">{{ UI.colPp }} —</span>
-            </span>
           </div>
         </div>
       </section>
@@ -719,7 +828,7 @@ onMounted(async () => {
 }
 
 .skill-grid--weapons {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
 .skill-grid--learned {
@@ -745,6 +854,25 @@ onMounted(async () => {
 
 .skill-row--unlearned { font-style: italic; }
 
+.combat-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0 0.75rem;
+  align-items: center;
+}
+
+.combat-grid > * {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+}
+
+.combat-ew,
+.combat-stat {
+  text-align: right;
+  white-space: nowrap;
+}
+
 .skill-row--with-pp {
   display: grid;
   grid-template-columns: 1fr auto auto;
@@ -762,6 +890,11 @@ onMounted(async () => {
   font-size: 0.85em;
   color: #666;
   white-space: nowrap;
+}
+
+.combat-stat {
+  white-space: nowrap;
+  text-align: right;
 }
 
 .btn-pp {

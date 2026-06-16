@@ -102,17 +102,43 @@ export class CharacterStorage {
       delete raw.derivedProperties
     }
 
-    // Ensure innate skills Raufen, Trinken and Wahrnehmung are present.
-    const innate = [
-      { skillId: 'Raufen',       value: 8 },
-      { skillId: 'Trinken',      value: 7 },
-      { skillId: 'Wahrnehmung',  value: 6 },
-    ]
+    // Ensure innate skills are present with correct starting values.
     const knownIds = new Set((raw.skills ?? []).map((s: any) => s.skillId))
-    for (const entry of innate) {
-      if (!knownIds.has(entry.skillId)) {
-        raw.skills = [...(raw.skills ?? []), entry]
-      }
+    const props = raw.properties ?? {}
+    const boni = raw.boni ?? {}
+
+    // Raufen: (St+Gw)/20 + AnB, Zwerge +1
+    if (!knownIds.has('Raufen')) {
+      const rv = Math.floor(((props.St ?? 0) + (props.Gw ?? 0)) / 20)
+               + (boni.AnB ?? 0)
+               + (raw.raceId === 'zwerg' ? 1 : 0)
+      raw.skills = [...(raw.skills ?? []), { skillId: 'Raufen', value: Math.max(0, rv) }]
+    }
+
+    // Trinken: Ko/10
+    if (!knownIds.has('Trinken')) {
+      const tv = Math.floor((props.Ko ?? 0) / 10)
+      raw.skills = [...(raw.skills ?? []), { skillId: 'Trinken', value: Math.max(0, tv) }]
+    }
+
+    // Wahrnehmung: FW 6
+    if (!knownIds.has('Wahrnehmung')) {
+      raw.skills = [...(raw.skills ?? []), { skillId: 'Wahrnehmung', value: 6 }]
+    }
+
+    // Abwehr: FW 11
+    if (!knownIds.has('Abwehr')) {
+      raw.skills = [...(raw.skills ?? []), { skillId: 'Abwehr', value: 11 }]
+    }
+
+    // Resistenz: FW 11
+    if (!knownIds.has('Resistenz')) {
+      raw.skills = [...(raw.skills ?? []), { skillId: 'Resistenz', value: 11 }]
+    }
+
+    // Zaubern: FW 11 für Charaktere mit Zaubersprüchen
+    if (Array.isArray(raw.spells) && raw.spells.length > 0 && !knownIds.has('Zaubern')) {
+      raw.skills = [...(raw.skills ?? []), { skillId: 'Zaubern', value: 11 }]
     }
 
     // Migrate skills: add pp if missing

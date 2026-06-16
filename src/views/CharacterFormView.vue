@@ -412,10 +412,13 @@ async function saveCharacter(): Promise<void> {
 
   try {
     const character = buildCharacter()
-    // Preserve the original createdAt when editing
+    // Preserve data not managed by this form when editing
     if (isEdit.value) {
       const existing = await characterStorage.load(character.id)
-      if (existing) character.createdAt = existing.createdAt
+      if (existing) {
+        character.createdAt = existing.createdAt
+        character.inventory = existing.inventory
+      }
     }
     await characterStorage.save(character)
     await router.push({ name: 'character-sheet', params: { id: character.id } })
