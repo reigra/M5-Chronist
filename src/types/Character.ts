@@ -8,6 +8,18 @@ export interface CharacterSkill {
   skillId: string
   /** Current skill value (Fertigkeitswert) */
   value: number
+  /** Power Points (Praktikapunkte) */
+  pp?: number
+}
+
+/**
+ * CharacterSpell — a spell as it is stored on a character.
+ */
+export interface CharacterSpell {
+  /** Matches Spell.id from the rules data */
+  spellId: string
+  /** Power Points (Praktikapunkte) */
+  pp?: number
 }
 
 /**
@@ -88,8 +100,8 @@ export interface Character {
   gold?: number
   /** All skills the character has learned */
   skills: CharacterSkill[]
-  /** IDs of all spells the character has learned */
-  spells: string[]
+  /** Spells the character has learned */
+  spells: CharacterSpell[]
   /** IDs der Spezialwaffen (max. 3 für Krieger, sonst 1 für Kämpfer/KampfZauberer) */
   weaponSpecializations?: string[]
   /** Spezialgebiet des Magiers (spellGroup-Key, nur für Typ "Ma") */

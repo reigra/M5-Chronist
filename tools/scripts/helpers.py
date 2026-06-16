@@ -3,16 +3,16 @@ import xml.etree.ElementTree as ET
 # ── Mappings ──────────────────────────────────────────────────────────────────
 
 SPELL_GROUP_MAP = {
-    # 'Beherrschen': 'Beherr.',
-    # 'Bewegen': 'Beweg.',
-    # 'Erkennen': 'Erkenn.',
-    # 'Erschaffen': 'Erschaff.',
-    # 'Formen': 'Formen',
-    # 'Verändern': 'Veränd.',
-    # 'Zerstören': 'Zerstören',
-    # 'Wundertat': 'Wunder',
-    # 'Zauberlied': 'Lied',
-    # 'Dweomer': 'Dweom.',
+    'Beherrschen': 'Beherrschen',
+    'Bewegen': 'Bewegen',
+    'Dweomer': 'Dweomer',
+    'Erkennen': 'Erkennen',
+    'Erschaffen': 'Erschaffen',
+    'Formen': 'Formen',
+    'Verändern': 'Verändern',
+    'Wundertat': 'Wundertaten',
+    'Zauberlied': 'Zauberlieder',
+    'Zerstören': 'Zerstören',
 }
 
 SPELL_GROUP_KEYS = set(SPELL_GROUP_MAP.keys())

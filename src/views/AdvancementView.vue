@@ -29,15 +29,22 @@ const errorMessage = ref<string | null>(null)
  * execute the action on confirmation. currentValue is only set for 'advance'.
  * isMultiInstance flags a learn action that requires an instance combobox.
  * instanceId carries the full instance key (e.g. "Sprache:Albisch") for advances.
+ * ppUsed records how many PP were consumed to reduce the cost.
+ * teCost is the raw TE cost before PP reduction.
  */
 interface PendingAction {
   type: 'learn' | 'advance'
   skill: Skill
   cost: number
+  originalCost?: number
   goldCost: number
+  epToPayWithGold: number
+  maxGoldEp: number
   currentValue?: number
   isMultiInstance?: boolean
   instanceId?: string
+  ppUsed?: number
+  teCost?: number
 }
 
 const pendingAction = ref<PendingAction | null>(null)
@@ -115,8 +122,13 @@ const knownSkillRows = computed(() => {
         }
       }
 
-      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns)
+      const pp = cs.pp ?? 0
+      const teCost = (!isGradBased && !isNotAdvanceable && skill.advancementCosts) ? (skill.advancementCosts[cs.value - skill.baseValue] ?? 0) : 0
+      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
+      const costWithoutPp = (isGradBased || isNotAdvanceable || pp === 0 || cost === null) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
       const maxValue = skill.maxValue ?? null
+      const ppUsed = Math.min(teCost, pp)
+      const fixedGoldCost = (teCost - ppUsed) * 20
       return {
         skillId: cs.skillId,
         name: displayName ?? skill.name,
@@ -124,7 +136,14 @@ const knownSkillRows = computed(() => {
         maxValue,
         isMaxed: maxValue !== null && cs.value >= maxValue,
         cost,
-        canAdvance: cost !== null && char.availableEp >= cost,
+        pp,
+        teCost,
+        fixedGoldCost,
+        costWithoutPp,
+        canAdvance: cost !== null && (
+          char.availableEp >= cost ||
+          (char.availableEp >= Math.ceil(cost / 2) && (char.gold ?? 0) >= fixedGoldCost)
+        ),
         isGradBased,
         isNotAdvanceable,
         nextGradHint,
@@ -149,7 +168,7 @@ const learnableSkillRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffengruppe' && s.id !== 'Zaubersprüche' && !s.gradValues?.length && (Array.isArray(s.groups) && s.groups.length > 0 || s.costPatternId !== undefined))
+    .filter(s => !knownIds.has(s.id) && s.typ !== 'Waffenfertigkeit' && s.id !== 'Zaubersprüche' && !s.gradValues?.length && (Array.isArray(s.groups) && s.groups.length > 0 || s.costPatternId !== undefined))
     .map(skill => {
       const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
       return {
@@ -173,7 +192,7 @@ const learnableWeaponRows = computed(() => {
   const knownIds = new Set(char.skills.map(s => s.skillId))
 
   return r.skills
-    .filter(s => !knownIds.has(s.id) && s.typ === 'Waffengruppe' && !s.gradValues?.length)
+    .filter(s => !knownIds.has(s.id) && s.typ === 'Waffenfertigkeit' && !s.gradValues?.length)
     .map(skill => {
       const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
       return {
@@ -234,7 +253,7 @@ function requestLearn(skill: Skill): void {
   const goldCost = skill.learnCost * 200
   const isMultiInstance = rules.value.skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
   selectedInstance.value = ''
-  pendingAction.value = { type: 'learn', skill, cost, goldCost, isMultiInstance }
+  pendingAction.value = { type: 'learn', skill, cost, goldCost, epToPayWithGold: 0, maxGoldEp: 0, isMultiInstance }
 }
 
 /**
@@ -246,12 +265,17 @@ function requestLearn(skill: Skill): void {
 function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
   const type = charType.value
   if (!type) return
-  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns)
-  if (cost === null) return
+  const charSkill = character.value?.skills.find(s => s.skillId === (instanceId ?? skill.id))
+  const pp = charSkill?.pp ?? 0
   const stepIndex = currentValue - skill.baseValue
   const teCost = skill.advancementCosts[stepIndex] ?? 0
-  const goldCost = teCost * 20
-  pendingAction.value = { type: 'advance', skill, cost, goldCost, currentValue, instanceId }
+  const ppUsed = Math.min(teCost, pp)
+  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
+  if (cost === null) return
+  const originalCost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
+  const goldCost = (teCost - ppUsed) * 20
+  const maxGoldEp = Math.floor(cost / 2)
+  pendingAction.value = { type: 'advance', skill, cost, originalCost: originalCost ?? cost, goldCost, epToPayWithGold: 0, maxGoldEp, currentValue, instanceId, ppUsed, teCost }
 }
 
 /** Discard the staged action without making any changes. */
@@ -308,13 +332,14 @@ async function confirmAction(): Promise<void> {
         }
       } else {
         if (action.instanceId) {
-          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns)
+          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold)
         } else {
-          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns)
+          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold)
         }
       }
 
-    updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost }
+    const epReplacementGold = action.epToPayWithGold * 10
+    updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost - epReplacementGold }
 
     await characterStorage.save(updated)
     character.value = updated
@@ -375,7 +400,7 @@ onMounted(async () => {
           </div>
           <nav class="sheet-nav">
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-sheet', params: { id: character.id } })">{{ UI.navSheet }}</button>
-            <button v-if="charType?.category === 'KampfZauberer' || charType?.category === 'Zauberer'" type="button" class="btn-nav" @click="router.push({ name: 'spells', params: { id: character.id } })">{{ UI.spells }}</button>
+            <button v-if="charType?.spellCosts && Object.keys(charType.spellCosts).length > 0" type="button" class="btn-nav" @click="router.push({ name: 'spells', params: { id: character.id } })">{{ UI.spells }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>
@@ -441,17 +466,30 @@ onMounted(async () => {
               </strong>
               {{ UI.advFromFw }} {{ pendingAction.currentValue }}
               {{ UI.advToFw }} {{ (pendingAction.currentValue ?? 0) + 1 }}
-              {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>?
+              {{ UI.confirmFor }} <strong>{{ pendingAction.cost }} {{ UI.unitEp }}</strong>.
+            </p>
+            <p v-if="(pendingAction.ppUsed ?? 0) > 0" class="pp-used-note">
+              PP genutzt: {{ pendingAction.ppUsed }} (spart {{ (pendingAction.originalCost ?? pendingAction.cost) - pendingAction.cost }} EP)
             </p>
             <label class="gold-cost-row">
               {{ UI.advGoldAdvanceCost }}
               <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
             </label>
+            <label class="gold-cost-row">
+              {{ UI.advGoldEpReplacement }}
+              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+              <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
+            </label>
+            <p class="ep-breakdown">
+              {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+              &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
+              {{ UI.advEpAfterDeduction }} {{ pendingAction.cost - pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+            </p>
           </template>
           <div class="confirmation-buttons">
             <button
               class="btn-confirm"
-              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || (character.gold ?? 0) < pendingAction.goldCost"
+              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
               @click="confirmAction"
             >{{ UI.confirm }}</button>
             <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>
@@ -467,6 +505,7 @@ onMounted(async () => {
             <tr>
               <th>{{ UI.colSkill }}</th>
               <th>{{ UI.colFw }}</th>
+              <th>{{ UI.colPp }}</th>
               <th>{{ UI.colNextCost }}</th>
               <th></th>
             </tr>
@@ -475,6 +514,9 @@ onMounted(async () => {
             <tr v-for="row in knownSkillRows" :key="row.skillId">
               <td>{{ row.name }}</td>
               <td>{{ row.value }}</td>
+              <td class="pp-cell">
+                <template v-if="!row.isGradBased && !row.isNotAdvanceable">{{ row.pp }}</template>
+              </td>
               <td>
                 <template v-if="row.isGradBased">
                   <span class="tag-grad-based">{{ UI.advGradBased }}</span>
@@ -483,7 +525,16 @@ onMounted(async () => {
                   <span class="tag-not-advanceable">{{ UI.advNotAdvanceable }}</span>
                 </template>
                 <template v-else>
-                  {{ row.isMaxed ? UI.notApplicable : row.cost + ' ' + UI.unitEp }}
+                  <template v-if="row.isMaxed">{{ UI.notApplicable }}</template>
+                  <template v-else>
+                    <template v-if="row.pp > 0 && row.costWithoutPp !== null">
+                      <span class="cost-strikethrough">{{ row.costWithoutPp }} {{ UI.unitEp }}</span>
+                      <span class="cost-pp-reduced">&nbsp;{{ row.cost }} {{ UI.unitEp }}</span>
+                    </template>
+                    <template v-else>
+                      {{ row.cost }} {{ UI.unitEp }}
+                    </template>
+                  </template>
                 </template>
               </td>
               <td>
@@ -818,6 +869,39 @@ button:disabled {
 .hint-grad {
   color: #7ab87a;
   font-size: 0.85em;
+}
+
+.pp-cell {
+  text-align: center;
+}
+
+.cost-strikethrough {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.85em;
+}
+
+.cost-pp-reduced {
+  color: #2a7a2a;
+  font-weight: 600;
+}
+
+.pp-used-note {
+  font-size: 0.9em;
+  color: #2a7a2a;
+  font-style: italic;
+}
+
+.gold-hint {
+  font-size: 0.8em;
+  color: #888;
+  white-space: nowrap;
+}
+
+.ep-breakdown {
+  font-size: 0.9em;
+  color: #444;
+  margin-top: 0.25rem;
 }
 </style>
 

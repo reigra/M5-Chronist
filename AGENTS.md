@@ -17,7 +17,7 @@ src/
   main.ts              — Vue app bootstrap (createApp + useRouter)
   App.vue              — Nav bar + RouterView + UpdateBanner
   router/index.ts      — vue-router, lazy-loaded views
-  views/               — Page-level components (Home, Sheet, Form, Advancement, Spells, Rules)
+  views/               — Page-level components (Home, Sheet, Form, Advancement, Equipment, Spells, Rules)
   components/          — Only UpdateBanner.vue today
   services/            — Business logic, no framework dependency
     CharacterStorage   — IndexedDB CRUD + file export/import via FS Access API
@@ -26,7 +26,7 @@ src/
     AdvancementService — EP cost calc, learn/advance skills (returns new Character, never mutates)
     GradUtils          — Pure functions: computeGrad, esForNextGrad
     SheetSkillService  — Sheet display helpers
-  types/               — Plain interfaces (Character, Skill, CharacterType, Rules, etc.)
+  types/               — Plain interfaces (Character, CharacterType, Equipment, Race, Rules, Skill, SkillRules, Spell, etc.)
   constants/ui.ts      — All UI strings exported as `UI` object (German), import via `import { UI } from '../constants/ui'`
 ```
 

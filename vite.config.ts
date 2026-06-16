@@ -5,6 +5,11 @@ import pkg from './package.json'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    watch: {
+      usePolling: true,
+    },
+  },
   define: {
     // __APP_VERSION__ wird zur Build-Zeit aus package.json injiziert
     __APP_VERSION__: JSON.stringify(pkg.version),

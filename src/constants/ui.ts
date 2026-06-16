@@ -9,12 +9,14 @@ export const UI = {
   loading:       'Wird geladen…',
   confirm:       'Bestätigen',
   cancel:        'Abbrechen',
+  close:         'Schließen',
   add:           'Hinzufügen',
   delete:        'Löschen',
   learnBtn:      'Lernen',
   notApplicable: '—',
   unitEp:        'EP',
   unitEs:        'ES',
+  selectPlaceholder: 'Bitte auswählen …',
 
   // ── App-Navigation ───────────────────────────────────────────────────────────
   appBrand:   'MagusNG',
@@ -46,6 +48,7 @@ export const UI = {
   secProps:               'Eigenschaften',
   secBoni:                'Boni',
   secPropsBoni:           'Eigenschaften & Boni',
+  secCombat:          'Kampf',
   secWeaponSkills:    'Waffenfertigkeiten',
   secSkills:          'Fertigkeiten',
   secUnlearnedSkills: 'Ungelernte Fertigkeiten',
@@ -53,7 +56,10 @@ export const UI = {
   // ── Spalten- und Feldbezeichner ──────────────────────────────────────────────
   colSkill:    'Fertigkeit',
   colFw:       'FW',
+  colPp:       'PP',
   colEw:       'EW',
+  colDamage:   'Schaden',
+  colAp:       'AP',
   colAttr:     'Eigenschaft',
   colLevel:    'Stufe',
   labelName:   'Name',
@@ -172,6 +178,7 @@ export const UI = {
   equipLabelAbb:        'Abwehr Bonus',
   equipLabelMagisch:      'Magisch',
   equipLabelSpezialwaffe: 'Spezialwaffe',
+  equipLabelSkill:       'Fertigkeit',
 
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',
@@ -204,6 +211,9 @@ export const UI = {
   advAddEp:             'EP hinzufügen',
   advGoldLearnCost:     'Lernkosten (GS):',
   advGoldAdvanceCost:   'Trainingskosten (GS):',
+  advGoldEpReplacement: 'EP-Ersatz (GS):',
+  advGoldEpReplaced:    'EP mit Gold ersetzt:',
+  advEpAfterDeduction:  'EP danach:',
   confirmLearnPfx:      'Lernen:',
   confirmFor:           'für',
   confirmAdvancePfx:    'Steigern:',
@@ -224,6 +234,8 @@ export const UI = {
   spellsEpAfter:   'EP danach:',
   spellsKnown:     'Bekannte Zaubersprüche',
   spellsLearnNew:  'Neuen Zauberspruch lernen',
+  spellDetailView:  'Details',
+  spellOverviewView: 'Übersicht',
 
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',

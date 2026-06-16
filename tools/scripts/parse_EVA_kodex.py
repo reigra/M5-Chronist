@@ -40,7 +40,13 @@ def parse_tekosten(el: ET.Element) -> dict:
         'advancementCosts': advancement_costs
     }
 
-SKIP_SKILLS = {'AP verbessern'}
+SKIP_SKILLS = {'AP verbessern', 'Fechten tevarrischer Stil'}
+
+SKILL_NAME_CORRECTIONS = {
+    'Alchimie': 'Alchemie',
+    'Thaumatographie': 'Thaumagraphie',
+    'Sprache': 'Sprechen',
+}
 
 def parse_name_value_list(raw: str) -> list:
     if not raw:
@@ -61,6 +67,7 @@ def parse_name_value_list(raw: str) -> list:
 
 def parse_fertigkeit(el: ET.Element):
     name = attr(el, 'Name')
+    name = SKILL_NAME_CORRECTIONS.get(name, name)
     dp = get_child(el, 'Dynprops')
     assocs = [a for a in el.findall('Assoc') if attr(a, 'typ') == 'LE-Kosten']
     tek = parse_tekosten(get_child(el, 'TEKosten'))
@@ -72,10 +79,13 @@ def parse_fertigkeit(el: ET.Element):
         except ValueError:
             pass
             
+    typ_raw = attr(el, 'Typ')
+    if typ_raw == 'Waffengruppe':
+        typ_raw = 'Waffenfertigkeit'
     skill = {
         'id': name,
         'name': name,
-        'typ': attr(el, 'Typ'),
+        'typ': typ_raw,
         'groups': [normalize_group_name(attr(a, 'sWert')) for a in assocs],
         'learnCost': learn_cost,
         'advancementCosts': tek['advancementCosts'],
@@ -101,7 +111,13 @@ def parse_fertigkeit(el: ET.Element):
     if zusaetze_el is not None:
         zus_str = attr(zusaetze_el, 'Zus')
         if zus_str:
-            values = [v.strip() for v in zus_str.split(',') if v.strip()]
+            seen = set()
+            values = []
+            for v in zus_str.split(','):
+                v = v.strip()
+                if v and v not in seen:
+                    seen.add(v)
+                    values.append(v)
             if values:
                 multi_instance_info = {
                     'baseSkillId': name,
@@ -188,7 +204,8 @@ def parse_klasse(el: ET.Element) -> dict:
                 if v > 0:
                     spell_costs[SPELL_GROUP_MAP[k]] = v
             else:
-                group_costs[normalize_group_name(k)] = v
+                if v > 0:
+                    group_costs[normalize_group_name(k)] = v
                 
     ctype = {
         'id': name,

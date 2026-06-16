@@ -40,6 +40,8 @@ export interface EquipmentItem {
   magisch?: boolean
   /** Whether the character is specialised in this weapon */
   spezialwaffe?: boolean
+  /** Skill ID of the associated Waffenfertigkeit skill (e.g. "Schwerter") */
+  skillId?: string
 }
 
 export interface CharacterEquipmentItem {

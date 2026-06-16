@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 import urllib.request
 import zipfile
@@ -137,15 +138,15 @@ def main():
     def run_pipeline():
         try:
             # --- EVA Teil ---
-            dialog.append("=== Schritt 1/6: EVA-Download ===\n\n")
+            dialog.append("=== Schritt 1/7: EVA-Download ===\n\n")
             download_zip(XML_DIR)
             dialog.append("\u2713 EVA-Zip erfolgreich geladen\n\n")
 
-            dialog.append("=== Schritt 2/6: Extrahieren ===\n\n")
+            dialog.append("=== Schritt 2/7: Extrahieren ===\n\n")
             extract_xmls(XML_DIR)
             dialog.append(f"\u2713 XML-Dateien extrahiert nach: {XML_DIR}\n\n")
 
-            dialog.append("=== Schritt 3/6: EVA-XML parsed ===\n\n")
+            dialog.append("=== Schritt 3/7: EVA-XML parsed ===\n\n")
             results = parse_all(XML_DIR, JSON_DIR)
             for key in results:
                 _, json_name = XML_FILES[key]
@@ -154,18 +155,35 @@ def main():
             dialog.append("\n")
 
             # --- Mogadil PDF Teil ---
-            dialog.append("=== Schritt 4/6: Lerntabellen-PDF download ===\n\n")
+            dialog.append("=== Schritt 4/7: Lerntabellen-PDF download ===\n\n")
             dialog.append(f"  URL: {PDF_URL}\n")
             download_pdf(PDF_DST)
             dialog.append(f"\u2713 PDF gespeichert als: {PDF_DST}\n\n")
 
-            dialog.append("=== Schritt 5/6: Lerntabellen parsed ===\n\n")
+            dialog.append("=== Schritt 5/7: Lerntabellen parsed ===\n\n")
             mogadil_out = os.path.join(JSON_DIR, "mogadil.json")
             parse_mogadil_document(PDF_DST, mogadil_out, log=log)
             dialog.append("\n")
 
+            # --- Arkanum PDF Parsing ---
+            dialog.append("=== Schritt 6/7: Arkanum PDF parsed ===\n\n")
+            project_dir = os.path.dirname(TOOLS_DIR)
+            arkanum_script = os.path.join(TOOLS_DIR, "scripts", "RuleBookParser", "parse_arkanum.py")
+            result = subprocess.run(
+                [sys.executable, arkanum_script],
+                capture_output=True, text=True, cwd=project_dir,
+            )
+            dialog.append(result.stdout)
+            if result.returncode != 0:
+                dialog.append("! Arkanum-PDF nicht gefunden oder Fehler im Parser \u2013 \u00fcbersprungen\n")
+                if result.stderr.strip():
+                    dialog.append(f"  Details: {result.stderr.strip()}\n")
+            else:
+                dialog.append("\u2713 tools/rules/arkanum.json\n")
+            dialog.append("\n")
+
             # --- Ausgabe ---
-            dialog.append("=== Schritt 6/6: Fertig ===\n\n")
+            dialog.append("=== Schritt 7/7: Fertig ===\n\n")
 
             cleanup()
             dialog.append(f"\u2713 JSON-Dateien in: {JSON_DIR}\n")
@@ -173,6 +191,8 @@ def main():
             dialog.append(f"  - eva_arkanum.json\n")
             dialog.append(f"  - eva_dinge.json\n")
             dialog.append(f"  - mogadil.json\n")
+            if result.returncode == 0:
+                dialog.append(f"  - arkanum.json\n")
 
             if args.notes_file:
                 notes_path = os.path.abspath(args.notes_file)
