@@ -40,7 +40,13 @@ def parse_tekosten(el: ET.Element) -> dict:
         'advancementCosts': advancement_costs
     }
 
-SKIP_SKILLS = {'AP verbessern'}
+SKIP_SKILLS = {'AP verbessern', 'Fechten tevarrischer Stil'}
+
+SKILL_NAME_CORRECTIONS = {
+    'Alchimie': 'Alchemie',
+    'Thaumatographie': 'Thaumagraphie',
+    'Sprache': 'Sprechen',
+}
 
 def parse_name_value_list(raw: str) -> list:
     if not raw:
@@ -61,6 +67,7 @@ def parse_name_value_list(raw: str) -> list:
 
 def parse_fertigkeit(el: ET.Element):
     name = attr(el, 'Name')
+    name = SKILL_NAME_CORRECTIONS.get(name, name)
     dp = get_child(el, 'Dynprops')
     assocs = [a for a in el.findall('Assoc') if attr(a, 'typ') == 'LE-Kosten']
     tek = parse_tekosten(get_child(el, 'TEKosten'))

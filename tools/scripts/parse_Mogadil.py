@@ -37,6 +37,12 @@ except ImportError:
         subprocess.check_call(cmd)
     import pdfplumber
 
+SKILL_NAME_CORRECTIONS = {
+    'Kampf ohne Waffen': 'Waffenloser Kampf',
+    'Schreiben:Sprache': 'Schreiben',
+    'Sprechen:Sprache': 'Sprechen',
+}
+
 SOURCE_MAP: dict[str, str] = {
     'ARK': 'Das Arkanum',
     'ARS': 'Ars Armorum',
@@ -763,11 +769,12 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
         key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
         pattern_id = pattern_map[key]
 
+        skill_name = SKILL_NAME_CORRECTIONS.get(r['name'], r['name'])
         source_raw = r.get('source_raw', '')
         source = _resolve_source(source_raw) if source_raw else ''
         skills.append({
-            'id': r['name'],
-            'name': r['name'],
+            'id': skill_name,
+            'name': skill_name,
             'typ': 'Fertigkeit',
             'learnCost': lookup['learnCost'],
             'advancementCosts': lookup['costs'],
@@ -790,10 +797,11 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
                     skipped += len(names)
                     continue
                 for name in names:
+                    wpn_name = SKILL_NAME_CORRECTIONS.get(name, name)
                     max_val = lookup['baseValue'] + len(lookup['costs'])
                     skills.append({
-                        'id': name,
-                        'name': name,
+                        'id': wpn_name,
+                        'name': wpn_name,
                         'typ': 'Waffenfertigkeit',
                         'learnCost': lookup['learnCost'],
                         'advancementCosts': lookup['costs'],
