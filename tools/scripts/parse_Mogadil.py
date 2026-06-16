@@ -750,13 +750,13 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     skills = []
     skipped = 0
     waffen_pattern_id = None
-    waffen_property = 'Gs'  # default, overridden if "Waffen" entry exists
+    waffen_property = ''  # default, overridden if "Waffen" entry exists
 
     for r in all_rows:
         if r['name'] == 'Waffen':
             key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
             waffen_pattern_id = pattern_map.get(key)
-            waffen_property = r['property']
+            waffen_property = '' # r['property']
             log(f'  Found "Waffen" entry, patternId={waffen_pattern_id}, property={waffen_property}')
             continue
 
