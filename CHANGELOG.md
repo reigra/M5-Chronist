@@ -1,5 +1,31 @@
 # Changelog
 
+## [v0.10.1] - 2026-06-16
+
+### Lernen & Steigern
+- Beim Steigern EP durch Gold ersetzen
+- Lernen / Steigern mit PP (Praxis Punkte)
+- Eingabe von PP im Charakterblatt (+/- Buttons)
+
+### Mogadil-Import
+- Quelle der Fertigkeiten (Mogadil) wird angezeigt
+- Waffenfertigkeiten aus Mogadil
+- Typen aus Mogadil werden importiert und genutzt
+
+### UI & Sheet
+- Spruchdetails im Charakterblatt
+- Search-as-you-type bei Fertigkeiten und Sprüchen in der EditView
+- Waffenskill wird zur Waffe gespeichert
+
+### Scripts
+- Arkanum-PDF-Parsing in Start-Installation.cmd integriert
+- Extraktionsscripts für Arkanum und Kodex begonnen
+
+### Fixes
+- Inventory wurde beim Bearbeiten nicht mehr gelöscht
+- Kleinere Unstimmigkeiten beim Parsen behoben
+- Fehler in EVA-Datei (doppelte Sprachen) umgangen
+
 ## [v0.9.5] - 2026-06-13
 
 ### Mogadil-Import (Scripts)
