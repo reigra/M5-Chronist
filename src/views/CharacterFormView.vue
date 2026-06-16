@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
-import type { Character, CharacterSkill } from '../types/Character'
+import type { Character, CharacterSkill, CharacterSpell } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -61,15 +61,19 @@ const skills = ref<CharacterSkill[]>([])
 
 /** The skill ID selected in the "add skill" dropdown. */
 const skillToAdd = ref('')
+const skillSearchQuery = ref('')
+const skillShowDropdown = ref(false)
 
 /** FW for the skill being added. */
 const skillFwToAdd = ref(12)
 
 /** Spell IDs currently on the character being edited. */
-const spells = ref<string[]>([])
+const spells = ref<CharacterSpell[]>([])
 
 /** The spell ID selected in the "add spell" dropdown. */
 const spellToAdd = ref('')
+const spellSearchQuery = ref('')
+const spellShowDropdown = ref(false)
 
 /** Waffenspezialisierungen (bis zu 3, nur für Kämpfer/KampfZauberer) */
 const weaponSpec1 = ref('')
@@ -125,12 +129,13 @@ const availableSkills = computed(() => {
   }
   return result.sort((a, b) => a.name.localeCompare(b.name))
 })
-/** True if the selected type can cast spells. */
+/** True if the selected type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const r = rules.value
   if (!r || !typeId.value) return false
   const t = r.types.find(x => x.id === typeId.value)
-  return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
+  const sc = t?.spellCosts
+  return !!sc && Object.keys(sc).length > 0
 })
 
 /** Spells available to add: in the type’s spell groups, not yet on the character. */
@@ -140,20 +145,32 @@ const availableSpells = computed(() => {
   const t = r.types.find(x => x.id === typeId.value)
   if (!t?.spellCosts) return []
   const groups = new Set(Object.keys(t.spellCosts))
-  const learned = new Set(spells.value)
+  const learned = new Set(spells.value.map(s => s.spellId))
   return r.spells
     .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
 
+const skillFiltered = computed(() => {
+  const q = skillSearchQuery.value.toLowerCase()
+  if (!q) return availableSkills.value
+  return availableSkills.value.filter(s => s.name.toLowerCase().includes(q))
+})
+
+const spellFiltered = computed(() => {
+  const q = spellSearchQuery.value.toLowerCase()
+  if (!q) return availableSpells.value
+  return availableSpells.value.filter(s => s.name.toLowerCase().includes(q))
+})
+
 /** Learned spells with display data, sorted by level then name. */
 const spellRows = computed(() => {
   const r = rules.value
-  if (!r) return spells.value.map(id => ({ id, name: id, level: 0, spellGroup: '—' }))
+  if (!r) return spells.value.map(s => ({ id: s.spellId, name: s.spellId, level: 0, spellGroup: '—', pp: s.pp ?? 0 }))
   return spells.value
-    .map(id => {
-      const spell = r.spells.find(s => s.id === id)
-      return { id, name: spell?.name ?? id, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
+    .map(s => {
+      const spell = r.spells.find(sp => sp.id === s.spellId)
+      return { id: s.spellId, name: spell?.name ?? s.spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—', pp: s.pp ?? 0 }
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
@@ -163,7 +180,7 @@ const playableTypes = computed(() => {
   if (!r) return []
   return r.types
     .filter(t => !t.isMeta)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id))
 })
 
 /** For display: look up skill names from rules.
@@ -210,6 +227,32 @@ const allWeapons = computed(() =>
     .filter(e => e.waffentyp)
     .sort((a, b) => a.name.localeCompare(b.name))
 )
+
+const closeSkillDropdown = (): void => {
+  setTimeout(() => { skillShowDropdown.value = false }, 200)
+}
+const closeSpellDropdown = (): void => {
+  setTimeout(() => { spellShowDropdown.value = false }, 200)
+}
+
+function selectSkill(item: { id: string; name: string }): void {
+  skillToAdd.value = item.id
+  skillSearchQuery.value = item.name
+  skillShowDropdown.value = false
+}
+
+function selectSpell(spell: { id: string; name: string }): void {
+  spellToAdd.value = spell.id
+  spellSearchQuery.value = spell.name
+  spellShowDropdown.value = false
+}
+
+watch(skillSearchQuery, (val) => {
+  if (!val) skillToAdd.value = ''
+})
+watch(spellSearchQuery, (val) => {
+  if (!val) spellToAdd.value = ''
+})
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Populate all form fields from an existing character. */
@@ -325,8 +368,9 @@ function addSkill(): void {
   const baseSkillId = multiRule ? multiRule.baseSkillId : sid
   const ruleSkill = r?.skills.find(s => s.id === baseSkillId)
   const fw = skillFwToAdd.value ?? (ruleSkill?.baseValue ?? 12)
-  skills.value = [...skills.value, { skillId: sid, value: fw }]
+  skills.value = [...skills.value, { skillId: sid, value: fw, pp: 0 }]
   skillToAdd.value = ''
+  skillSearchQuery.value = ''
   skillFwToAdd.value = ruleSkill?.baseValue ?? 12
 }
 
@@ -339,13 +383,14 @@ function removeSkill(skillId: string): void {
 function addSpell(): void {
   const sid = spellToAdd.value
   if (!sid) return
-  spells.value = [...spells.value, sid]
+  spells.value = [...spells.value, { spellId: sid, pp: 0 }]
   spellToAdd.value = ''
+  spellSearchQuery.value = ''
 }
 
 /** Remove a spell from the character's spell list. */
 function removeSpell(spellId: string): void {
-  spells.value = spells.value.filter(id => id !== spellId)
+  spells.value = spells.value.filter(s => s.spellId !== spellId)
 }
 
 /** Validate required fields. Returns an error message or null. */
@@ -367,10 +412,13 @@ async function saveCharacter(): Promise<void> {
 
   try {
     const character = buildCharacter()
-    // Preserve the original createdAt when editing
+    // Preserve data not managed by this form when editing
     if (isEdit.value) {
       const existing = await characterStorage.load(character.id)
-      if (existing) character.createdAt = existing.createdAt
+      if (existing) {
+        character.createdAt = existing.createdAt
+        character.inventory = existing.inventory
+      }
     }
     await characterStorage.save(character)
     await router.push({ name: 'character-sheet', params: { id: character.id } })
@@ -437,7 +485,7 @@ onMounted(async () => {
           <label class="form-field">{{ UI.labelType }} *
             <select v-model="typeId" required>
               <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
-              <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name }}</option>
+              <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name ?? t.id }}</option>
             </select>
           </label>
 
@@ -650,7 +698,7 @@ onMounted(async () => {
         <!-- Vorhandene Fertigkeiten -->
         <table v-if="skillRows.length > 0" class="skill-table">
           <thead>
-            <tr><th>{{ UI.colSkill }}</th><th>{{ UI.colFw }}</th><th></th></tr>
+            <tr><th>{{ UI.colSkill }}</th><th>{{ UI.colFw }}</th><th>{{ UI.colPp }}</th><th></th></tr>
           </thead>
           <tbody>
             <tr v-for="row in skillRows" :key="row.skillId">
@@ -669,6 +717,18 @@ onMounted(async () => {
                 />
               </td>
               <td>
+                <input
+                  :value="row.pp ?? 0"
+                  type="number"
+                  min="0"
+                  class="pp-input"
+                  @change="e => {
+                    const idx = skills.findIndex(s => s.skillId === row.skillId)
+                    if (idx !== -1) skills[idx] = { ...skills[idx], pp: Number((e.target as HTMLInputElement).value) }
+                  }"
+                />
+              </td>
+              <td>
                 <button type="button" class="btn-remove" @click="removeSkill(row.skillId)">✕</button>
               </td>
             </tr>
@@ -678,10 +738,19 @@ onMounted(async () => {
 
         <!-- Fertigkeit hinzufügen -->
         <div class="add-skill-row">
-          <select v-model="skillToAdd" class="skill-select">
-            <option value="" disabled>{{ UI.formAddSkillPlaceholder }}</option>
-            <option v-for="s in availableSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
+          <div class="search-wrapper">
+            <input v-model="skillSearchQuery" type="text" :placeholder="UI.formAddSkillPlaceholder"
+              class="skill-select"
+              @focus="skillShowDropdown = true"
+              @input="skillShowDropdown = true"
+              @blur="closeSkillDropdown" />
+            <ul v-if="skillShowDropdown && skillFiltered.length > 0" class="search-dropdown">
+              <li v-for="s in skillFiltered" :key="s.id"
+                @mousedown.prevent="selectSkill(s)" class="search-dropdown-item">
+                {{ s.name }}
+              </li>
+            </ul>
+          </div>
           <label class="fw-label">{{ UI.colFw }}
             <input v-model.number="skillFwToAdd" type="number"  class="fw-input" />
           </label>
@@ -738,13 +807,25 @@ onMounted(async () => {
 
         <table v-if="spellRows.length > 0" class="skill-table">
           <thead>
-            <tr><th>{{ UI.colLevel }}</th><th>{{ UI.labelName }}</th><th>{{ UI.colGroup }}</th><th></th></tr>
+            <tr><th>{{ UI.colLevel }}</th><th>{{ UI.labelName }}</th><th>{{ UI.colGroup }}</th><th>{{ UI.colPp }}</th><th></th></tr>
           </thead>
           <tbody>
             <tr v-for="row in spellRows" :key="row.id">
               <td>{{ row.level }}</td>
               <td>{{ row.name }}</td>
               <td>{{ row.spellGroup }}</td>
+              <td>
+                <input
+                  :value="row.pp"
+                  type="number"
+                  min="0"
+                  class="pp-input"
+                  @change="e => {
+                    const idx = spells.findIndex(s => s.spellId === row.id)
+                    if (idx !== -1) spells[idx] = { ...spells[idx], pp: Number((e.target as HTMLInputElement).value) }
+                  }"
+                />
+              </td>
               <td>
                 <button type="button" class="btn-remove" @click="removeSpell(row.id)">✕</button>
               </td>
@@ -754,12 +835,19 @@ onMounted(async () => {
         <p v-else class="empty-hint">{{ UI.emptySpellsForm }}</p>
 
         <div class="add-skill-row">
-          <select v-model="spellToAdd" class="skill-select">
-            <option value="" disabled>{{ UI.formAddSpellPlaceholder }}</option>
-            <option v-for="s in availableSpells" :key="s.id" :value="s.id">
-              {{ s.name }} -  ({{ UI.colLevel }} {{ s.level }}) 
-            </option>
-          </select>
+          <div class="search-wrapper">
+            <input v-model="spellSearchQuery" type="text" :placeholder="UI.formAddSpellPlaceholder"
+              class="skill-select"
+              @focus="spellShowDropdown = true"
+              @input="spellShowDropdown = true"
+              @blur="closeSpellDropdown" />
+            <ul v-if="spellShowDropdown && spellFiltered.length > 0" class="search-dropdown">
+              <li v-for="s in spellFiltered" :key="s.id"
+                @mousedown.prevent="selectSpell(s)" class="search-dropdown-item">
+                {{ s.name }} <span class="search-dropdown-group">({{ UI.colLevel }} {{ s.level }})</span>
+              </li>
+            </ul>
+          </div>
           <button type="button" class="btn-add" :disabled="!spellToAdd" @click="addSpell">{{ UI.add }}</button>
         </div>
       </section>
@@ -883,6 +971,7 @@ input, select {
 .skill-table th { background: #f0f0f0; }
 
 .fw-input { width: 4rem; text-align: right; }
+.pp-input { width: 3rem; text-align: right; }
 .es-input  { width: 7rem; text-align: right; }
 
 .btn-remove {
@@ -902,6 +991,34 @@ input, select {
 }
 
 .skill-select { flex: 1; min-width: 12rem; }
+
+.search-wrapper { position: relative; flex: 1; min-width: 12rem; }
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.search-dropdown-item {
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+.search-dropdown-item:hover { background: #e8f0ff; }
+
+.search-dropdown-group { color: #888; font-size: 0.85em; }
 
 .fw-label {
   flex-direction: row;

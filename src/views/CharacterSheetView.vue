@@ -9,6 +9,39 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+/**
+ * Add a numeric bonus to a dice damage string.
+ * e.g. "1W6+1" + 3 → "1W6+4", "2W6-2" + 3 → "2W6+1"
+ */
+function addDamageBonus(damage: string, bonus: number): string {
+  if (bonus === 0) return damage
+  const clean = damage.replace(/\s+/g, '')
+  const m = clean.match(/^(\d+)W(\d+)([+-]\d+)?$/i)
+  if (!m) return damage
+  const base = m[3] ? parseInt(m[3], 10) : 0
+  const total = base + bonus
+  if (total === 0) return `${m[1]}W${m[2]}`
+  const sign = total >= 0 ? '+' : ''
+  return `${m[1]}W${m[2]}${sign}${total}`
+}
+
+function weaponTypeSortKey(group: string): number {
+  if (group.includes('Angriff')) return 0
+  if (group.includes('Fern')) return 1
+  if (group.includes('Verteidigung')) return 2
+  return 0
+}
+
+interface CombatRow {
+  name: string
+  ew: number
+  damageDisplay: string | null
+  apSchutz: number | null
+  isDefense: boolean
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const route = useRoute()
@@ -20,6 +53,7 @@ const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
 const browserSupported = 'showSaveFilePicker' in window
+const showSpellDetail = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -55,12 +89,13 @@ const statusName = computed(() => {
   return r.socialStatuses.find(x => x.id === c.socialStatusId)?.name ?? c.socialStatusId
 })
 
-/** True if the character type can cast spells. */
+/** True if the character's type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return false
   const t = r.types.find(x => x.id === c.typeId)
-  return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
+  const sc = t?.spellCosts
+  return !!sc && Object.keys(sc).length > 0
 })
 
 /**
@@ -83,9 +118,27 @@ const hasSpecializations = computed(() =>
 const spellRows = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return []
-  return (c.spells ?? []).map(id => {
-    const spell = r.spells.find(s => s.id === id)
-    return { id, name: spell?.name ?? id, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
+  return (c.spells ?? []).map(s => {
+    const spellId = typeof s === 'string' ? s : s.spellId
+    const spell = r.spells.find(sp => sp.id === spellId)
+    if (!spell) return { id: spellId, name: spellId, level: 0, spellGroup: '—', pp: typeof s === 'string' ? 0 : (s.pp ?? 0) }
+
+    const desc = spell.shortDescription || r.spellDescriptions?.find(d => d.id === spellId)?.description || ''
+    return {
+      id: spellId,
+      name: spell.name,
+      level: spell.level,
+      spellGroup: spell.spellGroup,
+      spellType: spell.spellType,
+      apCost: spell.apCost,
+      castingTime: spell.castingTime,
+      range: spell.range,
+      targetType: spell.targetType,
+      effectArea: spell.effectArea,
+      duration: spell.duration,
+      displayDescription: desc,
+      pp: typeof s === 'string' ? 0 : (s.pp ?? 0),
+    }
   }).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
 
@@ -99,6 +152,113 @@ const skillRows = computed(() => {
 const weaponRows = computed(() => skillRows.value.filter(r => r.isWeapon))
 const learnedRows = computed(() => skillRows.value.filter(r => !r.isWeapon && !r.unlearned))
 const unlearnedRows = computed(() => skillRows.value.filter(r => r.unlearned))
+
+/** Weapons from inventory with combat stats. */
+const combatRows = computed((): CombatRow[] => {
+  const c = character.value
+  if (!c) return []
+
+  const rows: (CombatRow & { sortKey: number })[] = []
+
+  const boni = c.boni
+  const hasSkill = (id: string) => c.skills.some(s => s.skillId === id)
+  const skillVal = (id: string) => c.skills.find(s => s.skillId === id)?.value ?? 0
+
+  // ── 1. Feste Fertigkeiten (festgelegte Reihenfolge) ──
+
+  if (hasSkill('Abwehr')) {
+    rows.push({
+      name: 'Abwehr', ew: skillVal('Abwehr') + (boni?.AbB ?? 0),
+      damageDisplay: null, apSchutz: null, isDefense: false, sortKey: 0,
+    })
+  }
+
+  if (hasSkill('Resistenz')) {
+    const v = skillVal('Resistenz')
+    rows.push({ name: 'Resistenz (Geist)', ew: v + (boni?.ResBg ?? 0), damageDisplay: null, apSchutz: null, isDefense: false, sortKey: 1 })
+    rows.push({ name: 'Resistenz (Körper)', ew: v + (boni?.ResBk ?? 0), damageDisplay: null, apSchutz: null, isDefense: false, sortKey: 2 })
+  }
+
+  if (hasSkill('Raufen')) {
+    rows.push({
+      name: 'Raufen', ew: skillVal('Raufen') + (boni?.AnB ?? 0),
+      damageDisplay: addDamageBonus('1W6-4', boni?.SchB ?? 0), apSchutz: null, isDefense: false, sortKey: 3,
+    })
+  }
+
+  // ── 2. Waffen aus Inventar ──
+
+  for (const item of (c.inventory ?? []).filter(i => i.waffe)) {
+    const group = item.group ?? ''
+    const sk = weaponTypeSortKey(group) + 4
+
+    if (group.includes('Verteidigung')) {
+      rows.push({
+        name: item.name, ew: skillVal(item.skillId ?? '') + (item.abb ?? 0),
+        damageDisplay: null, apSchutz: item.saveAP ?? null, isDefense: true, sortKey: sk,
+      })
+      continue
+    }
+
+    const anbTotal = (boni?.AnB ?? 0) + (item.anb ?? 0) + ((item.spezialwaffe ?? false) ? 2 : 0)
+    const ew = skillVal(item.skillId ?? '') + anbTotal
+
+    let damageDisplay: string | null = null
+    if (item.damage) {
+      const schbTotal = group.includes('Angriff')
+        ? (boni?.SchB ?? 0) + (item.schb ?? 0)
+        : (item.schb ?? 0)
+      damageDisplay = addDamageBonus(item.damage, schbTotal)
+    }
+
+    rows.push({ name: item.name, ew, damageDisplay, apSchutz: null, isDefense: false, sortKey: sk })
+  }
+
+  // ── 3. Sortieren ──
+
+  rows.sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name))
+  return rows
+})
+
+/** Adjust PP for a learned skill and persist. */
+async function adjustPp(skillId: string, delta: number): Promise<void> {
+  const c = character.value
+  if (!c) return
+  const idx = c.skills.findIndex(s => s.skillId === skillId)
+  if (idx === -1) return
+  const current = c.skills[idx].pp ?? 0
+  if (current + delta < 0) return
+  const updated = {
+    ...c,
+    skills: c.skills.map(s =>
+      s.skillId === skillId ? { ...s, pp: Math.max(0, (s.pp ?? 0) + delta) } : s,
+    ),
+    updatedAt: new Date().toISOString(),
+  }
+  await characterStorage.save(updated)
+  character.value = updated
+}
+
+/** Adjust PP for a spell and persist. */
+async function adjustSpellPp(spellId: string, delta: number): Promise<void> {
+  const c = character.value
+  if (!c) return
+  const idx = c.spells.findIndex(s => (typeof s === 'string' ? s : s.spellId) === spellId)
+  if (idx === -1) return
+  const current = (typeof c.spells[idx] === 'string' ? 0 : (c.spells[idx] as any).pp) ?? 0
+  if (current + delta < 0) return
+  const updated = {
+    ...c,
+    spells: c.spells.map(s => {
+      const sid = typeof s === 'string' ? s : s.spellId
+      if (sid !== spellId) return s
+      return { spellId: sid, pp: Math.max(0, ((typeof s === 'string' ? 0 : (s as any).pp) ?? 0) + delta) }
+    }),
+    updatedAt: new Date().toISOString(),
+  }
+  await characterStorage.save(updated)
+  character.value = updated
+}
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -358,13 +518,30 @@ onMounted(async () => {
         </div>
       </section>
 
+      <!-- ── Kampf ── -->
+      <section v-if="combatRows.length > 0" class="card">
+        <h2>{{ UI.secCombat }}</h2>
+        <div class="combat-grid">
+          <template v-for="row in combatRows" :key="row.name">
+            <span class="combat-name">{{ row.name }}</span>
+            <span class="combat-ew">{{ row.ew >= 0 ? '+' + row.ew : row.ew }}</span>
+            <span class="combat-stat">{{ row.damageDisplay ?? (row.apSchutz != null ? '-' + row.apSchutz + ' AP' : '—') }}</span>
+          </template>
+        </div>
+      </section>
+
       <!-- ── Waffenfertigkeiten ── -->
       <section v-if="weaponRows.length > 0" class="card">
         <h2>{{ UI.secWeaponSkills }}</h2>
         <div class="skill-grid skill-grid--weapons">
-          <div v-for="row in weaponRows" :key="row.name" class="skill-row">
+          <div v-for="row in weaponRows" :key="row.name" class="skill-row skill-row--with-pp">
             <span>{{ row.name }}</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+            <span class="pp-control">
+              <button type="button" class="btn-pp" :disabled="(row.pp ?? 0) <= 0" @click="adjustPp(row.skillId, -1)">−</button>
+              <span class="pp-value">{{ UI.colPp }} {{ row.pp ?? 0 }}</span>
+              <button type="button" class="btn-pp" @click="adjustPp(row.skillId, 1)">+</button>
+            </span>
           </div>
         </div>
       </section>
@@ -373,9 +550,14 @@ onMounted(async () => {
       <section v-if="learnedRows.length > 0" class="card">
         <h2>{{ UI.secSkills }}</h2>
         <div class="skill-grid skill-grid--learned">
-          <div v-for="row in learnedRows" :key="row.name" class="skill-row">
+          <div v-for="row in learnedRows" :key="row.name" class="skill-row skill-row--with-pp">
             <span>{{ row.name }}</span>
             <span>{{ row.displayEw >= 0 ? '+' + row.displayEw : row.displayEw }}</span>
+            <span class="pp-control">
+              <button type="button" class="btn-pp" :disabled="(row.pp ?? 0) <= 0" @click="adjustPp(row.skillId, -1)">−</button>
+              <span class="pp-value">{{ UI.colPp }} {{ row.pp ?? 0 }}</span>
+              <button type="button" class="btn-pp" @click="adjustPp(row.skillId, 1)">+</button>
+            </span>
           </div>
         </div>
       </section>
@@ -392,14 +574,21 @@ onMounted(async () => {
       </section>
 
       <!-- ── Spells ── -->
-      <section v-if="isCaster" class="card">
-        <h2>{{ UI.spells }}</h2>
-        <table v-if="spellRows.length > 0" class="skill-table">
+      <section v-if="spellRows.length > 0" class="card">
+        <div class="section-header">
+          <h2>{{ UI.spells }}</h2>
+          <button v-if="spellRows.length > 0" class="btn-toggle" @click="showSpellDetail = !showSpellDetail">
+            {{ showSpellDetail ? UI.spellOverviewView : UI.spellDetailView }}
+          </button>
+        </div>
+        <table v-if="!showSpellDetail && spellRows.length > 0" class="skill-table">
           <thead>
             <tr>
               <th>{{ UI.colLevel }}</th>
               <th>{{ UI.labelName }}</th>
               <th>{{ UI.colGroup }}</th>
+              <th>{{ UI.colPp }}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -407,10 +596,24 @@ onMounted(async () => {
               <td>{{ row.level }}</td>
               <td>{{ row.name }}</td>
               <td>{{ row.spellGroup }}</td>
+              <td class="pp-cell">{{ row.pp ?? 0 }}</td>
+              <td class="pp-control">
+                <button type="button" class="btn-pp" :disabled="(row.pp ?? 0) <= 0" @click="adjustSpellPp(row.id, -1)">−</button>
+                <button type="button" class="btn-pp" @click="adjustSpellPp(row.id, 1)">+</button>
+              </td>
             </tr>
           </tbody>
         </table>
-          <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
+        <div v-else-if="showSpellDetail && spellRows.length > 0" class="spell-detail-list">
+          <div v-for="row in spellRows" :key="row.id" class="spell-detail-item">
+            <div class="spell-detail-line1">
+              <span class="spell-name">{{ row.name }}</span>
+              <span class="spell-meta">{{ row.spellType }} | AP: {{ row.apCost }} | {{ row.castingTime }} | {{ row.range }} | {{ row.targetType }} | {{ row.effectArea }} | {{ row.duration }}</span>
+            </div>
+            <div v-if="row.displayDescription" class="spell-detail-line2">{{ row.displayDescription }}</div>
+          </div>
+        </div>
+        <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
       </section>
 
       <!-- ── Footer ── -->
@@ -506,11 +709,65 @@ onMounted(async () => {
 }
 
 .card h2 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #555;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.btn-toggle {
+  padding: 0.2rem 0.6rem;
+  background: #fff;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8em;
+  color: #555;
+}
+
+.btn-toggle:hover {
+  background: #e8e8e8;
+}
+
+.spell-detail-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+}
+
+.spell-detail-item:last-child {
+  border-bottom: none;
+}
+
+.spell-detail-line1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.spell-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.spell-meta {
+  color: #666;
+  white-space: normal;
+}
+
+.spell-detail-line2 {
+  margin-top: 0.2rem;
+  color: #444;
+  font-size: 0.95em;
+  line-height: 1.4;
 }
 
 .prop-grid {
@@ -571,7 +828,7 @@ onMounted(async () => {
 }
 
 .skill-grid--weapons {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
 .skill-grid--learned {
@@ -596,6 +853,79 @@ onMounted(async () => {
 }
 
 .skill-row--unlearned { font-style: italic; }
+
+.combat-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0 0.75rem;
+  align-items: center;
+}
+
+.combat-grid > * {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9em;
+}
+
+.combat-ew,
+.combat-stat {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.skill-row--with-pp {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pp-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pp-value {
+  font-size: 0.85em;
+  color: #666;
+  white-space: nowrap;
+}
+
+.combat-stat {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.btn-pp {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-pp:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-pp:hover:not(:disabled) {
+  background: #e8e8e8;
+}
+
+.pp-cell {
+  text-align: center !important;
+  font-weight: 600;
+}
 
 .empty-hint { color: #888; font-style: italic; margin: 0; }
 

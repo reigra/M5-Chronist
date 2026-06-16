@@ -7,7 +7,7 @@ const STORE = 'sources'
 
 const SPELL_GROUPS = [
   'Beherrschen', 'Bewegen', 'Dweomer', 'Erkennen', 'Erschaffen',
-  'Formen', 'Verändern', 'Wundertat', 'Zauberlied', 'Zerstören',
+  'Formen', 'Verändern', 'Wundertaten', 'Zauberlieder', 'Zerstören',
 ] as const
 
 /**
@@ -268,10 +268,13 @@ export class RulesStorage {
       }
     }
 
-    // Post-merge pass: mark types without groupCosts as non-playable (isMeta).
-    // A type needs at least one groupCosts entry to be usable for character advancement.
+    // Post-merge pass: mark types without groupCosts as non-playable (isMeta) —
+    // but only if no rule source provides costPatterns (Mogadil system).
+    // In the Mogadil system, costPatterns[costPatternId][typeColumn] replaces groupCosts.
+    const hasCostPatterns = entries.some(e => e.data.costPatterns?.length)
     for (const type of merged.values()) {
-      if (!type.isMeta && (!type.groupCosts || Object.keys(type.groupCosts).length === 0)) {
+      if (!type.isMeta && !hasCostPatterns &&
+          (!type.groupCosts || Object.keys(type.groupCosts).length === 0)) {
         type.isMeta = true
         console.warn(
           `[RulesLoader] Typ "${type.id}" hat kein groupCosts — wird als nicht spielbar markiert (isMeta).`
@@ -312,9 +315,13 @@ export class RulesStorage {
     sourceName: string,
     metaOnly = false,
   ): void {
-    // Scalar fields — warn on conflict, keep existing value
+    // Scalar fields — fill undefined/null from source, warn on real conflict
     for (const key of ['name', 'category'] as const) {
-      if (source[key] && target[key] !== source[key] && !metaOnly) {
+      if (source[key] === undefined) continue
+      if (target[key] === undefined || target[key] === null) {
+        if (key === 'name') target.name = source.name!
+        else target.category = source.category!
+      } else if (target[key] !== source[key] && !metaOnly) {
         console.warn(
           `[RulesLoader] Typ "${target.id}".${key}: Kollision ` +
           `("${target[key]}" vs. "${source[key]}" aus "${sourceName}") — ` +

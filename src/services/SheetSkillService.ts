@@ -4,11 +4,13 @@ import type { Skill } from '../types/Skill'
 import type { SkillRulesConfig } from '../types/SkillRules'
 
 export interface SheetSkillRow {
+  skillId: string
   name: string
   displayEw: number
   linkedProperty: string
   unlearned: boolean
   isWeapon: boolean
+  pp: number
 }
 
 /**
@@ -78,6 +80,8 @@ export class SheetSkillService {
             linkedProperty: linkedProperty ?? '—',
             unlearned: false,
             isWeapon: false,
+            skillId: cs.skillId,
+            pp: cs.pp ?? 0,
           })
         }
         continue
@@ -96,6 +100,8 @@ export class SheetSkillService {
           linkedProperty: baseSkill.linkedProperty ?? '—',
           unlearned: false,
           isWeapon: false,
+          skillId: cs.skillId,
+          pp: cs.pp ?? 0,
         })
         continue
       }
@@ -109,7 +115,9 @@ export class SheetSkillService {
         displayEw: computeEw(character, skill, cs.value),
         linkedProperty: skill.linkedProperty ?? '—',
         unlearned: false,
-        isWeapon: skill.typ === 'Waffengruppe',
+        isWeapon: skill.typ === 'Waffenfertigkeit',
+        skillId: cs.skillId,
+        pp: cs.pp ?? 0,
       })
     }
 
@@ -120,7 +128,9 @@ export class SheetSkillService {
         displayEw: s.unlearnedValue as number,
         linkedProperty: s.linkedProperty ?? '—',
         unlearned: true,
-        isWeapon: s.typ === 'Waffengruppe',
+        isWeapon: s.typ === 'Waffenfertigkeit',
+        skillId: s.id,
+        pp: 0,
       }))
 
     return [...learnedRows, ...unlearnedRows].sort((a, b) => a.name.localeCompare(b.name))

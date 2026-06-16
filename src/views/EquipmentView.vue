@@ -8,6 +8,7 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { EquipmentItem } from '../types/Equipment'
+import type { Skill } from '../types/Skill'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,6 +29,10 @@ const availableEquipment = computed(() => {
   const r = rules.value
   if (!r) return []
   return r.equipment
+})
+
+const weaponSkills = computed<Skill[]>(() => {
+  return rules.value?.skills.filter(s => s.typ === 'Waffenfertigkeit') ?? []
 })
 
 const searchQuery = ref('')
@@ -56,6 +61,7 @@ const formSchb      = ref(0)
 const formAbb       = ref(0)
 const formMagisch      = ref(false)
 const formSpezialwaffe = ref(false)
+const formSkillId = ref('')
 
 const editingIndex = ref<number | null>(null)
 const isEditing = computed(() => editingIndex.value !== null)
@@ -77,6 +83,7 @@ function resetForm(): void {
   formAbb.value       = 0
   formMagisch.value   = false
   formSpezialwaffe.value = false
+  formSkillId.value = ''
 }
 
 watch(searchQuery, (val) => {
@@ -107,6 +114,7 @@ function selectItem(item: EquipmentItem): void {
   formAbb.value       = item.abb ?? 0
   formMagisch.value   = !!item.magisch
   formSpezialwaffe.value = !!(item.spezialwaffe ?? character.value?.weaponSpecializations?.includes(item.name))
+  formSkillId.value = item.skillId ?? ''
 }
 
 function buildItem(): EquipmentItem {
@@ -127,6 +135,7 @@ function buildItem(): EquipmentItem {
     abb:       formAbb.value || undefined,
     magisch:      formMagisch.value || undefined,
     spezialwaffe: formSpezialwaffe.value || undefined,
+    skillId: formSkillId.value || undefined,
   }
 }
 
@@ -159,6 +168,7 @@ function editItem(idx: number): void {
   formAbb.value       = item.abb ?? 0
   formMagisch.value   = !!item.magisch
   formSpezialwaffe.value = !!(item.spezialwaffe ?? character.value?.weaponSpecializations?.includes(item.name))
+  formSkillId.value = item.skillId ?? ''
   editingIndex.value = idx
 }
 
@@ -288,6 +298,12 @@ onMounted(async () => {
         </label>
 
         <div v-if="formWaffe" class="weapon-grid">
+          <label>{{ UI.equipLabelSkill }}
+            <select v-model="formSkillId">
+              <option value="" disabled>{{ UI.selectPlaceholder }}</option>
+              <option v-for="s in weaponSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+          </label>
           <label>{{ UI.equipLabelWaffentyp }}
             <input v-model="formWaffentyp" type="text" />
           </label>
@@ -473,7 +489,8 @@ onMounted(async () => {
   gap: 0.2rem;
 }
 
-.weapon-grid input {
+.weapon-grid input,
+.weapon-grid select {
   padding: 0.35rem 0.5rem;
   border: 1px solid #bbb;
   border-radius: 3px;

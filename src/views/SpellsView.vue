@@ -23,9 +23,16 @@ const errorMessage = ref<string | null>(null)
 interface PendingSpellAction {
   spell: Spell
   epCost: number
+  originalEpCost: number
   goldCost: number
+  epToPayWithGold: number
+  maxGoldEp: number
+  ppUsed: number
 }
 const pendingAction = ref<PendingSpellAction | null>(null)
+
+/** Spell whose detail popup is currently open. */
+const infoSpellRow = ref<{ spell: Spell; description: string } | null>(null)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -41,10 +48,26 @@ const charType = computed(() => {
   return r.types.find(t => t.id === c.typeId) ?? null
 })
 
-/** True if the character type can cast spells. */
+/** True if the character type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const t = charType.value
-  return t?.category === 'KampfZauberer' || t?.category === 'Zauberer'
+  const sc = t?.spellCosts
+  return !!sc && Object.keys(sc).length > 0
+})
+
+/** Sum of PP per spellGroup across all learned spells. */
+const groupPp = computed(() => {
+  const c = character.value
+  const r = rules.value
+  if (!c || !r) return {}
+  const result: Record<string, number> = {}
+  for (const s of c.spells) {
+    const spell = r.spells.find(sp => sp.id === s.spellId)
+    if (!spell) continue
+    const pp = s.pp ?? 0
+    if (pp > 0) result[spell.spellGroup] = (result[spell.spellGroup] ?? 0) + pp
+  }
+  return result
 })
 
 /**
@@ -56,9 +79,10 @@ const learnedSpellRows = computed(() => {
   if (!c || !r) return []
   const learned = c.spells ?? []
   return learned
-    .map(id => {
-      const spell = r.spells.find(s => s.id === id)
-      return { id, name: spell?.name ?? id, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—' }
+    .map(s => {
+      const spellId = typeof s === 'string' ? s : s.spellId
+      const spell = r.spells.find(sp => sp.id === spellId)
+      return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—', pp: s.pp ?? 0 }
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
@@ -74,16 +98,26 @@ const learnableSpellRows = computed(() => {
   if (!c || !r || !type?.spellCosts) return []
 
   const groups = new Set(Object.keys(type.spellCosts))
-  const learned = new Set(c.spells ?? [])
+  const learned = new Set((c.spells ?? []).map(s => typeof s === 'string' ? s : s.spellId))
 
   return r.spells
     .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
     .map(s => {
       const lc = s.learnCost ?? 0
+      const ppAvailable = groupPp.value[s.spellGroup] ?? 0
+      const ppUsed = Math.min(lc, ppAvailable)
+      const epCost = lc * (type.spellCosts![s.spellGroup] ?? 0)
+      const ppDiscount = ppUsed * (type.spellCosts![s.spellGroup] ?? 0)
+      const netCost = epCost - ppDiscount
       return {
         spell: s,
-        cost: lc * (type.spellCosts![s.spellGroup] ?? 0),
-        canAfford: (c.availableEp) >= lc * (type.spellCosts![s.spellGroup] ?? 0),
+        originalCost: epCost,
+        ppUsed,
+        cost: netCost,
+        canAfford: c.availableEp >= netCost || (
+          c.availableEp >= Math.ceil(netCost / 2) &&
+          (c.gold ?? 0) >= (lc - ppUsed) * 100
+        ),
       }
     })
     .sort((a, b) => a.spell.level - b.spell.level || a.spell.name.localeCompare(b.spell.name))
@@ -99,9 +133,13 @@ function requestLearn(spell: Spell): void {
   const type = charType.value
   if (!type?.spellCosts) return
   const lc = spell.learnCost ?? 0
-  const epCost = lc * (type.spellCosts[spell.spellGroup] ?? 0)
-  const goldCost = lc * 100
-  pendingAction.value = { spell, epCost, goldCost }
+  const ppAvailable = groupPp.value[spell.spellGroup] ?? 0
+  const ppUsed = Math.min(lc, ppAvailable)
+  const epCost = (lc - ppUsed) * (type.spellCosts[spell.spellGroup] ?? 0)
+  const originalEpCost = lc * (type.spellCosts[spell.spellGroup] ?? 0)
+  const goldCost = (lc - ppUsed) * 100
+  const maxGoldEp = Math.floor(epCost / 2)
+  pendingAction.value = { spell, epCost, originalEpCost, goldCost, epToPayWithGold: 0, maxGoldEp, ppUsed }
 }
 
 /** Discard the staged learn without any changes. */
@@ -117,17 +155,36 @@ async function confirmLearn(): Promise<void> {
   const char = character.value
   if (!action || !char) return
 
-  if (char.availableEp < action.epCost) {
+  const epToDeduct = action.epCost - action.epToPayWithGold
+
+  if (char.availableEp < epToDeduct) {
     errorMessage.value = 'Not enough EP.'
     pendingAction.value = null
     return
   }
 
+  const epReplacementGold = action.epToPayWithGold * 10
+  if ((char.gold ?? 0) < action.goldCost + epReplacementGold) {
+    errorMessage.value = 'Not enough gold.'
+    pendingAction.value = null
+    return
+  }
+
+  let remainingPp = action.ppUsed
+  const updatedSpells = (char.spells ?? []).map(s => {
+    if (remainingPp <= 0) return s
+    const spell = rules.value?.spells.find(sp => sp.id === s.spellId)
+    if (!spell || spell.spellGroup !== action.spell.spellGroup) return s
+    const consume = Math.min(s.pp ?? 0, remainingPp)
+    remainingPp -= consume
+    return { ...s, pp: (s.pp ?? 0) - consume }
+  })
+
   const updated: Character = {
     ...char,
-    spells: [...(char.spells ?? []), action.spell.id],
-    availableEp: char.availableEp - action.epCost,
-    gold: (char.gold ?? 0) - action.goldCost,
+    spells: [...updatedSpells, { spellId: action.spell.id, pp: 0 }],
+    availableEp: char.availableEp - epToDeduct,
+    gold: (char.gold ?? 0) - action.goldCost - epReplacementGold,
     updatedAt: new Date().toISOString(),
   }
 
@@ -139,6 +196,16 @@ async function confirmLearn(): Promise<void> {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
     pendingAction.value = null
   }
+}
+
+/** Show the spell info popup for a given spell ID. */
+function showSpellInfo(spellId: string): void {
+  const r = rules.value
+  if (!r) return
+  const spell = r.spells.find(sp => sp.id === spellId) ?? null
+  if (!spell) return
+  const desc = r.spellDescriptions?.find(d => d.id === spellId)?.description ?? ''
+  infoSpellRow.value = { spell, description: desc }
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -209,20 +276,60 @@ onMounted(async () => {
               ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ pendingAction.spell.spellGroup }})
               {{ UI.confirmFor }} <strong>{{ pendingAction.epCost }} {{ UI.unitEp }}</strong>?
             </p>
+            <p v-if="pendingAction.ppUsed > 0" class="pp-used-note">
+              PP genutzt: {{ pendingAction.ppUsed }} (spart {{ pendingAction.originalEpCost - pendingAction.epCost }} EP)
+            </p>
             <label class="gold-cost-row">
               {{ UI.advGoldLearnCost }}
               <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
             </label>
-            <p class="ep-after">
-              {{ UI.spellsEpAfter }} {{ character.availableEp - pendingAction.epCost }}
+            <label class="gold-cost-row">
+              {{ UI.advGoldEpReplacement }}
+              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+              <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
+            </label>
+            <p class="ep-breakdown">
+              {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+              &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
+              {{ UI.spellsEpAfter }} {{ character.availableEp - (pendingAction.epCost - pendingAction.epToPayWithGold) }} {{ UI.unitEp }}
             </p>
             <div class="confirmation-buttons">
               <button
                 class="btn-confirm"
-                :disabled="(character.gold ?? 0) < pendingAction.goldCost"
+                :disabled="(character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
                 @click="confirmLearn"
               >{{ UI.confirm }}</button>
               <button class="btn-cancel" @click="cancelLearn">{{ UI.cancel }}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Spell Info Modal ── -->
+        <div v-if="infoSpellRow !== null" class="modal-overlay" @click.self="infoSpellRow = null">
+          <div class="modal-box modal-wide">
+            <h3>{{ infoSpellRow.spell.name }}</h3>
+            <div class="spell-info-layout">
+              <div class="spell-info-props">
+                <p class="spell-info-type">{{ infoSpellRow.spell.spellType }} der Stufe {{ infoSpellRow.spell.level }}</p>
+                <p v-if="infoSpellRow.spell.material" class="spell-info-material">{{ infoSpellRow.spell.material }}</p>
+                <p class="spell-info-group">{{ infoSpellRow.spell.spellGroup }} → {{ infoSpellRow.spell.elements[0] }} → {{ infoSpellRow.spell.elements[1] ?? '' }}</p>
+                <div class="spell-info-details">
+                  <p><span class="detail-label">AP:</span> {{ infoSpellRow.spell.apCost }}</p>
+                  <p><span class="detail-label">Zauberdauer:</span> {{ infoSpellRow.spell.castingTime }}</p>
+                  <p><span class="detail-label">Reichweite:</span> {{ infoSpellRow.spell.range }}</p>
+                  <p><span class="detail-label">Wirkungsziel:</span> {{ infoSpellRow.spell.targetType }}</p>
+                  <p><span class="detail-label">Wirkungsbereich:</span> {{ infoSpellRow.spell.effectArea }}</p>
+                  <p><span class="detail-label">Wirkungsdauer:</span> {{ infoSpellRow.spell.duration }}</p>
+                  <p><span class="detail-label">Ursprung:</span> {{ infoSpellRow.spell.origin }}</p>
+                  <p><span class="detail-label">Quelle:</span> {{ infoSpellRow.spell.source }}</p>
+                </div>
+              </div>
+              <div v-if="infoSpellRow.description" class="spell-info-desc">
+                {{ infoSpellRow.description }}
+              </div>
+            </div>
+            <div class="confirmation-buttons">
+              <button class="btn-cancel" @click="infoSpellRow = null">{{ UI.close }}</button>
             </div>
           </div>
         </div>
@@ -235,14 +342,20 @@ onMounted(async () => {
               <tr>
                 <th>{{ UI.colLevel }}</th>
                 <th>{{ UI.labelName }}</th>
+                <th></th>
                 <th>{{ UI.colGroup }}</th>
+                <th>{{ UI.colPp }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in learnedSpellRows" :key="row.id">
                 <td class="col-level">{{ row.level }}</td>
                 <td>{{ row.name }}</td>
+                <td>
+                  <button class="btn-info" @click="showSpellInfo(row.id)">{{ UI.spellDetailView }}</button>
+                </td>
                 <td>{{ row.spellGroup }}</td>
+                <td class="pp-cell">{{ row.pp }}</td>
               </tr>
             </tbody>
           </table>
@@ -257,7 +370,9 @@ onMounted(async () => {
               <tr>
                 <th>{{ UI.colLevel }}</th>
                 <th>{{ UI.labelName }}</th>
+                <th></th>
                 <th>{{ UI.colGroup }}</th>
+                <th>{{ UI.colPp }}</th>
                 <th>{{ UI.colCost }}</th>
                 <th></th>
               </tr>
@@ -266,8 +381,20 @@ onMounted(async () => {
               <tr v-for="row in learnableSpellRows" :key="row.spell.id">
                 <td class="col-level">{{ row.spell.level }}</td>
                 <td>{{ row.spell.name }}</td>
+                <td>
+                  <button class="btn-info" @click="showSpellInfo(row.spell.id)">{{ UI.spellDetailView }}</button>
+                </td>
                 <td>{{ row.spell.spellGroup }}</td>
-                <td>{{ row.cost }} {{ UI.unitEp }}</td>
+                <td class="pp-cell">{{ groupPp[row.spell.spellGroup] ?? 0 }}</td>
+                <td>
+                  <template v-if="row.ppUsed > 0">
+                    <span class="cost-strikethrough">{{ row.originalCost }} {{ UI.unitEp }}</span>
+                    <span class="cost-pp-reduced">&nbsp;{{ row.cost }} {{ UI.unitEp }}</span>
+                  </template>
+                  <template v-else>
+                    {{ row.cost }} {{ UI.unitEp }}
+                  </template>
+                </td>
                 <td>
                   <button
                     :disabled="!row.canAfford || pendingAction !== null"
@@ -464,5 +591,109 @@ section h2 {
   color: #888;
   font-size: 0.9em;
   font-style: italic;
+}
+
+.pp-cell {
+  text-align: center;
+}
+
+.cost-strikethrough {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.85em;
+}
+
+.cost-pp-reduced {
+  color: #2a7a2a;
+  font-weight: 600;
+}
+
+.pp-used-note {
+  font-size: 0.9em;
+  color: #2a7a2a;
+  font-style: italic;
+}
+
+.gold-hint {
+  font-size: 0.8em;
+  color: #888;
+  white-space: nowrap;
+}
+
+.ep-breakdown {
+  font-size: 0.9em;
+  color: #444;
+  margin-top: 0.25rem;
+}
+
+.modal-wide {
+  max-width: 700px;
+}
+
+.spell-info-layout {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.spell-info-props {
+  flex: 0 0 auto;
+  min-width: 260px;
+}
+
+.spell-info-desc {
+  flex: 1;
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: #444;
+  white-space: pre-wrap;
+}
+
+.spell-info-type {
+  font-size: 0.95em;
+  color: #555;
+  margin: 0 0 0.25rem;
+}
+
+.spell-info-material {
+  font-style: italic;
+  color: #666;
+  margin: 0 0 0.25rem;
+}
+
+.spell-info-group {
+  font-size: 0.9em;
+  color: #555;
+  margin: 0 0 0.75rem;
+}
+
+.spell-info-details {
+  padding-top: 0.5rem;
+}
+
+.spell-info-details p {
+  margin: 0.15rem 0;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #555;
+  display: inline-block;
+  min-width: 7rem;
+}
+
+.btn-info {
+  padding: 0.2rem 0.5rem;
+  background: #f5f5f5;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.btn-info:hover {
+  background: #e8e8e8;
 }
 </style>
