@@ -38,6 +38,8 @@ interface PendingAction {
   cost: number
   originalCost?: number
   goldCost: number
+  epToPayWithGold: number
+  maxGoldEp: number
   currentValue?: number
   isMultiInstance?: boolean
   instanceId?: string
@@ -125,6 +127,8 @@ const knownSkillRows = computed(() => {
       const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
       const costWithoutPp = (isGradBased || isNotAdvanceable || pp === 0 || cost === null) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
       const maxValue = skill.maxValue ?? null
+      const ppUsed = Math.min(teCost, pp)
+      const fixedGoldCost = (teCost - ppUsed) * 20
       return {
         skillId: cs.skillId,
         name: displayName ?? skill.name,
@@ -134,8 +138,12 @@ const knownSkillRows = computed(() => {
         cost,
         pp,
         teCost,
+        fixedGoldCost,
         costWithoutPp,
-        canAdvance: cost !== null && char.availableEp >= cost,
+        canAdvance: cost !== null && (
+          char.availableEp >= cost ||
+          (char.availableEp >= Math.ceil(cost / 2) && (char.gold ?? 0) >= fixedGoldCost)
+        ),
         isGradBased,
         isNotAdvanceable,
         nextGradHint,
@@ -245,7 +253,7 @@ function requestLearn(skill: Skill): void {
   const goldCost = skill.learnCost * 200
   const isMultiInstance = rules.value.skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
   selectedInstance.value = ''
-  pendingAction.value = { type: 'learn', skill, cost, goldCost, isMultiInstance }
+  pendingAction.value = { type: 'learn', skill, cost, goldCost, epToPayWithGold: 0, maxGoldEp: 0, isMultiInstance }
 }
 
 /**
@@ -266,7 +274,8 @@ function requestAdvance(skill: Skill, currentValue: number, instanceId?: string)
   if (cost === null) return
   const originalCost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
   const goldCost = (teCost - ppUsed) * 20
-  pendingAction.value = { type: 'advance', skill, cost, originalCost: originalCost ?? cost, goldCost, currentValue, instanceId, ppUsed, teCost }
+  const maxGoldEp = Math.floor(cost / 2)
+  pendingAction.value = { type: 'advance', skill, cost, originalCost: originalCost ?? cost, goldCost, epToPayWithGold: 0, maxGoldEp, currentValue, instanceId, ppUsed, teCost }
 }
 
 /** Discard the staged action without making any changes. */
@@ -323,13 +332,14 @@ async function confirmAction(): Promise<void> {
         }
       } else {
         if (action.instanceId) {
-          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns)
+          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold)
         } else {
-          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns)
+          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold)
         }
       }
 
-    updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost }
+    const epReplacementGold = action.epToPayWithGold * 10
+    updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost - epReplacementGold }
 
     await characterStorage.save(updated)
     character.value = updated
@@ -465,11 +475,21 @@ onMounted(async () => {
               {{ UI.advGoldAdvanceCost }}
               <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
             </label>
+            <label class="gold-cost-row">
+              {{ UI.advGoldEpReplacement }}
+              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+              <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
+            </label>
+            <p class="ep-breakdown">
+              {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+              &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
+              {{ UI.advEpAfterDeduction }} {{ pendingAction.cost - pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+            </p>
           </template>
           <div class="confirmation-buttons">
             <button
               class="btn-confirm"
-              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || (character.gold ?? 0) < pendingAction.goldCost"
+              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
               @click="confirmAction"
             >{{ UI.confirm }}</button>
             <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>
@@ -870,6 +890,18 @@ button:disabled {
   font-size: 0.9em;
   color: #2a7a2a;
   font-style: italic;
+}
+
+.gold-hint {
+  font-size: 0.8em;
+  color: #888;
+  white-space: nowrap;
+}
+
+.ep-breakdown {
+  font-size: 0.9em;
+  color: #444;
+  margin-top: 0.25rem;
 }
 </style>
 

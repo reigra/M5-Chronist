@@ -25,6 +25,8 @@ interface PendingSpellAction {
   epCost: number
   originalEpCost: number
   goldCost: number
+  epToPayWithGold: number
+  maxGoldEp: number
   ppUsed: number
 }
 const pendingAction = ref<PendingSpellAction | null>(null)
@@ -106,12 +108,16 @@ const learnableSpellRows = computed(() => {
       const ppUsed = Math.min(lc, ppAvailable)
       const epCost = lc * (type.spellCosts![s.spellGroup] ?? 0)
       const ppDiscount = ppUsed * (type.spellCosts![s.spellGroup] ?? 0)
+      const netCost = epCost - ppDiscount
       return {
         spell: s,
         originalCost: epCost,
         ppUsed,
-        cost: epCost - ppDiscount,
-        canAfford: c.availableEp >= (epCost - ppDiscount),
+        cost: netCost,
+        canAfford: c.availableEp >= netCost || (
+          c.availableEp >= Math.ceil(netCost / 2) &&
+          (c.gold ?? 0) >= (lc - ppUsed) * 100
+        ),
       }
     })
     .sort((a, b) => a.spell.level - b.spell.level || a.spell.name.localeCompare(b.spell.name))
@@ -132,7 +138,8 @@ function requestLearn(spell: Spell): void {
   const epCost = (lc - ppUsed) * (type.spellCosts[spell.spellGroup] ?? 0)
   const originalEpCost = lc * (type.spellCosts[spell.spellGroup] ?? 0)
   const goldCost = (lc - ppUsed) * 100
-  pendingAction.value = { spell, epCost, originalEpCost, goldCost, ppUsed }
+  const maxGoldEp = Math.floor(epCost / 2)
+  pendingAction.value = { spell, epCost, originalEpCost, goldCost, epToPayWithGold: 0, maxGoldEp, ppUsed }
 }
 
 /** Discard the staged learn without any changes. */
@@ -148,8 +155,17 @@ async function confirmLearn(): Promise<void> {
   const char = character.value
   if (!action || !char) return
 
-  if (char.availableEp < action.epCost) {
+  const epToDeduct = action.epCost - action.epToPayWithGold
+
+  if (char.availableEp < epToDeduct) {
     errorMessage.value = 'Not enough EP.'
+    pendingAction.value = null
+    return
+  }
+
+  const epReplacementGold = action.epToPayWithGold * 10
+  if ((char.gold ?? 0) < action.goldCost + epReplacementGold) {
+    errorMessage.value = 'Not enough gold.'
     pendingAction.value = null
     return
   }
@@ -167,8 +183,8 @@ async function confirmLearn(): Promise<void> {
   const updated: Character = {
     ...char,
     spells: [...updatedSpells, { spellId: action.spell.id, pp: 0 }],
-    availableEp: char.availableEp - action.epCost,
-    gold: (char.gold ?? 0) - action.goldCost,
+    availableEp: char.availableEp - epToDeduct,
+    gold: (char.gold ?? 0) - action.goldCost - epReplacementGold,
     updatedAt: new Date().toISOString(),
   }
 
@@ -267,13 +283,20 @@ onMounted(async () => {
               {{ UI.advGoldLearnCost }}
               <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
             </label>
-            <p class="ep-after">
-              {{ UI.spellsEpAfter }} {{ character.availableEp - pendingAction.epCost }}
+            <label class="gold-cost-row">
+              {{ UI.advGoldEpReplacement }}
+              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+              <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
+            </label>
+            <p class="ep-breakdown">
+              {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+              &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
+              {{ UI.spellsEpAfter }} {{ character.availableEp - (pendingAction.epCost - pendingAction.epToPayWithGold) }} {{ UI.unitEp }}
             </p>
             <div class="confirmation-buttons">
               <button
                 class="btn-confirm"
-                :disabled="(character.gold ?? 0) < pendingAction.goldCost"
+                :disabled="(character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
                 @click="confirmLearn"
               >{{ UI.confirm }}</button>
               <button class="btn-cancel" @click="cancelLearn">{{ UI.cancel }}</button>
@@ -589,6 +612,18 @@ section h2 {
   font-size: 0.9em;
   color: #2a7a2a;
   font-style: italic;
+}
+
+.gold-hint {
+  font-size: 0.8em;
+  color: #888;
+  white-space: nowrap;
+}
+
+.ep-breakdown {
+  font-size: 0.9em;
+  color: #444;
+  margin-top: 0.25rem;
 }
 
 .modal-wide {

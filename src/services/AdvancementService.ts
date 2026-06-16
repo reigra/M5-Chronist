@@ -9,6 +9,9 @@ import type { CharacterType } from '../types/CharacterType'
  *   Lernen:   skill.learnCost (TE)             × cheapest group cost (EP/TE)
  *   Steigern: skill.advancementCosts[step] (TE) × cheapest group cost (EP/TE)
  *
+ * Gold may replace up to 50 % of the EP cost (epToPayWithGold).
+ * Gold deduction is handled by the caller (view).
+ *
  * The "cheapest group cost" is the lowest value in the character type's groupCosts
  * map that matches any of the skill's groups. This allows the player to learn a skill
  * under the most favourable group for their type.
@@ -158,18 +161,21 @@ export class AdvancementService {
    * Does NOT mutate the original character — returns a new object with the
    * updated EP balance, the skill's FW raised by 1, and a fresh updatedAt.
    *
-   * @param character - The current character.
-   * @param skill     - The skill to advance.
-   * @param type      - The character's type.
+   * Gold may replace up to 50% of the EP cost (epToPayWithGold).
+   * The gold deduction itself is handled by the caller.
+   *
+   * @param character      - The current character.
+   * @param skill          - The skill to advance.
+   * @param type           - The character's type.
+   * @param epToPayWithGold - EP cost to cover with gold (max 50% of total).
    * @throws Error if EP is insufficient, the skill is not learned, or it is at max.
    */
-  advanceSkill(character: Character, skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): Character {
+  advanceSkill(character: Character, skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[], epToPayWithGold: number = 0): Character {
     const charSkill = character.skills.find(s => s.skillId === skill.id)
     if (!charSkill) {
       throw new Error(`${skill.name} has not been learned yet.`)
     }
 
-    // TE-Kosten ohne PP ermitteln, um PP-Verbrauch zu berechnen
     if (!skill.advancementCosts?.length) {
       throw new Error(`${skill.name} cannot be advanced.`)
     }
@@ -186,13 +192,17 @@ export class AdvancementService {
     const ppUsed = Math.min(teCost, pp)
     const cost = (teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
 
-    if (character.availableEp < cost) {
-      throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
+    const maxGoldEp = Math.floor(cost / 2)
+    const effectiveEpGold = Math.min(Math.max(0, epToPayWithGold), maxGoldEp)
+    const epToDeduct = cost - effectiveEpGold
+
+    if (character.availableEp < epToDeduct) {
+      throw new Error(`Not enough EP. Need ${epToDeduct}, have ${character.availableEp}.`)
     }
 
     return {
       ...character,
-      availableEp: character.availableEp - cost,
+      availableEp: character.availableEp - epToDeduct,
       skills: character.skills.map(s =>
         s.skillId === skill.id ? { ...s, value: s.value + 1, pp: Math.max(0, (s.pp ?? 0) - ppUsed) } : s,
       ),
@@ -209,8 +219,9 @@ export class AdvancementService {
    * @param skill      - Der Basis-Skill (z. B. "Sprache") für die Kostenberechnung.
    * @param instanceId - Die vollständige Instanz-ID (z. B. "Sprache:Albisch").
    * @param type       - Der Charaktertyp.
+   * @param epToPayWithGold - EP cost to cover with gold (max 50% of total).
    */
-  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType, costPatterns?: number[][], costColumns?: string[]): Character {
+  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType, costPatterns?: number[][], costColumns?: string[], epToPayWithGold: number = 0): Character {
     const charSkill = character.skills.find(s => s.skillId === instanceId)
     if (!charSkill) {
       throw new Error(`${instanceId} has not been learned yet.`)
@@ -232,13 +243,17 @@ export class AdvancementService {
     const ppUsed = Math.min(teCost, pp)
     const cost = (teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
 
-    if (character.availableEp < cost) {
-      throw new Error(`Not enough EP. Need ${cost}, have ${character.availableEp}.`)
+    const maxGoldEp = Math.floor(cost / 2)
+    const effectiveEpGold = Math.min(Math.max(0, epToPayWithGold), maxGoldEp)
+    const epToDeduct = cost - effectiveEpGold
+
+    if (character.availableEp < epToDeduct) {
+      throw new Error(`Not enough EP. Need ${epToDeduct}, have ${character.availableEp}.`)
     }
 
     return {
       ...character,
-      availableEp: character.availableEp - cost,
+      availableEp: character.availableEp - epToDeduct,
       skills: character.skills.map(s =>
         s.skillId === instanceId ? { ...s, value: s.value + 1, pp: Math.max(0, (s.pp ?? 0) - ppUsed) } : s,
       ),
