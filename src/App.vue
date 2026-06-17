@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { UI } from './constants/ui'
 import UpdateBanner from './components/UpdateBanner.vue'
+import DevBanner from './components/DevBanner.vue'
 
 // __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
 const appVersion = __APP_VERSION__
@@ -9,7 +10,7 @@ const appVersion = __APP_VERSION__
 <template>
   <nav class="app-nav">
     <router-link to="/" class="nav-home">{{ UI.appBrand }}</router-link>
-    <span class="nav-version">Version {{ appVersion }}</span>
+    <span class="nav-version">Version {{ appVersion }}<DevBanner /></span>
     <router-link to="/character/new" class="nav-link">{{ UI.appNewChar }}</router-link>
     <a
       href="https://gitlab.com/silbaer/magusng-pwa"

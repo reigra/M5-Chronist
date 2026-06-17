@@ -288,6 +288,9 @@ export const UI = {
   } as Record<string, string>,
 
 
+  // ── Dev-Badge ─────────────────────────────────────────────────────────────────
+  devBadge: 'DEV',
+
   // ── Google Drive (Datei-Import/Export) ───────────────────────────────────────
   importGoogleDrive:    'Aus Google Drive importieren',
   exportGoogleDrive:    'Nach Google Drive exportieren',

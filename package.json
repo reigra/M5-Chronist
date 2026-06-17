@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:dev": "node scripts/build-dev.cjs",
+    "deploy:dev": "node scripts/deploy-dev.cjs"
   },
   "dependencies": {
     "vue": "^3.5.13",

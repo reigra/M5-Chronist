@@ -12,7 +12,8 @@ export default defineConfig({
   },
   define: {
     // __APP_VERSION__ wird zur Build-Zeit aus package.json injiziert
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    // Überschreibbar via Umgebungsvariable VITE_APP_VERSION (für dev-Builds)
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || pkg.version),
   },
   plugins: [
     vue(),
