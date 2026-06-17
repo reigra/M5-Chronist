@@ -6,8 +6,10 @@ Eine Progressive Web App (PWA) zur Erstellung und Verwaltung von Charakteren fü
 
 Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Midgard-Regelwerk liegen beim Verlag für F&SF-Spiele GbR, Stelzenberg.
 
-Du kannst die aktuelle Version der Software jederzeit [hier](https://magusng-pwa-823c6f.gitlab.io/) ausprobieren. 
+Du kannst die stabile Version unter [https://magusng-pwa-823c6f.gitlab.io](https://magusng-pwa-823c6f.gitlab.io/) und den aktuellen Entwicklungsstand unter [https://magusng-dev.silbaer.de](https://magusng-dev.silbaer.de/) ausprobieren. 
 Die App läuft komplett im Browser und auch alle Daten werden nur in deinem Browser gespeichert. Die App läuft auch auf Tablets und Telefonen, aber das Layout ist für Handys aktuell nicht gut geeignet.
+
+Die App läuft in allen modernen Browsern (Chrome, Edge, Firefox, Opera). Für den Import/Export von lokalen Dateien wird die File System Access API genutzt, die nur in Chromium-basierten Browsern (Chrome, Edge, Opera) verfügbar ist. Der Import/Export via Google Drive funktioniert in allen Browsern und erfordert kein Chromium.
 
 ---
 
@@ -21,9 +23,11 @@ MagusNG ermöglicht es, RPG-Charaktere Schritt für Schritt zu erstellen und zwi
 
 - Neue RPG-Charaktere anlegen
 - Bestehende Charaktere verwalten und steigern
-- Offline-Nutzung nach dem ersten Laden (TBD)
-- Charaktere als lokale JSON-Dateien speichern (kein Cloud-Konto erforderlich)
-- Regelwerke (Fertigkeiten, Kosten, Rassen, Typen) aus lokalen JSON-Dateien laden
+- Offline-Nutzung nach dem ersten Laden 
+- Charaktere als Dateien speichern (kein Cloud-Konto erforderlich)
+- Regelwerke (Fertigkeiten, Kosten, Rassen, Typen) aus lokalen Dateien laden
+- Ausrüstungsverwaltung (Waffen, Rüstung, Gegenstände)
+- Google Drive Integration (Import/Export von Charakteren und Regelwerken)
 
 ## Speicherung der Charaktäre
 
@@ -42,26 +46,13 @@ Aus rechtlichen Gründen kann ich keine Dateien mit den Regeln mitliefern. Diese
 
 Das Format der Regeldateien wird [hier](docs/data-schema.md) beschrieben. Falls sich Fragen ergeben könnt ihr mich gerne kontaktieren (siehe unten).
 
-Die Regel-JSONs werden mit Python-Skripten aus den EVA-XML-Dateien erstellt. Die Skripte liegen im Verzeichnis `tools/`.
+Die Regel-Dateien werden mit Python-Skripten aus verschiedenen Quellen erstellt. Das Basisregelwerk wird aus öffentlichen Quellen erstellt (kein eigenes Regelwerk notwendig), aber wenn vorhanden werden auch die offiziellen Regelwerk PDF Dateien eingelesen. Die Skripte liegen im Verzeichnis `tools/`.
 
 ### Windows (einfach)
 
 Einfach `tools/Start-Installation.cmd` doppelklicken. Das Skript lädt automatisch die aktuellen EVA-Daten herunter, entpackt sie und erzeugt die JSON-Dateien im Ordner `tools/rules/`.
 
-### Manuell
-
-1. Lade EVA von [ebruenner.de](https://ebruenner.de) herunter ([Direktlink](http://ebruenner.de/download/EVA.zip))
-2. Entpacke das Archiv — die benötigten Dateien sind `m5arkanum.xml`, `m5kodex.xml` und `dinge.xml`
-3. Lege die XML-Dateien in `tools/EVA/`
-4. Führe die Python-Skripte aus:
-
-   ```bash
-   python3 tools/scripts/parse_EVA_kodex.py tools/EVA/m5kodex.xml tools/rules/eva_kodex.json
-   python3 tools/scripts/parse_EVA_arkanum.py tools/EVA/m5arkanum.xml tools/rules/eva_arkanum.json
-   python3 tools/scripts/parse_EVA_dinge.py tools/EVA/dinge.xml tools/rules/eva_dinge.json
-   ```
-
-5. Lade die erzeugten JSON-Dateien unter "Regeln verwalten" in der PWA hoch
+Lade die erzeugten Dateien unter "Regeln verwalten" in der PWA hoch
 
 ## Kontakt
 
@@ -77,7 +68,7 @@ Du kannst mich auch über [Mastodon](https://social.tchncs.de/deck/@silbaer) ode
 |-------|-------------|
 | Frontend | Vue 3, Vite, TypeScript |
 | Middleware | TypeScript (Service-/Logikschicht) |
-| Datenspeicherung | IndexedDB, File System Access API |
+| Datenspeicherung | IndexedDB, File System Access API, Google Drive API |
 | Datenformat | JSON |
 | PWA | Service Worker, Web App Manifest |
 
@@ -131,6 +122,9 @@ Import und Verwaltung von Regelquellen (JSON) über IndexedDB.
 ### 5. Zauberverwaltung
 EP-basiertes Lernen von Zaubersprüchen für zauberfähige Charaktertypen.
 
+### 6. Ausrüstungsverwaltung
+Verwaltung von Waffen, Rüstungen und Gegenständen inklusive Suchfunktion und Editier-Modal.
+
 ---
 
 ## Entwicklung
@@ -169,7 +163,7 @@ npm run preview
 ## Datenspeicherung
 
 - **Charaktere** werden in IndexedDB gespeichert (Datenbank `MagusM5`, Store `characters`).
-- **Regelwerke** werden vom Benutzer als JSON-Dateien importiert und in IndexedDB gespeichert (Datenbank `MagusM5-Rules`, Store `sources`).
+- **Regelwerke** werden vom Benutzer als Dateien importiert und in IndexedDB gespeichert (Datenbank `MagusM5-Rules`, Store `sources`).
 - Kein Cloud-Konto, kein Server erforderlich — alle Daten verbleiben lokal im Browser.
 
 ---
