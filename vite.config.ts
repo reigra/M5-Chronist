@@ -26,8 +26,8 @@ export default defineConfig({
         description: 'RPG character management app',
         start_url: '/',
         display: 'standalone',
-        background_color: '#1a237e',
-        theme_color: '#1a237e',
+        background_color: '#2A4A7A',
+        theme_color: '#2A4A7A',
         icons: [
           {
             src: '/icon-192.png',
