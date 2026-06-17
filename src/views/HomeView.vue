@@ -245,12 +245,6 @@ onMounted(loadList)
 
     <template v-else>
 
-      <!-- Browser compatibility warning -->
-      <div v-if="!browserSupported" class="browser-warning">
-        <strong>{{ UI.browserUnsupportedTitle }}</strong><br>
-        {{ UI.browserWarningApp }}
-      </div>
-
       <!-- ── Import confirmation / diff panel ── -->
       <div v-if="pendingImport !== null" class="diff-panel">
         <h2>{{ UI.homeOverwriteTitle }}</h2>
@@ -299,20 +293,22 @@ onMounted(loadList)
                 :aria-disabled="isUnsupported(char)"
               >{{ UI.navAdvancement }}</router-link>
               <router-link :to="{ name: 'character-edit', params: { id: char.id } }" class="btn-link btn-link--edit">{{ UI.navEdit }}</router-link>
-              <button class="btn-link btn-link--delete" @click="deleteCharacter(char.id)">{{ UI.delete }}</button>
+              <button class="btn-remove" @click="deleteCharacter(char.id)">{{ UI.delete }}</button>
             </div>
           </li>
         </ul>
 
         <p v-else class="empty-hint">{{ UI.emptyChars }}</p>
 
-        <button class="btn-import" :disabled="!browserSupported" @click="importCharacter">
-          {{ UI.homeImportBtn }}
-        </button>
+        <div class="btn-row">
+          <button class="btn-import" :disabled="!browserSupported" :title="!browserSupported ? UI.browserUnsupportedHint : ''" @click="importCharacter">
+            {{ UI.homeImportBtn }}
+          </button>
 
-        <button class="btn-import" @click="importCharacterFromDrive">
-          {{ UI.importGoogleDrive }}
-        </button>
+          <button class="btn-import" @click="importCharacterFromDrive">
+            {{ UI.importGoogleDrive }}
+          </button>
+        </div>
 
         <div class="rules-nav">
           <h2 class="rules-nav-title">{{ UI.homeActiveRules }}</h2>
@@ -379,69 +375,9 @@ onMounted(loadList)
   gap: 0.4rem;
 }
 
-.btn-link {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  background: #fff;
-  color: #333;
-  font-size: 0.85em;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.btn-link:hover {
-  background: #f0f0f0;
-  text-decoration: none;
-}
-
-.btn-link--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.btn-link--edit {
-  color: #555;
-}
-
-.btn-link--delete {
-  padding: 0.25rem 0.6rem;
-  border: 1px solid #c00;
-  color: #c00;
-}
-
-.btn-link--delete:hover {
-  background: #fff0f0;
-}
-
 .empty-hint {
   color: #666;
   margin: 1rem 0;
-}
-
-.btn-import {
-  margin-top: 0.5rem;
-  padding: 0.5rem 1.25rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  background: #fff;
-}
-
-.btn-import:hover:not(:disabled) {
-  background: #f0f0f0;
-}
-
-.browser-warning {
-  background: #fff3cd;
-  border: 1px solid #e6a817;
-  border-radius: 4px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  color: #7a4f00;
-  line-height: 1.5;
 }
 
 /* ── Diff panel ── */
@@ -500,24 +436,6 @@ onMounted(loadList)
   margin-top: 0.75rem;
 }
 
-.btn-confirm {
-  background: #2a7a2a;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-cancel {
-  background: #888;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
 .rules-nav {
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -563,19 +481,5 @@ onMounted(loadList)
   color: #333;
 }
 
-.btn-rules {
-  display: inline-block;
-  padding: 0.4rem 1rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  background: #fff;
-  color: #333;
-  font-size: 0.9em;
-  text-decoration: none;
-}
-
-.btn-rules:hover {
-  background: #f0f0f0;
-}
 </style>
 

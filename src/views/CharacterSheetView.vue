@@ -334,7 +334,7 @@ onMounted(async () => {
           <button
             class="btn-nav"
             :disabled="!browserSupported"
-            :title="browserSupported ? UI.sheetExportHint : UI.sheetExportHintNA"
+            :title="browserSupported ? UI.sheetExportHint : UI.browserUnsupportedHint"
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
           <button
@@ -690,28 +690,6 @@ onMounted(async () => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-}
-
-.btn-nav {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.85em;
-  color: #333;
-  text-decoration: none;
-}
-
-.btn-nav:hover {
-  background: #f0f0f0;
-}
-
-.btn-nav--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
 }
 
 .card {

@@ -675,30 +675,8 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.btn-nav {
-  padding: 0.3rem 0.75rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.85em;
-}
-
 .char-header-top h1 {
   margin: 0;
-}
-
-.btn-export {
-  padding: 0.35rem 0.9rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  background: #fff;
-  white-space: nowrap;
-}
-
-.btn-export:hover:not(:disabled) {
-  background: #f0f0f0;
 }
 
 .add-ep-section {
@@ -792,24 +770,6 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.btn-confirm {
-  background: #2a7a2a;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-cancel {
-  background: #888;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
 section {
   margin-bottom: 2rem;
 }
@@ -832,19 +792,6 @@ th, td {
 th {
   background: #f5f5f5;
   font-weight: 600;
-}
-
-button {
-  padding: 0.3rem 0.75rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  background: #fff;
-}
-
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .tag-max {
