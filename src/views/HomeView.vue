@@ -174,6 +174,31 @@ async function importCharacter(): Promise<void> {
   }
 }
 
+/**
+ * Import a character from Google Drive (with diff/overwrite flow).
+ * Same as importCharacter() but reads via GoogleDriveProvider.
+ */
+async function importCharacterFromDrive(): Promise<void> {
+  try {
+    const incoming = await characterStorage.readFromDrive()
+    const existing = await characterStorage.load(incoming.id)
+
+    if (!existing) {
+      await characterStorage.save(incoming)
+      await loadList()
+      await router.push({ name: 'character-sheet', params: { id: incoming.id } })
+      return
+    }
+
+    const diff = computeDiff(existing, incoming)
+    pendingImport.value = { incoming, diff }
+  } catch (e) {
+    if (e instanceof Error) {
+      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    }
+  }
+}
+
 /** Confirm the overwrite: save and navigate. */
 async function confirmImport(): Promise<void> {
   const p = pendingImport.value
@@ -186,6 +211,18 @@ async function confirmImport(): Promise<void> {
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
     pendingImport.value = null
+  }
+}
+
+/**
+ * Permanently delete a character from IndexedDB.
+ */
+async function deleteCharacter(id: string): Promise<void> {
+  try {
+    await characterStorage.remove(id)
+    await loadList()
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Failed to delete character.'
   }
 }
 
@@ -262,6 +299,7 @@ onMounted(loadList)
                 :aria-disabled="isUnsupported(char)"
               >{{ UI.navAdvancement }}</router-link>
               <router-link :to="{ name: 'character-edit', params: { id: char.id } }" class="btn-link btn-link--edit">{{ UI.navEdit }}</router-link>
+              <button class="btn-link btn-link--delete" @click="deleteCharacter(char.id)">{{ UI.delete }}</button>
             </div>
           </li>
         </ul>
@@ -270,6 +308,10 @@ onMounted(loadList)
 
         <button class="btn-import" :disabled="!browserSupported" @click="importCharacter">
           {{ UI.homeImportBtn }}
+        </button>
+
+        <button class="btn-import" @click="importCharacterFromDrive">
+          {{ UI.importGoogleDrive }}
         </button>
 
         <div class="rules-nav">
@@ -362,6 +404,16 @@ onMounted(loadList)
 
 .btn-link--edit {
   color: #555;
+}
+
+.btn-link--delete {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #c00;
+  color: #c00;
+}
+
+.btn-link--delete:hover {
+  background: #fff0f0;
 }
 
 .empty-hint {

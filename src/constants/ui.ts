@@ -287,4 +287,13 @@ export const UI = {
     'Dweom.':    'Dweomer',
   } as Record<string, string>,
 
+
+  // ── Google Drive (Datei-Import/Export) ───────────────────────────────────────
+  importGoogleDrive:    'Aus Google Drive importieren',
+  exportGoogleDrive:    'Nach Google Drive exportieren',
+  driveImportRules:     'Regelwerk aus Google Drive importieren',
+  driveExportRules:     'Regelwerk nach Google Drive exportieren',
+  driveExportRulesHint: 'Nur aktivierte Quellen können exportiert werden.',
+  driveUploadSuccess:   'Erfolgreich nach Google Drive hochgeladen.',
+  driveErrorPrefix:     'Google Drive Fehler:',
 } as const

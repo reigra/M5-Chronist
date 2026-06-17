@@ -1,5 +1,6 @@
 import type { RulebookData, RulesData } from '../types/Rules'
 import type { CharacterType } from '../types/CharacterType'
+import { GoogleDriveProvider, formatDate, sanitizeFileName } from './FileProvider'
 
 const DB_NAME = 'MagusNG-Rules'
 const DB_VERSION = 1
@@ -510,6 +511,73 @@ export class RulesStorage {
     }
 
     return rules
+  }
+  /**
+   * Import a rules file from Google Drive.
+   *
+   * Opens the Google Picker dialog, lets the user select a .json rules file,
+   * validates it (must have metadata.id and metadata.title), and stores it
+   * in IndexedDB.
+   *
+   * @returns Summary of the imported source.
+   * @throws Error if the file is not a valid rules file.
+   */
+  async importFromDrive(): Promise<SourceSummary> {
+    const provider = new GoogleDriveProvider('rules')
+    const { data, fileName } = await provider.readFile()
+    const rulebook = data as RulebookData
+
+    if (!rulebook.metadata?.id || !rulebook.metadata?.title) {
+      throw new Error(
+        `"${fileName}" is not a valid rules file — missing metadata.id or metadata.title.`
+      )
+    }
+
+    this.normalizeIds(rulebook)
+
+    const entry: StoredSource = {
+      id:        rulebook.metadata.id,
+      title:     rulebook.metadata.title,
+      version:   rulebook.metadata.version ?? '?',
+      priority:  await this.nextFreePriority(rulebook.metadata.priority ?? 999),
+      enabled:   true,
+      data:      rulebook,
+    }
+
+    const db = await this.open()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      tx.objectStore(STORE).put(entry)
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror    = () => { db.close(); reject(tx.error) }
+    })
+
+    return { id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true }
+  }
+
+  /**
+   * Export a rules source to Google Drive.
+   *
+   * Loads the source from IndexedDB and uploads it as JSON to the user's Drive.
+   *
+   * @param sourceId - The ID of the source to export.
+   * @throws Error if the source is not found.
+   */
+  async exportToDrive(sourceId: string): Promise<void> {
+    const db = await this.open()
+    const entry = await new Promise<StoredSource | undefined>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly')
+      const req = tx.objectStore(STORE).get(sourceId)
+      req.onsuccess = () => { db.close(); resolve(req.result) }
+      req.onerror   = () => { db.close(); reject(req.error) }
+    })
+
+    if (!entry) throw new Error(`Source "${sourceId}" not found.`)
+
+    const provider = new GoogleDriveProvider('rules')
+    const version = sanitizeFileName(entry.version)
+    const name = `${entry.id}_${version}_${formatDate()}.json`
+    await provider.writeFile(entry.data, name)
   }
 }
 

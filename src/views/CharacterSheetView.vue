@@ -272,6 +272,16 @@ async function exportCharacter(): Promise<void> {
   }
 }
 
+async function exportToDrive(): Promise<void> {
+  const char = character.value
+  if (!char) return
+  try {
+    await characterStorage.exportToDrive(char)
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? (UI.driveErrorPrefix + ' ' + e.message) : 'Export failed.'
+  }
+}
+
 onMounted(async () => {
   try {
     const id = route.params.id as string
@@ -327,6 +337,10 @@ onMounted(async () => {
             :title="browserSupported ? UI.sheetExportHint : UI.sheetExportHintNA"
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
+          <button
+            class="btn-nav"
+            @click="exportToDrive"
+          >{{ UI.exportGoogleDrive }}</button>
         </nav>
       </header>
 

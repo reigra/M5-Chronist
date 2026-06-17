@@ -1,4 +1,5 @@
 import type { Character } from '../types/Character'
+import { GoogleDriveProvider, formatDate, sanitizeFileName } from './FileProvider'
 
 const DB_NAME = 'MagusNG'
 const DB_VERSION = 1
@@ -266,6 +267,61 @@ export class CharacterStorage {
     const character = CharacterStorage.migrate(JSON.parse(text)) as Character
     await this.save(character)
     return character
+  }
+  /**
+   * Read a character from Google Drive without saving to IndexedDB.
+   *
+   * Opens the Google Picker dialog, reads and parses the selected .json file,
+   * and runs migration. Does NOT save — the caller decides what to do next.
+   *
+   * @throws Error if Google Drive access fails or the file is invalid.
+   */
+  async readFromDrive(): Promise<Character> {
+    const provider = new GoogleDriveProvider('characters')
+    const { data } = await provider.readFile()
+    return CharacterStorage.migrate(data) as Character
+  }
+
+  /**
+   * Import a character from Google Drive.
+   *
+   * Opens the Google Picker dialog, lets the user select a .json file,
+   * parses and migrates it, saves to IndexedDB, and returns the Character.
+   *
+   * @throws Error if Google Drive access fails or the file is invalid.
+   */
+  async importFromDrive(): Promise<Character> {
+    const char = await this.readFromDrive()
+    await this.save(char)
+    return char
+  }
+
+  /**
+   * Export a character to Google Drive.
+   *
+   * Opens the OAuth flow, then uploads the character JSON to the user's Drive.
+   *
+   * @param character - The character to export.
+   */
+  async exportToDrive(character: Character): Promise<void> {
+    const provider = new GoogleDriveProvider('characters')
+    const name = `${sanitizeFileName(character.name)}_${formatDate()}.json`
+    await provider.writeFile(character, name)
+  }
+
+  /**
+   * Permanently remove a character from IndexedDB.
+   *
+   * @param id - The character's unique ID.
+   */
+  async remove(id: string): Promise<void> {
+    const db = await this.open()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      tx.objectStore(STORE).delete(id)
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror    = () => { db.close(); reject(tx.error) }
+    })
   }
 }
 

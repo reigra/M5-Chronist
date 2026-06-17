@@ -64,6 +64,37 @@ async function toggleEnabled(source: SourceSummary): Promise<void> {
 
 
 /**
+ * Import a rules file from Google Drive.
+ */
+async function importRuleFromDrive(): Promise<void> {
+  errorMessage.value = null
+  try {
+    await rulesStorage.importFromDrive()
+    await loadList()
+  } catch (e) {
+    if (e instanceof Error) {
+      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    }
+  }
+}
+
+/**
+ * Export a rules source to Google Drive.
+ *
+ * @param sourceId - The source ID to export.
+ */
+async function exportRuleToDrive(sourceId: string): Promise<void> {
+  errorMessage.value = null
+  try {
+    await rulesStorage.exportToDrive(sourceId)
+  } catch (e) {
+    if (e instanceof Error) {
+      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    }
+  }
+}
+
+/**
  * Permanently delete a source from IndexedDB.
  *
  * @param id - The source ID to remove.
@@ -167,6 +198,12 @@ onMounted(loadList)
                 />
               </td>
               <td class="col-action">
+                <button
+                  v-if="source.enabled"
+                  class="btn-icon btn-drive-export"
+                  @click="exportRuleToDrive(source.id)"
+                  :title="UI.driveExportRules"
+                >☁</button>
                 <button class="btn-remove" @click="removeSource(source.id)">{{ UI.delete }}</button>
               </td>
             </template>
@@ -198,6 +235,12 @@ onMounted(loadList)
           @click="importFiles"
         >
           {{ UI.rulesImportBtn }}
+        </button>
+        <button
+          class="btn-import"
+          @click="importRuleFromDrive"
+        >
+          {{ UI.driveImportRules }}
         </button>
         <button
           class="btn-reorder"
@@ -293,6 +336,27 @@ onMounted(loadList)
 
 .col-action {
   text-align: right;
+}
+
+.btn-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+.btn-icon:hover {
+  background: #f0f0f0;
 }
 
 .btn-remove {
