@@ -1,5 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="10" fill="#2a4a7a"/>
-  <text x="32" y="46" font-family="serif" font-size="40" font-weight="bold"
-        text-anchor="middle" fill="#ffffff">M</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a237e"/>
+      <stop offset="100%" stop-color="#4a148c"/>
+    </linearGradient>
+    <linearGradient id="border" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c4dff"/>
+      <stop offset="100%" stop-color="#e040fb"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="4" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="80" fill="url(#bg)"/>
+  <rect x="14" y="14" width="484" height="484" rx="70" fill="none" stroke="url(#border)" stroke-width="2.5" opacity="0.5"/>
+  <g filter="url(#shadow)">
+    <text x="256" y="375" font-family="Georgia" font-size="420" font-weight="bold" text-anchor="middle" fill="#ffffff" stroke="#0d1145" stroke-width="7" stroke-linejoin="round">M</text>
+  </g>
 </svg>
