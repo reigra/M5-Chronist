@@ -12,12 +12,7 @@ const appVersion = __APP_VERSION__
     <router-link to="/" class="nav-home">{{ UI.appBrand }}</router-link>
     <span class="nav-version">Version {{ appVersion }}<DevBanner /></span>
     <router-link to="/character/new" class="nav-link">{{ UI.appNewChar }}</router-link>
-    <a
-      href="https://gitlab.com/silbaer/magusng-pwa"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="nav-link nav-link--help"
-    >Hilfe in der README</a>
+    <router-link to="/help" class="nav-link nav-link--help">{{ UI.helpNav }}</router-link>
   </nav>
   <RouterView />
   <UpdateBanner />

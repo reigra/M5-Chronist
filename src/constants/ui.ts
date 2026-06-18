@@ -270,6 +270,12 @@ export const UI = {
   } as Record<string, string>,
 
 
+  // ── Hilfe ──────────────────────────────────────────────────────────────────────
+  helpNav:         'Hilfe',
+  helpBackToOverview: 'Zurück zur Übersicht',
+  helpNotFoundTitle:  'Seite nicht gefunden',
+  helpNotFoundText:   'Die angeforderte Hilfeseite existiert nicht.',
+
   // ── Google Drive (Datei-Import/Export) ───────────────────────────────────────
   importGoogleDrive:    'Aus Google Drive importieren',
   exportGoogleDrive:    'Nach Google Drive exportieren',
