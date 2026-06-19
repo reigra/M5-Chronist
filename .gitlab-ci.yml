@@ -31,24 +31,31 @@ pages:
     # Dependencies installieren (vor Version-Bump, damit lockfile stabil)
     - npm ci
 
-    # Git-Identität für npm version patch (macht intern git commit)
+    # Git-Identität
     - git config user.email "ci-bot@gitlab.com"
     - git config user.name "GitLab CI Bot"
 
-    # Changelog mit neuem Versionsheader aktualisieren
-    - NEXT_VERSION=$(node -p "const p=require('./package.json').version.split('.').map(Number); p[2]++; p.join('.')")
+    # Version bump (nur Dateien, noch kein Commit/Tag)
+    - npm version patch --no-git-tag-version
+
+    # Neue Version auslesen
+    - NEW_VERSION=$(node -p "require('./package.json').version")
+
+    # Changelog mit Versionsheader aktualisieren
     - |
       node -e "
         const fs = require('fs');
+        const version = '$NEW_VERSION';
         const date = new Date().toISOString().slice(0, 10);
-        const header = '## [v$NEXT_VERSION] - ' + date + '\n\n';
+        const header = '## [v' + version + '] - ' + date + '\n\n';
         const content = fs.readFileSync('CHANGELOG.md', 'utf8');
         fs.writeFileSync('CHANGELOG.md', header + content);
       "
-    - git add CHANGELOG.md
 
-    # Version bump: patch + Commit + Tag
-    - 'npm version patch -m "chore: release v%s [skip ci]"'
+    # Alles in einem Commit + Tag
+    - git add -A
+    - git commit -m "chore: release v$NEW_VERSION [skip ci]"
+    - git tag "v$NEW_VERSION"
 
     # Version-Commit + Tag nach release pushen
     - git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
