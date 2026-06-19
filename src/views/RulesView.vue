@@ -4,6 +4,9 @@ import { rulesStorage } from '../services/RulesStorage'
 import { UI } from '../constants/ui'
 import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
+// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
+const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const sources        = ref<SourceSummary[]>([])
@@ -194,7 +197,7 @@ onMounted(loadList)
               </td>
               <td class="col-action">
                 <button
-                  v-if="source.enabled"
+                  v-if="source.enabled && isDriveVisible"
                   class="btn-icon btn-drive-export"
                   @click="exportRuleToDrive(source.id)"
                   :title="UI.driveExportRules"
@@ -233,6 +236,7 @@ onMounted(loadList)
           {{ UI.rulesImportBtn }}
         </button>
         <button
+          v-if="isDriveVisible"
           class="btn-import"
           @click="importRuleFromDrive"
         >

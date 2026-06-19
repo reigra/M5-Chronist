@@ -9,6 +9,9 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
+// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
+const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /**
@@ -338,6 +341,7 @@ onMounted(async () => {
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
           <button
+            v-if="isDriveVisible"
             class="btn-nav"
             @click="exportToDrive"
           >{{ UI.exportGoogleDrive }}</button>
