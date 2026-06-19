@@ -89,23 +89,10 @@ release:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
     - |
-      node -e "
-        const fs = require('fs');
-        const version = process.env.NEW_VERSION;
-        const content = fs.readFileSync('CHANGELOG.md', 'utf8');
-        const lines = content.split('\n');
-        let start = -1, end = -1;
-        for (let i = 0; i < lines.length; i++) {
-          if (lines[i].trim().startsWith('## [v' + version + ']')) start = i;
-          else if (start !== -1 && lines[i].trim().startsWith('## [')) { end = i; break; }
-        }
-        if (start === -1) {
-          console.error('Section v' + version + ' not found in CHANGELOG.md');
-          process.exit(1);
-        }
-        fs.writeFileSync('changelog-notes.txt',
-          lines.slice(start, end === -1 ? undefined : end).join('\n').trim());
-      "
+      awk '
+        /^## \[v/ { if (f) exit; f = 1; next }
+        f
+      ' CHANGELOG.md > changelog-notes.txt
     - 'release-cli create
         --name "Release $NEW_VERSION"
         --tag-name "$TAG_NAME"
