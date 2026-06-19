@@ -1,11 +1,5 @@
 ## [v0.11.3] - 2026-06-19
 
-## [v0.11.2] - 2026-06-19
-
-## [v0.11.1] - 2026-06-19
-
-# Changelog
-
 ### Google Drive Integration
 - Import/Export von Charakteren und Regelwerken via Google Drive
 - Automatische Ordnerstruktur (MagusNG/characters, MagusNG/rules)

@@ -89,10 +89,9 @@ release:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
     - |
-      awk '
-        /^## \[v/ { if (f) exit; f = 1; next }
-        f
-      ' CHANGELOG.md > changelog-notes.txt
+      awk '/^## [[]v/ { if (f) exit; f = 1; next } f' CHANGELOG.md > changelog-notes.txt
+    - cat changelog-notes.txt
+    - test -s changelog-notes.txt || echo "WARN: changelog-notes.txt ist leer"
     - 'release-cli create
         --name "Release $NEW_VERSION"
         --tag-name "$TAG_NAME"
