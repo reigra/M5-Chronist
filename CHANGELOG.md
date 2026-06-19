@@ -1,3 +1,5 @@
+## [v0.11.1] - 2026-06-19
+
 # Changelog
 
 ### Google Drive Integration
