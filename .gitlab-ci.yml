@@ -97,7 +97,7 @@ release:
         --name "Release $NEW_VERSION"
         --tag-name "$TAG_NAME"
         --ref "$TAG_NAME"
-        --description-file changelog-notes.txt
+        --description changelog-notes.txt
         --assets-link "{\"name\":\"Magus-Release.zip\",\"url\":\"${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/Magus-Release.zip\"}"'
   needs:
     - pages
