@@ -9,6 +9,9 @@ import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { SourceSummary } from '../services/RulesStorage'
 
+// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
+const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** One changed field shown in the diff view. */
@@ -174,6 +177,31 @@ async function importCharacter(): Promise<void> {
   }
 }
 
+/**
+ * Import a character from Google Drive (with diff/overwrite flow).
+ * Same as importCharacter() but reads via GoogleDriveProvider.
+ */
+async function importCharacterFromDrive(): Promise<void> {
+  try {
+    const incoming = await characterStorage.readFromDrive()
+    const existing = await characterStorage.load(incoming.id)
+
+    if (!existing) {
+      await characterStorage.save(incoming)
+      await loadList()
+      await router.push({ name: 'character-sheet', params: { id: incoming.id } })
+      return
+    }
+
+    const diff = computeDiff(existing, incoming)
+    pendingImport.value = { incoming, diff }
+  } catch (e) {
+    if (e instanceof Error) {
+      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    }
+  }
+}
+
 /** Confirm the overwrite: save and navigate. */
 async function confirmImport(): Promise<void> {
   const p = pendingImport.value
@@ -186,6 +214,18 @@ async function confirmImport(): Promise<void> {
   } catch (e) {
     errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
     pendingImport.value = null
+  }
+}
+
+/**
+ * Permanently delete a character from IndexedDB.
+ */
+async function deleteCharacter(id: string): Promise<void> {
+  try {
+    await characterStorage.remove(id)
+    await loadList()
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'Failed to delete character.'
   }
 }
 
@@ -207,12 +247,6 @@ onMounted(loadList)
     <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
 
     <template v-else>
-
-      <!-- Browser compatibility warning -->
-      <div v-if="!browserSupported" class="browser-warning">
-        <strong>{{ UI.browserUnsupportedTitle }}</strong><br>
-        {{ UI.browserWarningApp }}
-      </div>
 
       <!-- ── Import confirmation / diff panel ── -->
       <div v-if="pendingImport !== null" class="diff-panel">
@@ -262,15 +296,22 @@ onMounted(loadList)
                 :aria-disabled="isUnsupported(char)"
               >{{ UI.navAdvancement }}</router-link>
               <router-link :to="{ name: 'character-edit', params: { id: char.id } }" class="btn-link btn-link--edit">{{ UI.navEdit }}</router-link>
+              <button class="btn-remove" @click="deleteCharacter(char.id)">{{ UI.delete }}</button>
             </div>
           </li>
         </ul>
 
         <p v-else class="empty-hint">{{ UI.emptyChars }}</p>
 
-        <button class="btn-import" :disabled="!browserSupported" @click="importCharacter">
-          {{ UI.homeImportBtn }}
-        </button>
+        <div class="btn-row">
+          <button class="btn-import" :disabled="!browserSupported" :title="!browserSupported ? UI.browserUnsupportedHint : ''" @click="importCharacter">
+            {{ UI.homeImportBtn }}
+          </button>
+
+          <button v-if="isDriveVisible" class="btn-import" @click="importCharacterFromDrive">
+            {{ UI.importGoogleDrive }}
+          </button>
+        </div>
 
         <div class="rules-nav">
           <h2 class="rules-nav-title">{{ UI.homeActiveRules }}</h2>
@@ -337,59 +378,9 @@ onMounted(loadList)
   gap: 0.4rem;
 }
 
-.btn-link {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  background: #fff;
-  color: #333;
-  font-size: 0.85em;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.btn-link:hover {
-  background: #f0f0f0;
-  text-decoration: none;
-}
-
-.btn-link--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.btn-link--edit {
-  color: #555;
-}
-
 .empty-hint {
   color: #666;
   margin: 1rem 0;
-}
-
-.btn-import {
-  margin-top: 0.5rem;
-  padding: 0.5rem 1.25rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  background: #fff;
-}
-
-.btn-import:hover:not(:disabled) {
-  background: #f0f0f0;
-}
-
-.browser-warning {
-  background: #fff3cd;
-  border: 1px solid #e6a817;
-  border-radius: 4px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  color: #7a4f00;
-  line-height: 1.5;
 }
 
 /* ── Diff panel ── */
@@ -448,24 +439,6 @@ onMounted(loadList)
   margin-top: 0.75rem;
 }
 
-.btn-confirm {
-  background: #2a7a2a;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-cancel {
-  background: #888;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
 .rules-nav {
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -511,19 +484,5 @@ onMounted(loadList)
   color: #333;
 }
 
-.btn-rules {
-  display: inline-block;
-  padding: 0.4rem 1rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  background: #fff;
-  color: #333;
-  font-size: 0.9em;
-  text-decoration: none;
-}
-
-.btn-rules:hover {
-  background: #f0f0f0;
-}
 </style>
 

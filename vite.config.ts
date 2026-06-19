@@ -12,14 +12,41 @@ export default defineConfig({
   },
   define: {
     // __APP_VERSION__ wird zur Build-Zeit aus package.json injiziert
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    // Überschreibbar via Umgebungsvariable VITE_APP_VERSION (für dev-Builds)
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || pkg.version),
   },
   plugins: [
     vue(),
     VitePWA({
       registerType: 'prompt',
-      // manifest.json liegt bereits in public/ — nicht neu generieren
-      manifest: false,
+      // Name via VITE_PWA_NAME überschreibbar (für dev-Builds: "Magus NG - DEV")
+      manifest: {
+        name: process.env.VITE_PWA_NAME || 'Magus NG',
+        short_name: process.env.VITE_PWA_NAME || 'Magus NG',
+        description: 'RPG character management app',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#2A4A7A',
+        theme_color: '#2A4A7A',
+        icons: [
+          {
+            src: '/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: '/favicon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+        ],
+      },
       workbox: {
         // Alle App-Assets (JS, CSS, HTML, SVG) vorcachen
         globPatterns: ['**/*.{js,css,html,svg,ico,png,woff2}'],

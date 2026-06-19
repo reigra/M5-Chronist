@@ -4,6 +4,9 @@ import { rulesStorage } from '../services/RulesStorage'
 import { UI } from '../constants/ui'
 import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
+// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
+const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const sources        = ref<SourceSummary[]>([])
@@ -62,6 +65,37 @@ async function toggleEnabled(source: SourceSummary): Promise<void> {
   }
 }
 
+
+/**
+ * Import a rules file from Google Drive.
+ */
+async function importRuleFromDrive(): Promise<void> {
+  errorMessage.value = null
+  try {
+    await rulesStorage.importFromDrive()
+    await loadList()
+  } catch (e) {
+    if (e instanceof Error) {
+      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    }
+  }
+}
+
+/**
+ * Export a rules source to Google Drive.
+ *
+ * @param sourceId - The source ID to export.
+ */
+async function exportRuleToDrive(sourceId: string): Promise<void> {
+  errorMessage.value = null
+  try {
+    await rulesStorage.exportToDrive(sourceId)
+  } catch (e) {
+    if (e instanceof Error) {
+      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    }
+  }
+}
 
 /**
  * Permanently delete a source from IndexedDB.
@@ -129,11 +163,6 @@ onMounted(loadList)
   <main class="rules-view">
     <h1>{{ UI.rulesTitle }}</h1>
 
-    <div v-if="!browserSupported" class="browser-warning">
-      <strong>{{ UI.browserUnsupportedTitle }}</strong><br>
-      {{ UI.browserWarningRules }}
-    </div>
-
     <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
@@ -167,6 +196,12 @@ onMounted(loadList)
                 />
               </td>
               <td class="col-action">
+                <button
+                  v-if="source.enabled && isDriveVisible"
+                  class="btn-icon btn-drive-export"
+                  @click="exportRuleToDrive(source.id)"
+                  :title="UI.driveExportRules"
+                >☁</button>
                 <button class="btn-remove" @click="removeSource(source.id)">{{ UI.delete }}</button>
               </td>
             </template>
@@ -195,9 +230,17 @@ onMounted(loadList)
         <button
           class="btn-import"
           :disabled="!browserSupported"
+          :title="!browserSupported ? UI.browserUnsupportedHint : ''"
           @click="importFiles"
         >
           {{ UI.rulesImportBtn }}
+        </button>
+        <button
+          v-if="isDriveVisible"
+          class="btn-import"
+          @click="importRuleFromDrive"
+        >
+          {{ UI.driveImportRules }}
         </button>
         <button
           class="btn-reorder"
@@ -250,16 +293,6 @@ onMounted(loadList)
   margin-bottom: 1rem;
 }
 
-.browser-warning {
-  background: #fff3cd;
-  border: 1px solid #e6a817;
-  border-radius: 4px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  color: #7a4f00;
-  line-height: 1.5;
-}
-
 .source-table {
   width: 100%;
   border-collapse: collapse;
@@ -295,46 +328,9 @@ onMounted(loadList)
   text-align: right;
 }
 
-.btn-remove {
-  padding: 0.25rem 0.6rem;
-  border: 1px solid #c00;
-  border-radius: 3px;
-  background: #fff;
-  color: #c00;
-  font-size: 0.85em;
-  cursor: pointer;
-}
-
-.btn-remove:hover {
-  background: #fff0f0;
-}
-
 .empty-hint {
   color: #666;
   margin: 1rem 0;
-}
-
-.btn-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.btn-github {
-  padding: 0.5rem 1rem;
-  background: #2d8a4e;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.btn-github:hover:not(:disabled) {
-  background: #236c3d;
-}
-.btn-github:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .github-message {
@@ -373,81 +369,9 @@ onMounted(loadList)
   font-size: 0.9rem;
 }
 
-.btn-download {
-  padding: 0.3rem 0.75rem;
-  background: #2d8a4e;
-  color: #fff;
-  border-radius: 4px;
-  text-decoration: none;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-.btn-download:hover {
-  background: #236c3d;
-}
-
-.btn-import {
-  padding: 0.5rem 1.25rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  background: #fff;
-}
-
-.btn-import:hover:not(:disabled) {
-  background: #f0f0f0;
-}
-
-.btn-import:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-reorder {
-  padding: 0.5rem 1.25rem;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  background: #fff;
-}
-
-.btn-reorder:hover {
-  background: #f0f0f0;
-}
-
-.btn-reorder--active {
-  background: #2a4a7a;
-  color: #fff;
-  border-color: #2a4a7a;
-}
-
-.btn-reorder--active:hover {
-  background: #1e3559;
-}
-
 .col-reorder {
   text-align: center;
   white-space: nowrap;
-}
-
-.btn-move {
-  padding: 0.2rem 0.5rem;
-  margin: 0 0.1rem;
-  border: 1px solid #888;
-  border-radius: 3px;
-  background: #fff;
-  font-size: 0.85em;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.btn-move:hover:not(:disabled) {
-  background: #eef3fa;
-}
-
-.btn-move:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
 }
 
 .import-hint {

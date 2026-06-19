@@ -1,19 +1,34 @@
 Das ZIP einfach irgendwohin entpacken, z.B. nach Dokumente\MagusNG
 
-Start-Installation.cmd erstellt die Regeldateien (*.json)
+Start-Installation.cmd erstellt die Regeldateien.
+Die Quellen werden dabei aus dem Internet geladen: 
+EVA von Eric Brünner und die Regeltabellen von Mogadil aus dem Midgardforum.
+Es können im Verzeichnis books eigene Regelbücher hinterlegt werden. 
+Atuell wird nur das Arkanum (Arkanum*.pdf) unterstützt.
 
-Es wird ein Chromebasierter Browser benötigt. Firefox geht leider nicht.
-Man kann die App installieren (oben rechts in der Adresszeile). Dann kann man sie direkt aus dem Startmenü / Desktop ausführen.
+1. https://magusng-pwa-823c6f.gitlab.io/ aufrufen. App startet
+1.5 Die letzte DEV-Version findet sich unter https://magusng-dev.silbaer.de/ 
+2. Auf der Startseite Seite ist ein Button [Regeln verwalten]
+3. Dort drauf klicken und dann können die Regldateien (*.json) aus dem Verzeichnis 
+   in dem ihr das ZIP entpackt habt geladen werden.
+4. Anschließend oben links in der Headerzeile auf [+ Neuer Charakter] klicken
+
+Die App läuft komplett im Browser. Das lokale Speichern/Laden wird nur von
+chromebasierten Browsern (z.B. Chrome, Edge, Opera) unterstützt.
+
+Man kann die App installieren (oben rechts in der Adresszeile). Dann kann man sie direkt 
+aus dem Startmenü / Desktop ausführen.
+
 Die App läuft komplett im Browser und funktioniert auch offline.
-Alle Daten werden lokal auf dem eigenen Rechner gespeichert. Es wird nichts auf irgendwelchen Servern gespeichert.
 
-1. https://magusng-pwa-823c6f.gitlab.io/ aufrufen. 
-2, Auf der Seite ist ein Button [Regeln verwalten]
-3. Dort drauf klicken und dann können die Regldateien (*.json) aus dem Verzeichnis rules geladen werden
-4. Anschließend oben liks in der Headerzeile auf + Neuer Charakter klicken
+Alle Daten werden lokal auf dem eigenen Rechner gespeichert. Es wird nichts auf irgendwelchen 
+Servern gespeichert.
 
+Die Funktion Dateien aus Google Drive zu Importieren/Exportieren ist noch in der Testphase 
+und muss von mir einzeln freigeschaltet werden.
 
-Falls du einen Fehler findest oder was fehlt, kannst du unter https://gitlab.com/silbaer/magusng-pwa/-/work_items?sort=created_date&state=opened&first_page_size=20 oben rechts ein neues Issue erstellen.
+Falls du einen Fehler findest oder was fehlt, kannst du unter 
+https://gitlab.com/silbaer/magusng-pwa/-/work_items?sort=created_date&state=opened&first_page_size=20 
+oben rechts ein neues Issue erstellen.
 
-PPs fehlen noch. Ebenso eine vernünftige Druckversion.
-
+Oder eine E-Mail an silbaer@gmail.com schreiben.

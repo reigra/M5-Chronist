@@ -21,7 +21,7 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
     "id": "kodex",
     "title": "Der Kodex",
     "version": "1402",
-    "isCore": true,
+    "priority": 10,
     "createdAt": "2026-05-01",
     "notes": ""
   },
@@ -30,8 +30,14 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
   "races": [...],
   "origins": [...],
   "socialStatuses": [...],
+  "languages": [...],
+  "scripts": [...],
   "spells": [...],
-  "spellDescriptions": [...]
+  "spellDescriptions": [...],
+  "equipment": [...],
+  "skillRules": {...},
+  "costColumns": [...],
+  "costPatterns": [...]
 }
 ```
 
@@ -40,7 +46,7 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 | `metadata.id` | `string` | Eindeutige Quellenkennung |
 | `metadata.title` | `string` | Anzeigename der Quelle |
 | `metadata.version` | `string` | Ausgabe oder Druckjahr (nur Anzeige) |
-| `metadata.isCore` | `boolean` | `true` = Kernquelle, kann nicht deaktiviert werden |
+| `metadata.priority` | `number` *(optional)* | Numerische Priorität: niedriger = höhere Priorität. `0` = Hausregel, `10` = Kernquelle, `999` = Fallback |
 | `metadata.createdAt` | `string` | Erstellungsdatum der Datei |
 | `metadata.notes` | `string` | Optionale Anmerkungen |
 
@@ -52,6 +58,7 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 {
   "id": "Klettern",
   "name": "Klettern",
+  "typ": "Fertigkeit",
   "groups": ["Alltag", "Körper"],
   "difficulty": { "Alltag": "leicht", "Körper": "normal" },
   "learnCost": 1,
@@ -61,7 +68,9 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
   "linkedProperty": "Gs",
   "bonusKey": "AnB",
   "notes": "",
-  "unlearnedValue": 3
+  "costPatternId": 0,
+  "unlearnedValue": 3,
+  "gradValues": [{ "grad": 1, "fw": 8 }, { "grad": 4, "fw": 10 }]
 }
 ```
 
@@ -78,6 +87,8 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 | `linkedProperty` | `string` | Eigenschaft, die zum EW addiert wird (z.B. `"Gs"`) |
 | `bonusKey` | `string` *(optional)* | Abgeleiteter Bonus, der zusätzlich auf den EW addiert wird (z.B. `"AnB"`, `"ZauB"`) |
 | `notes` | `string` | Optionale Regelhinweise |
+| `typ` | `string` *(optional)* | Quelltyp aus dem EVA-XML (z.B. `"Fertigkeit"`, `"Waffenfertigkeit"`) |
+| `costPatternId` | `number` *(optional)* | Index in `costPatterns` für regionale EP-Kosten (Mogadil-System). Fehlt = Standard-Kosten via `advancementCosts`. |
 | `unlearnedValue` | `number` *(optional)* | EW-Wert bei ungelernt verwenden. Fehlt = Fertigkeit kann nicht ungelernt eingesetzt werden. |
 | `gradValues` | `Array<{grad, fw}>` *(optional)* | Grad-abhängige Steigerungstabelle (Abwehr, Resistenz, Zaubern). Wenn vorhanden, wird die Fertigkeit nicht per EP gesteigert, sondern erhöht sich automatisch beim Erreichen bestimmter Grade. |
 
@@ -95,7 +106,6 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
     "Kampf": 2,
     "Waffen": 2
   },
-  "spellCosts": null,
   "propertyBonuses": [
     { "id": "AnB", "value": 1 }
   ]
@@ -201,6 +211,48 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 
 ---
 
+### `languages` — Sprachen (`Language`)
+
+```json
+{
+  "id": "handelssprache",
+  "name": "Handelssprache",
+  "old": false,
+  "regions": ["Alba", "Myrkjartan"]
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `id` | `string` *(optional)* | Eindeutige ID. Fehlt sie, wird beim Import auf `name` normalisiert. |
+| `name` | `string` | Anzeigename |
+| `old` | `boolean` *(optional)* | `true` = veraltete Sprache |
+| `regions` | `string[]` | Regionen, in denen die Sprache gesprochen wird |
+
+---
+
+### `scripts` — Schriften (`Script`)
+
+```json
+{
+  "id": "runen",
+  "name": "Runen",
+  "old": true,
+  "secret": false,
+  "regions": ["Alba", "Myrkjartan"]
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `id` | `string` *(optional)* | Eindeutige ID. Fehlt sie, wird beim Import auf `name` normalisiert. |
+| `name` | `string` | Anzeigename |
+| `old` | `boolean` *(optional)* | `true` = veraltete Schrift |
+| `secret` | `boolean` *(optional)* | `true` = geheime Schrift |
+| `regions` | `string[]` | Regionen, in denen die Schrift verwendet wird |
+
+---
+
 ### `spells` — Zaubersprüche (`Spell`)
 
 ```json
@@ -208,6 +260,7 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
   "id": "Laufen wie der Wind",
   "name": "Laufen wie der Wind",
   "level": 5,
+  "learnCost": 2,
   "spellType": "Gestenzauber",
   "spellGroup": "Veränd.",
   "elements": ["Holz", "Erde"],
@@ -229,6 +282,7 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 | `id` | `string` | Eindeutige ID, entspricht dem deutschen Regelbuchnamen |
 | `name` | `string` | Anzeigename |
 | `level` | `number` | Zauberstufe (1–10) |
+| `learnCost` | `number` *(optional)* | Lernkosten in Trainingseinheiten |
 | `spellType` | `string` | z.B. `"Wortzauber"`, `"Gestenzauber"`, `"Gedankenzauber"` |
 | `spellGroup` | `string` | Zaubergruppe — entspricht einem Schlüssel in `type.spellCosts` |
 | `elements` | `string[]` | Zugeordnete Elemente |
@@ -261,6 +315,148 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 
 ---
 
+### `equipment` — Ausrüstung (`EquipmentItem`)
+
+```json
+{
+  "id": "langschwert",
+  "name": "Langschwert",
+  "group": "Schwerter",
+  "description": "Ein typisches Langschwert",
+  "location": "Gürtel",
+  "price": 15,
+  "weight": 1.5,
+  "damage": "1W6+1",
+  "propertyRestrictions": { "St": { "min": 11 } },
+  "waffentyp": "Angriff",
+  "waffe": true,
+  "anb": 0,
+  "schb": 0,
+  "abb": 0,
+  "magisch": false,
+  "spezialwaffe": false,
+  "skillId": "Schwerter"
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `id` | `string` | Eindeutige ID |
+| `name` | `string` | Anzeigename |
+| `group` | `string` | Kategorie (z.B. `"Schwerter"`, `"Rüstungen"`) |
+| `description` | `string` | Beschreibungstext |
+| `location` | `string` | Trageort (z.B. `"Gürtel"`, `"Rucksack"`) |
+| `price` | `number` | Preis in Goldstücken |
+| `weight` | `number` | Gewicht in kg |
+| `damage` | `string` *(optional)* | Schadenswürfel (nur bei Waffen) |
+| `propertyRestrictions` | `object` *(optional)* | Voraussetzungen an Eigenschaften (z.B. `{ "St": { "min": 11 } }`) |
+| `distance` | `string[]` *(optional)* | Reichweitenstufen (nur bei Fernkampfwaffen) |
+| `saveAP` | `number` *(optional)* | AP-Vorzug durch Rüstung |
+| `waffentyp` | `string` *(optional)* | Waffentyp (z.B. `"Angriff"`, `"Fern"`) |
+| `waffe` | `boolean` *(optional)* | `true` = wird als Waffe behandelt |
+| `anb` | `number` *(optional)* | Angriffsbonus |
+| `schb` | `number` *(optional)* | Schadensbonus |
+| `abb` | `number` *(optional)* | Abwehrbonus |
+| `magisch` | `boolean` *(optional)* | `true` = magischer Gegenstand |
+| `spezialwaffe` | `boolean` *(optional)* | `true` = Spezialwaffe des Charakters |
+| `skillId` | `string` *(optional)* | ID der zugehörigen Waffenfertigkeit (z.B. `"Schwerter"`) |
+
+---
+
+### `skillRules` — Fertigkeits-Sonderregeln (`SkillRulesConfig`)
+
+Konfiguriert zwei Sonderfälle: **Split-Skills** (eine Fertigkeit wird als mehrere Zeilen angezeigt) und **Multi-Instance-Skills** (eine Fertigkeit kann mehrfach mit Spezialisierung gelernt werden).
+
+```json
+{
+  "splitSkills": [
+    {
+      "baseSkillId": "Resistenz",
+      "variants": [
+        { "displayName": "Resistenz (Geist)", "bonusKey": "ResBg" },
+        { "displayName": "Resistenz (Körper)", "bonusKey": "ResBk" }
+      ]
+    }
+  ],
+  "multiInstanceSkills": [
+    {
+      "baseSkillId": "Sprache",
+      "idPrefix": "Sprache:",
+      "instanceSource": { "type": "rules", "rulesKey": "languages", "nameField": "name" }
+    }
+  ]
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `splitSkills` | `SplitSkillRule[]` | Liste der Split-Skill-Konfigurationen |
+| `multiInstanceSkills` | `MultiInstanceSkillRule[]` | Liste der Multi-Instance-Skill-Konfigurationen |
+
+#### `SplitSkillRule`
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `baseSkillId` | `string` | ID der Basis-Fertigkeit in `skills` (z.B. `"Resistenz"`) |
+| `variants` | `SplitSkillVariant[]` | Anzeige-Varianten mit optionalem `bonusKey` |
+
+#### `MultiInstanceSkillRule`
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `baseSkillId` | `string` | ID der Basis-Fertigkeit in `skills` (z.B. `"Sprache"`) |
+| `idPrefix` | `string` | Präfix für die Skill-IDs im Charakter (z.B. `"Sprache:"`) |
+| `instanceSource` | `object` | Quelltyp: `{ type: "rules", rulesKey, nameField }` für Daten aus `languages`/`scripts`, oder `{ type: "fixed", values }` für feste Liste |
+
+---
+
+### `costColumns` — Kosten-Tabellenspalten (Mogadil)
+
+Spaltenüberschriften für die Mogadil-Tabellen. Jeder Eintrag entspricht einem Typ-Schlüssel in `costPatterns`.
+
+```json
+["Kr", "Hä", "Dr", "Sc", "Bk", "Ma", "He", "Pa"]
+```
+
+### `costPatterns` — Kosten-Tabellen (Mogadil)
+
+Zweidimensionales Array, das die EP-Kosten pro TE für Fertigkeiten definiert. Wird im Mogadil-System anstelle von `advancementCosts` einer Fertigkeit verwendet. Die Fertigkeit referenziert über `costPatternId` eine Zeile, die Spalte wird durch den Charaktertyp bestimmt.
+
+```json
+[
+  [1, 1, 1, 2, 2, 3, 3, 4],
+  [2, 3, 5, 4, 5, 6, 5, 7]
+]
+```
+
+---
+
+## Zusammengeführte Regeldaten (`RulesData`)
+
+Beim Laden werden alle aktiven Quellen nach Priorität sortiert und zu einem einzigen `RulesData`-Objekt zusammengeführt. Die Merge-Strategie ist **First-Wins auf Feldebene**: Die Quelle mit der höchsten Priorität (niedrigster `priority`-Wert) gewinnt bei Konflikten. Für `types` gibt es eine spezielle Merge-Logik, die Meta-Typen (`isMeta`) auf alle Typen derselben Kategorie anwendet.
+
+```json
+{
+  "skills": [...],
+  "types": [...],
+  "races": [...],
+  "origins": [...],
+  "socialStatuses": [...],
+  "languages": [...],
+  "scripts": [...],
+  "spells": [...],
+  "spellDescriptions": [...],
+  "equipment": [...],
+  "skillRules": {...},
+  "costColumns": [...],
+  "costPatterns": [...]
+}
+```
+
+Das `RulesData`-Objekt entspricht in seiner Struktur dem `RulebookData`-Schema, jedoch sind alle List-Felder (außer `skillRules`, `costColumns`, `costPatterns`) immer vorhanden — ggf. als leere Arrays.
+
+---
+
 ## Charakterdaten (`Character`)
 
 Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
@@ -276,6 +472,7 @@ Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
   "socialStatusId": "adel",
   "totalEs": 500,
   "availableEp": 120,
+  "gold": 35,
   "properties": {
     "St": 12, "Gs": 14, "Gw": 13, "Ko": 11,
     "In": 15, "Zt": 8,  "pA": 12, "Wk": 10,
@@ -286,9 +483,13 @@ Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
     "ZauB": 0, "ResBg": 2, "ResBk": 1
   },
   "skills": [
-    { "skillId": "Reiten", "value": 12 }
+    { "skillId": "Reiten", "value": 12, "pp": 0 }
   ],
-  "spells": ["Laufen wie der Wind"],
+  "spells": [
+    { "spellId": "Laufen wie der Wind", "pp": 0 }
+  ],
+  "weaponSpecializations": ["Langschwert"],
+  "inventory": [],
   "personalia": {
     "geschlecht": "weiblich",
     "haendigkeit": "rechts",
@@ -318,8 +519,12 @@ Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
 | `socialStatusId` | `string` | Referenz auf `SocialStatus.id` |
 | `totalEs` | `number` | Gesamter Erfahrungsschatz (kumulativ, wächst nur) |
 | `availableEp` | `number` | Aktuell verfügbare EP (wird beim Steigern reduziert) |
+| `gold` | `number` *(optional)* | Goldstücke |
 | `createdAt` | `string` | ISO-Zeitstempel der Erstellung |
 | `updatedAt` | `string` | ISO-Zeitstempel der letzten Änderung |
+| `weaponSpecializations` | `string[]` *(optional)* | IDs der Spezialwaffen (max. 3 für Krieger, sonst 1) |
+| `spellSpecialization` | `string` *(optional)* | Spezialgebiet des Magiers (`spellGroup`-Key) |
+| `inventory` | `EquipmentItem[]` *(optional)* | Ausrüstungsgegenstände (vollständige Objekte, siehe `equipment`) |
 
 ### `properties` — Eigenschaften
 
@@ -353,17 +558,25 @@ Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
 ### `skills` — Erlernte Fertigkeiten
 
 ```json
-{ "skillId": "Reiten", "value": 12 }
+{ "skillId": "Reiten", "value": 12, "pp": 0 }
 ```
 
 | Feld | Typ | Beschreibung |
 |------|-----|--------------|
 | `skillId` | `string` | Referenz auf `Skill.id` |
 | `value` | `number` | Aktueller Fertigkeitswert (FW) |
+| `pp` | `number` *(optional)* | Praktikapunkte (Power Points) für diese Fertigkeit |
 
 ### `spells` — Erlernte Zaubersprüche
 
-Array von `Spell.id`-Strings der bekannten Zauber.
+```json
+{ "spellId": "Laufen wie der Wind", "pp": 0 }
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `spellId` | `string` | Referenz auf `Spell.id` |
+| `pp` | `number` *(optional)* | Praktikapunkte (Power Points) für diesen Zauber |
 
 ### `personalia` — Beschreibende Eigenschaften *(optional)*
 
@@ -380,16 +593,3 @@ Alle Felder optional (Rückwärtskompatibilität mit älteren Speicherständen).
 | `glaube` | `string` | Gottheit oder Glaube |
 | `gg` | `number` | Göttergunst |
 | `sg` | `number` | Schicksalsgunst |
-
-
-```json
-{
-  "spells": [...],
-  "spellDescriptions": [...],
-  "skills": [...],
-  "types": [...],
-  "races": [...],
-  "origins": [...],
-  "socialStatuses": [...]
-}
-```

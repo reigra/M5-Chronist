@@ -729,7 +729,7 @@ onMounted(async () => {
                 />
               </td>
               <td>
-                <button type="button" class="btn-remove" @click="removeSkill(row.skillId)">✕</button>
+                <button type="button" class="btn-remove-inline" @click="removeSkill(row.skillId)">✕</button>
               </td>
             </tr>
           </tbody>
@@ -827,7 +827,7 @@ onMounted(async () => {
                 />
               </td>
               <td>
-                <button type="button" class="btn-remove" @click="removeSpell(row.id)">✕</button>
+                <button type="button" class="btn-remove-inline" @click="removeSpell(row.id)">✕</button>
               </td>
             </tr>
           </tbody>
@@ -857,7 +857,7 @@ onMounted(async () => {
         <button type="submit" class="btn-save" :disabled="saving">
           {{ saving ? UI.formSaving : (isEdit ? UI.formSaveChanges : UI.formCreateChar) }}
         </button>
-        <button type="button" class="btn-cancel" @click="router.back()">{{ UI.cancel }}</button>
+        <button type="button" class="btn" @click="router.back()">{{ UI.cancel }}</button>
       </div>
 
     </form>
@@ -974,7 +974,7 @@ input, select {
 .pp-input { width: 3rem; text-align: right; }
 .es-input  { width: 7rem; text-align: right; }
 
-.btn-remove {
+.btn-remove-inline {
   background: none;
   border: none;
   color: #a00;
@@ -1028,40 +1028,10 @@ input, select {
   font-size: 0.85em;
 }
 
-.btn-add {
-  padding: 0.35rem 0.85rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
-
 .empty-hint { color: #888; font-style: italic; font-size: 0.9em; margin: 0; }
 
 .form-actions {
   display: flex;
   gap: 0.75rem;
-}
-
-.btn-save {
-  padding: 0.5rem 1.5rem;
-  background: #2a7a2a;
-  color: #fff;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.btn-cancel {
-  padding: 0.5rem 1rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
 }
 </style>

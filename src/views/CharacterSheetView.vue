@@ -9,6 +9,9 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
+// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
+const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /**
@@ -272,6 +275,16 @@ async function exportCharacter(): Promise<void> {
   }
 }
 
+async function exportToDrive(): Promise<void> {
+  const char = character.value
+  if (!char) return
+  try {
+    await characterStorage.exportToDrive(char)
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? (UI.driveErrorPrefix + ' ' + e.message) : 'Export failed.'
+  }
+}
+
 onMounted(async () => {
   try {
     const id = route.params.id as string
@@ -324,9 +337,14 @@ onMounted(async () => {
           <button
             class="btn-nav"
             :disabled="!browserSupported"
-            :title="browserSupported ? UI.sheetExportHint : UI.sheetExportHintNA"
+            :title="browserSupported ? UI.sheetExportHint : UI.browserUnsupportedHint"
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
+          <button
+            v-if="isDriveVisible"
+            class="btn-nav"
+            @click="exportToDrive"
+          >{{ UI.exportGoogleDrive }}</button>
         </nav>
       </header>
 
@@ -676,28 +694,6 @@ onMounted(async () => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-}
-
-.btn-nav {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.85em;
-  color: #333;
-  text-decoration: none;
-}
-
-.btn-nav:hover {
-  background: #f0f0f0;
-}
-
-.btn-nav--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
 }
 
 .card {

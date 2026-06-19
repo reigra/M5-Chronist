@@ -461,17 +461,6 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.btn-nav {
-  padding: 0.3rem 0.75rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.85em;
-}
-
-.btn-nav:hover { background: #f0f0f0; }
-
 .ep-balance {
   margin: 0.4rem 0 0;
   color: #444;
@@ -530,29 +519,6 @@ onMounted(async () => {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.75rem;
-}
-
-.btn-confirm {
-  background: #2a7a2a;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-confirm:disabled {
-  background: #aaa;
-  cursor: default;
-}
-
-.btn-cancel {
-  background: #888;
-  color: #fff;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 3px;
-  cursor: pointer;
 }
 
 section {

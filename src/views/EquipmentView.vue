@@ -269,7 +269,7 @@ onMounted(async () => {
               <td>{{ item.location }}</td>
               <td>{{ item.weight }}</td>
               <td><button type="button" class="btn-edit" @click="editItem(idx)">✎</button></td>
-              <td><button type="button" class="btn-remove" @click="removeItem(idx)">✕</button></td>
+              <td><button type="button" class="btn-remove-inline" @click="removeItem(idx)">✕</button></td>
             </tr>
           </tbody>
         </table>
@@ -447,7 +447,7 @@ onMounted(async () => {
   padding: 0.1rem 0.3rem;
 }
 
-.btn-remove {
+.btn-remove-inline {
   background: none;
   border: none;
   color: #a00;
@@ -564,48 +564,9 @@ onMounted(async () => {
   align-items: center;
 }
 
-.action-row .btn-cancel {
-  padding: 0.35rem 0.85rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-add {
-  align-self: flex-start;
-  padding: 0.35rem 0.85rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
-
 .form-actions {
   display: flex;
   gap: 0.75rem;
   margin-top: 1rem;
-}
-
-.btn-save {
-  padding: 0.5rem 1.5rem;
-  background: #2a7a2a;
-  color: #fff;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.btn-cancel {
-  padding: 0.5rem 1rem;
-  background: #fff;
-  border: 1px solid #aaa;
-  border-radius: 3px;
-  cursor: pointer;
 }
 </style>

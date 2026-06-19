@@ -23,6 +23,10 @@ secret_detection:
 pages:
   stage: deploy
   image: node:20
+  variables:
+    VITE_GOOGLE_API_KEY: $VITE_GOOGLE_API_KEY
+    VITE_GOOGLE_CLIENT_ID: $VITE_GOOGLE_CLIENT_ID
+    VITE_GOOGLE_APP_ID: $VITE_GOOGLE_APP_ID
   script:
     # Dependencies installieren (vor Version-Bump, damit lockfile stabil)
     - npm ci
@@ -30,6 +34,18 @@ pages:
     # Git-Identität für npm version patch (macht intern git commit)
     - git config user.email "ci-bot@gitlab.com"
     - git config user.name "GitLab CI Bot"
+
+    # Changelog mit neuem Versionsheader aktualisieren
+    - NEXT_VERSION=$(node -p "const p=require('./package.json').version.split('.').map(Number); p[2]++; p.join('.')")
+    - |
+      node -e "
+        const fs = require('fs');
+        const date = new Date().toISOString().slice(0, 10);
+        const header = '## [v$NEXT_VERSION] - ' + date + '\n\n';
+        const content = fs.readFileSync('CHANGELOG.md', 'utf8');
+        fs.writeFileSync('CHANGELOG.md', header + content);
+      "
+    - git add CHANGELOG.md
 
     # Version bump: patch + Commit + Tag
     - 'npm version patch -m "chore: release v%s [skip ci]"'
@@ -65,16 +81,30 @@ release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   script:
-    - echo "Creating release $NEW_VERSION ..."
-  release:
-    name: "Release $NEW_VERSION"
-    tag_name: "$TAG_NAME"
-    ref: "$TAG_NAME"
-    assets:
-      links:
-        - name: "Magus-Release.zip"
-          url: "${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/Magus-Release.zip"
-    description: "Automatisierter Release v$NEW_VERSION"
+    - |
+      node -e "
+        const fs = require('fs');
+        const version = process.env.NEW_VERSION;
+        const content = fs.readFileSync('CHANGELOG.md', 'utf8');
+        const lines = content.split('\n');
+        let start = -1, end = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().startsWith('## [v' + version + ']')) start = i;
+          else if (start !== -1 && lines[i].trim().startsWith('## [')) { end = i; break; }
+        }
+        if (start === -1) {
+          console.error('Section v' + version + ' not found in CHANGELOG.md');
+          process.exit(1);
+        }
+        fs.writeFileSync('changelog-notes.txt',
+          lines.slice(start, end === -1 ? undefined : end).join('\n').trim());
+      "
+    - 'release-cli create
+        --name "Release $NEW_VERSION"
+        --tag-name "$TAG_NAME"
+        --ref "$TAG_NAME"
+        --description-file changelog-notes.txt
+        --assets-link "{\"name\":\"Magus-Release.zip\",\"url\":\"${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/Magus-Release.zip\"}"'
   needs:
     - pages
   only:

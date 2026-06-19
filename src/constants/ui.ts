@@ -31,14 +31,9 @@ export const UI = {
   // ── Zaubersprüche (Navigationsbutton und Abschnittsüberschrift) ───────────────
   spells: 'Zaubersprüche',
 
-  // ── Browser-Kompatibilitätswarnung ───────────────────────────────────────────
-  browserUnsupportedTitle: 'Nicht unterstützter Browser',
-  browserWarningApp:
-    'Diese App benötigt einen Chromium-basierten Browser (Chrome, Edge oder Opera). ' +
-    'Firefox und Safari unterstützen die File System Access API nicht, ' +
-    'die zum Importieren und Exportieren von Charakteren erforderlich ist.',
-  browserWarningRules:
-    'Das Importieren von Regeln erfordert einen Chromium-basierten Browser (Chrome, Edge oder Opera).',
+  // ── Browser-Kompatibilitätshinweis ───────────────────────────────────────────
+  browserUnsupportedHint:
+    'Dieser Browser wird nicht unterstützt. Bitte Chrome, Edge oder Opera verwenden.',
 
   // ── Abschnitts-Überschriften ─────────────────────────────────────────────────
   secIdentity:            'Identität',
@@ -57,10 +52,6 @@ export const UI = {
   colSkill:    'Fertigkeit',
   colFw:       'FW',
   colPp:       'PP',
-  colEw:       'EW',
-  colDamage:   'Schaden',
-  colAp:       'AP',
-  colAttr:     'Eigenschaft',
   colLevel:    'Stufe',
   labelName:   'Name',
   colGroup:    'Gruppe',
@@ -151,15 +142,11 @@ export const UI = {
   navEquipment:         'Ausrüstung',
   equipHeader:          'Ausrüstung',
   equipColName:         'Name',
-  equipColGroup:        'Gruppe',
   equipColLocation:     'Ort',
-  equipColPrice:        'Preis (GS)',
   equipColWeight:       'Gewicht (kg)',
   equipEmpty:           'Keine Ausrüstung vorhanden.',
   equipSearchPlaceholder: 'Name eingeben oder suchen…',
-  equipAddCustom:       '— Eigenen Gegenstand eingeben —',
   equipAddBtn:          'Hinzufügen',
-  equipEditBtn:         'Bearbeiten',
   equipUpdateBtn:       'Aktualisieren',
   equipSaveBtn:         'Speichern',
   equipCancelBtn:       'Abbrechen',
@@ -186,11 +173,11 @@ export const UI = {
   emptySpellsLearned: 'Noch keine Zaubersprüche gelernt.',
   emptySpellsForm:    'Noch keine Zaubersprüche hinzugefügt.',
   emptyChars:
-    'Noch keine Charaktere gespeichert. Importiere eine Charakter-JSON-Datei, um zu beginnen.',
+    'Noch keine Charaktere gespeichert. Importiere eine Charakter-Datei, um zu beginnen.',
 
   // ── Startseite (HomeView) ────────────────────────────────────────────────────
   homeTitle:          'Magus NG',
-  homeImportBtn:      'Charakter aus JSON importieren',
+  homeImportBtn:      'Charakter von Festplatte importieren',
   homeIsAlreadySaved: 'ist bereits gespeichert.',
   homeOverwriteTitle: 'Bestehenden Charakter überschreiben?',
   homeDiffSubtitle:   'Die folgenden Werte würden sich ändern:',
@@ -202,9 +189,8 @@ export const UI = {
   homeManageRules:    'Regeln verwalten',
 
   // ── Charakterbogen (CharacterSheetView) ──────────────────────────────────────
-  sheetExport:          'Als JSON exportieren',
-  sheetExportHint:      'Charakter als JSON exportieren',
-  sheetExportHintNA:    'Benötigt einen Chromium-basierten Browser',
+  sheetExport:          'Auf Festplatte exportieren',
+  sheetExportHint:      'Charakter exportieren',
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
@@ -243,14 +229,10 @@ export const UI = {
   rulesReorderBtn:     'Priorität ändern',
   rulesReorderExit:    'Fertig',
   rulesReorderCol:     'Verschieben',
-  rulesGithubBtn:      'Von Github laden',
-  rulesGithubLoading:  'Wird geladen…',
-  rulesGithubSuccess:  (n: number) => `${n} Regelwerk(e) erfolgreich geladen.`,
-  rulesGithubNoAssets: 'Dieses Release enthält keine JSON-Assets.',
   rulesGithubAvailable:   'Erhältlich auf Github',
   rulesGithubDownloadBtn: 'Herunterladen',
   rulesEmptyHint:
-    'Keine Regeln geladen. Importiere eine Regelwerk-JSON-Datei, um zu beginnen.',
+    'Keine Regeln geladen. Importiere eine Regelwerk-Datei, um zu beginnen.',
 
   // ── Charakterformular (CharacterFormView) ────────────────────────────────────
   formEditTitle:             'Charakter bearbeiten',
@@ -287,4 +269,17 @@ export const UI = {
     'Dweom.':    'Dweomer',
   } as Record<string, string>,
 
+
+  // ── Hilfe ──────────────────────────────────────────────────────────────────────
+  helpNav:         'Hilfe',
+  helpBackToOverview: 'Zurück zur Übersicht',
+  helpNotFoundTitle:  'Seite nicht gefunden',
+  helpNotFoundText:   'Die angeforderte Hilfeseite existiert nicht.',
+
+  // ── Google Drive (Datei-Import/Export) ───────────────────────────────────────
+  importGoogleDrive:    'Aus Google Drive importieren',
+  exportGoogleDrive:    'Nach Google Drive exportieren',
+  driveImportRules:     'Regelwerk aus Google Drive importieren',
+  driveExportRules:     'Regelwerk nach Google Drive exportieren',
+  driveErrorPrefix:     'Google Drive Fehler:',
 } as const

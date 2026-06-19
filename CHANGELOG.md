@@ -1,5 +1,34 @@
 # Changelog
 
+## [v0.10.3] - 2026-06-16
+
+### Google Drive Integration
+- Import/Export von Charakteren und Regelwerken via Google Drive
+- Automatische Ordnerstruktur (MagusNG/characters, MagusNG/rules)
+- Diff-Ansicht beim erneuten Import eines existierenden Charakters
+
+### Hilfe / FAQ
+- FAQ-Seite hinzugefügt (noch mit KI-generiertem Inhalt)
+
+### UI & Icons
+- Icons (SVG/PNG) hinzugefügt und Hintergrundfarbe angepasst
+- Browser-Warnung entfernt — App funktioniert auch in Firefox (lokaler Datei-Import/Export weiterhin Chromium-only)
+- Buttons für lokalen Datei-Import/Export werden in Firefox ausgegraut mit Tooltip
+- Button-Styles zentralisiert in src/styles/buttons.css und vereinheitlicht
+- Ungenutzte UI-Strings aufgeräumt
+
+### Deployment & CI
+- Deployment auf Ubuntu LXC unter https://magusng-dev.silbaer.de/ (Entwicklungsstand)
+- CI-Script gefixt
+
+### Dokumentation
+- Installationsanleitung und Data Schema aktualisiert
+
+## [v0.10.2] - 2026-06-16
+
+### Fixes
+- Mogadil-Parser gefixt
+
 ## [v0.10.1] - 2026-06-16
 
 ### Lernen & Steigern

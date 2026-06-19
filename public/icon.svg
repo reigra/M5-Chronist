@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#2A4A7A"/>
+  <text x="256" y="176" font-family="Georgia" font-size="145" font-weight="bold" text-anchor="middle" fill="#ffffff">Magus</text>
+  <text x="20" y="320" font-family="Georgia" font-size="72" font-weight="bold" text-anchor="start" fill="#ffffff">Next</text>
+  <text x="495" y="405" font-family="Georgia" font-size="66" font-weight="bold" text-anchor="end" fill="#ffffff">Generation</text>
+</svg>

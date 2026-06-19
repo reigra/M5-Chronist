@@ -1,0 +1,146 @@
+/* ── Shared button styles ────────────────────────────────────────────────── */
+/* Imported in main.ts — available globally, overridable per-view via scoped CSS */
+
+/* ── Base white button ── */
+.btn,
+.btn-nav,
+.btn-link,
+.btn-import,
+.btn-rules,
+.btn-reorder {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.85em;
+  text-decoration: none;
+}
+
+.btn:hover,
+.btn-nav:hover,
+.btn-link:hover,
+.btn-import:hover:not(:disabled),
+.btn-rules:hover,
+.btn-reorder:hover {
+  background: #f0f0f0;
+}
+
+.btn-nav:disabled,
+.btn-import:disabled,
+.btn-reorder:disabled,
+.btn-link--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Confirm / Save (primary action) ── */
+.btn-confirm,
+.btn-save,
+.btn-github {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 3px;
+  background: #2a7a2a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.btn-confirm:disabled,
+.btn-save:disabled,
+.btn-github:disabled {
+  background: #aaa;
+  cursor: default;
+}
+
+/* ── Cancel (secondary action) ── */
+.btn-cancel {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 3px;
+  background: #888;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ── Remove / Delete (danger, bordered) ── */
+.btn-remove,
+.btn-link--delete {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #c00;
+  border-radius: 3px;
+  background: #fff;
+  color: #c00;
+  cursor: pointer;
+}
+
+.btn-remove:hover,
+.btn-link--delete:hover {
+  background: #fff0f0;
+}
+
+/* ── Icon button (square, centered) ── */
+.btn-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.btn-icon:hover {
+  background: #f0f0f0;
+}
+
+.btn-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Download link (styled as green button, RulesView) ── */
+.btn-download {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 3px;
+  background: #2a7a2a;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-download:hover {
+  background: #1e5e1e;
+}
+
+/* ── Reorder active state ── */
+.btn-reorder--active {
+  background: #2a4a7a;
+  color: #fff;
+  border-color: #2a4a7a;
+}
+
+.btn-reorder--active:hover {
+  background: #1e3559;
+}
+
+/* ─── Button row (flex container for button groups) ── */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
