@@ -192,6 +192,8 @@ export const UI = {
   sheetExport:          'Auf Festplatte exportieren',
   sheetExportHint:      'Charakter exportieren',
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
+  sheetExportLatex:     'Als LaTeX exportieren',
+  sheetExportLatexPdf:  'Als PDF (LaTeX) exportieren',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
   advAddEp:             'EP hinzufügen',
