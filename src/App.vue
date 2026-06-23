@@ -5,12 +5,16 @@ import DevBanner from './components/DevBanner.vue'
 
 // __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
 const appVersion = __APP_VERSION__
+const isDev = __APP_VERSION__.includes('-dev.')
 </script>
 
 <template>
   <nav class="app-nav">
     <router-link to="/" class="nav-home">{{ UI.appBrand }}</router-link>
-    <span class="nav-version">Version {{ appVersion }}<DevBanner /></span>
+    <span class="nav-version">
+      <template v-if="!isDev">Version {{ appVersion }}</template>
+      <DevBanner />
+    </span>
     <router-link to="/character/new" class="nav-link">{{ UI.appNewChar }}</router-link>
     <router-link to="/help" class="nav-link nav-link--help">{{ UI.helpNav }}</router-link>
   </nav>
