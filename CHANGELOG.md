@@ -1,3 +1,20 @@
+## [v0.11.4] - 2026-06-24
+
+### Google Drive Integration
+- Token-Persistenz: Access-Token und Refresh-Token werden jetzt in localStorage gespeichert und über Browser-Neustarts hinweg vorgehalten
+- Refresh-Token ermöglicht stumme Erneuerung des Access-Tokens ohne erneute Kontoauswahl
+- PKCE-Auth-Flow (Authorization Code) implementiert (Fallback auf `client_secret` für Web-App-Clients)
+
+### UI & Navigation
+- Versionsbanner: In Dev-Builds wird der normale Versionstext ausgeblendet, nur der DEV-Badge bleibt sichtbar
+
+### Installation & CI
+- CI-Pipeline aktualisiert
+- Installationsskripte laden fehlende Abhängigkeiten nur noch bei Bedarf (kein erneuter Download wenn bereits vorhanden)
+
+### Sonstiges
+- Vorbereitungen für PDF-Export von Charakterblättern
+
 ## [v0.11.3] - 2026-06-19
 
 ### Google Drive Integration
