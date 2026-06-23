@@ -71,6 +71,15 @@ declare global {
           scope: string
           callback: (response: { access_token?: string; error?: string; expires_in?: number }) => void
         }): { requestAccessToken(): void }
+        initCodeClient(config: {
+          client_id: string
+          scope: string
+          ux_mode: 'popup' | 'redirect'
+          code_challenge: string
+          code_challenge_method: string
+          state?: string
+          callback: (response: { code?: string; error?: string }) => void
+        }): { requestCode(): void }
       }
     }
     picker: {
@@ -119,21 +128,47 @@ export function sanitizeFileName(s: string): string {
 
 let cachedAccessToken: string | null = null
 let cachedTokenExpiry: number | null = null
+let cachedRefreshToken: string | null = null
 let gisApiLoaded = false
 let pickerApiLoaded = false
 
-const SESSION_STORAGE_TOKEN_KEY = 'magusng_gdrive_token'
-const SESSION_STORAGE_EXPIRY_KEY = 'magusng_gdrive_token_exp'
+const STORAGE_TOKEN_KEY = 'magusng_gdrive_token'
+const STORAGE_EXPIRY_KEY = 'magusng_gdrive_token_exp'
+const STORAGE_REFRESH_KEY = 'magusng_gdrive_refresh_token'
 /** Margin in ms: request a new token 5 minutes before it actually expires. */
 const TOKEN_EXPIRY_MARGIN_MS = 5 * 60 * 1000
+
+// ── PKCE helpers ──────────────────────────────────────────────────────────────
+
+function base64url(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32)
+  crypto.getRandomValues(array)
+  return base64url(array.buffer)
+}
+
+async function deriveCodeChallenge(verifier: string): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+  return base64url(hash)
+}
 
 /**
  * GoogleDriveProvider — uses Google Picker API for file selection and Drive API v3
  * for download (files.get?alt=media) and upload (multipart).
  *
  * Manages a folder tree: MagusNG/characters or MagusNG/rules.
- * Access token is cached in a module-level variable + sessionStorage to avoid
- * showing the Google account picker on every operation.
+ *
+ * Authentication uses the Authorization Code flow with PKCE (RFC 7636) to obtain
+ * a long-lived refresh token. The access token is refreshed silently afterwards,
+ * so the Google account picker appears only on the very first use.
+ *
+ * Tokens are persisted in localStorage and survive browser restarts.
  */
 export class GoogleDriveProvider implements FileProvider {
   readonly name = 'Google Drive'
@@ -173,7 +208,7 @@ export class GoogleDriveProvider implements FileProvider {
 
   /**
    * Fetch wrapper that automatically attaches the Bearer token and retries
-   * once if the server responds with 401 (expired token).
+   * once if the server responds with 401 (expired/stale token).
    */
   private async fetchWithToken(url: string, options: RequestInit = {}): Promise<Response> {
     const execute = async (): Promise<Response> => {
@@ -189,63 +224,195 @@ export class GoogleDriveProvider implements FileProvider {
 
     let res = await execute()
     if (res.status === 401) {
-      // Token expired — clear cache and retry once
+      // Stale access token — clear it (keep refresh token) and try once more
       cachedAccessToken = null
       cachedTokenExpiry = null
       try {
-        sessionStorage.removeItem(SESSION_STORAGE_TOKEN_KEY)
-        sessionStorage.removeItem(SESSION_STORAGE_EXPIRY_KEY)
+        localStorage.removeItem(STORAGE_TOKEN_KEY)
+        localStorage.removeItem(STORAGE_EXPIRY_KEY)
       } catch { /* ignore */ }
       res = await execute()
     }
     return res
   }
 
+  // ── Token lifecycle ──────────────────────────────────────────────────────────
+
+  /**
+   * Returns a valid access token.
+   *
+   * Priority:
+   *  1. Module-level cache (fastest)
+   *  2. localStorage (survives restarts)
+   *  3. Silent refresh via stored refresh token (no UI)
+   *  4. Full PKCE auth flow (account picker — once per user)
+   */
   private async ensureAccessToken(): Promise<string> {
-    // Module-level cache
+    // 1. Module-level cache
     if (cachedAccessToken && cachedTokenExpiry && Date.now() < cachedTokenExpiry) {
       return cachedAccessToken
     }
 
-    // sessionStorage (survives page navigations within the same tab)
-    try {
-      const storedToken = sessionStorage.getItem(SESSION_STORAGE_TOKEN_KEY)
-      const storedExpiry = sessionStorage.getItem(SESSION_STORAGE_EXPIRY_KEY)
-      if (storedToken && storedExpiry) {
-        const expiry = parseInt(storedExpiry, 10)
-        if (Date.now() < expiry) {
-          cachedAccessToken = storedToken
-          cachedTokenExpiry = expiry
-          return storedToken
-        }
-      }
-    } catch { /* sessionStorage unavailable */ }
+    // 2. localStorage
+    this.loadTokensFromStorage()
+    if (cachedAccessToken && cachedTokenExpiry && Date.now() < cachedTokenExpiry) {
+      return cachedAccessToken
+    }
 
-    // No valid cached token — trigger OAuth flow
+    // 3. Silent refresh with stored refresh token
+    if (cachedRefreshToken) {
+      try {
+        const result = await this.refreshAccessToken(cachedRefreshToken)
+        cachedAccessToken = result.access_token
+        cachedTokenExpiry = Date.now() + result.expires_in * 1000 - TOKEN_EXPIRY_MARGIN_MS
+        this.persistTokens()
+        return cachedAccessToken
+      } catch {
+        // Refresh token expired / revoked — full re-auth required
+        this.clearTokens()
+      }
+    }
+
+    // 4. Full PKCE auth flow (first time or after revoke)
+    return this.authenticateWithPkce()
+  }
+
+  /**
+   * Authorization Code flow (with PKCE when no client_secret is configured).
+   * Called once per user lifetime — afterwards the refresh token keeps access
+   * alive silently.
+   */
+  private async authenticateWithPkce(): Promise<string> {
     await this.loadGisApi()
 
-    return new Promise((resolve, reject) => {
-      google.accounts.oauth2.initTokenClient({
+    const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
+    const usePkce = !clientSecret
+
+    let codeVerifier: string | undefined
+    let codeChallenge: string | undefined
+    if (usePkce) {
+      codeVerifier = generateCodeVerifier()
+      codeChallenge = await deriveCodeChallenge(codeVerifier)
+    }
+
+    const tokens = await new Promise<{
+      access_token: string
+      expires_in: number
+      refresh_token: string
+    }>((resolve, reject) => {
+      const config: Record<string, unknown> = {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
         scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: (res) => {
-          if (res.error) { reject(new Error(res.error)); return }
-          const token = res.access_token!
-          const expiresIn = res.expires_in ?? 3600
-          const expiry = Date.now() + expiresIn * 1000 - TOKEN_EXPIRY_MARGIN_MS
-
-          cachedAccessToken = token
-          cachedTokenExpiry = expiry
-
+        ux_mode: 'popup',
+        callback: async (response: any) => {
+          if (response.error) { reject(new Error(response.error)); return }
           try {
-            sessionStorage.setItem(SESSION_STORAGE_TOKEN_KEY, token)
-            sessionStorage.setItem(SESSION_STORAGE_EXPIRY_KEY, expiry.toString())
-          } catch { /* non-critical */ }
-
-          resolve(token)
+            const result = await this.exchangeCodeForTokens(response.code!, codeVerifier)
+            resolve(result)
+          } catch (e) {
+            reject(e)
+          }
         },
-      }).requestAccessToken()
+      }
+      if (codeChallenge) {
+        config.code_challenge = codeChallenge
+        config.code_challenge_method = 'S256'
+      }
+      google.accounts.oauth2.initCodeClient(config as any).requestCode()
     })
+
+    cachedAccessToken = tokens.access_token
+    cachedRefreshToken = tokens.refresh_token
+    cachedTokenExpiry = Date.now() + tokens.expires_in * 1000 - TOKEN_EXPIRY_MARGIN_MS
+    this.persistTokens()
+    return cachedAccessToken
+  }
+
+  /**
+   * Exchange an authorization code for access + refresh tokens.
+   */
+  private async exchangeCodeForTokens(
+    code: string,
+    codeVerifier?: string,
+  ): Promise<{ access_token: string; expires_in: number; refresh_token: string }> {
+    const body = new URLSearchParams({
+      code,
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
+      redirect_uri: 'postmessage',
+      grant_type: 'authorization_code',
+    })
+    const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
+    if (clientSecret) {
+      body.set('client_secret', clientSecret)
+    } else if (codeVerifier) {
+      body.set('code_verifier', codeVerifier)
+    }
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Token exchange failed: ${text}`)
+    }
+    return res.json()
+  }
+
+  /**
+   * Use a refresh token to obtain a new access token (no user interaction).
+   */
+  private async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
+    const body = new URLSearchParams({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    })
+    const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
+    if (clientSecret) body.set('client_secret', clientSecret)
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Token refresh failed: ${text}`)
+    }
+    return res.json()
+  }
+
+  // ── localStorage helpers ─────────────────────────────────────────────────────
+
+  private loadTokensFromStorage(): void {
+    if (cachedAccessToken && cachedRefreshToken !== null) return
+    try {
+      cachedAccessToken = localStorage.getItem(STORAGE_TOKEN_KEY)
+      const expiryStr = localStorage.getItem(STORAGE_EXPIRY_KEY)
+      cachedTokenExpiry = expiryStr ? parseInt(expiryStr, 10) : null
+      cachedRefreshToken = localStorage.getItem(STORAGE_REFRESH_KEY)
+    } catch { /* ignore */ }
+  }
+
+  private persistTokens(): void {
+    try {
+      localStorage.setItem(STORAGE_TOKEN_KEY, cachedAccessToken ?? '')
+      localStorage.setItem(STORAGE_EXPIRY_KEY, (cachedTokenExpiry ?? 0).toString())
+      localStorage.setItem(STORAGE_REFRESH_KEY, cachedRefreshToken ?? '')
+    } catch { /* ignore */ }
+  }
+
+  private clearTokens(): void {
+    cachedAccessToken = null
+    cachedRefreshToken = null
+    cachedTokenExpiry = null
+    try {
+      localStorage.removeItem(STORAGE_TOKEN_KEY)
+      localStorage.removeItem(STORAGE_EXPIRY_KEY)
+      localStorage.removeItem(STORAGE_REFRESH_KEY)
+    } catch { /* ignore */ }
   }
 
   private async loadGisApi(): Promise<void> {
