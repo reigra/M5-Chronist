@@ -1,14 +1,16 @@
 {
   "name": "magus-m5",
   "private": true,
-  "version": "0.11.3",
+  "version": "0.12.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "build:dev": "node scripts/build-dev.cjs",
-    "deploy:dev": "node scripts/deploy-dev.cjs"
+    "build:prod": "node scripts/build-prod.cjs",
+    "deploy:dev": "node scripts/deploy-dev.cjs",
+    "deploy:prod": "node scripts/deploy-prod.cjs"
   },
   "dependencies": {
     "@types/markdown-it": "^14.1.2",
