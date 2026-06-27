@@ -1,6 +1,7 @@
 stages:
   - test
   - secret-detection
+  - build
   - deploy
   - release
   - merge
@@ -13,6 +14,9 @@ variables:
   SECRET_DETECTION_ENABLED: 'true'
   # .npmrc setzt git-tag-version=false → in CI überschreiben
   NPM_CONFIG_GIT_TAG_VERSION: 'true'
+  VITE_GOOGLE_API_KEY: $VITE_GOOGLE_API_KEY
+  VITE_GOOGLE_CLIENT_ID: $VITE_GOOGLE_CLIENT_ID
+  VITE_GOOGLE_APP_ID: $VITE_GOOGLE_APP_ID
 
 sast:
   stage: test
@@ -20,13 +24,24 @@ sast:
 secret_detection:
   stage: secret-detection
 
-pages:
-  stage: deploy
+# Master: nur bauen + pages deployen (kein version bump)
+build-pwa:
+  stage: build
   image: node:20
-  variables:
-    VITE_GOOGLE_API_KEY: $VITE_GOOGLE_API_KEY
-    VITE_GOOGLE_CLIENT_ID: $VITE_GOOGLE_CLIENT_ID
-    VITE_GOOGLE_APP_ID: $VITE_GOOGLE_APP_ID
+  script:
+    - npm ci
+    - npm run build
+    - rm -rf public
+    - mv dist public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
+
+release-build:
+  stage: build
+  image: node:20
   script:
     # Dependencies installieren (vor Version-Bump, damit lockfile stabil)
     - 'npm ci'
@@ -84,6 +99,21 @@ pages:
   only:
     - release
 
+# Veröffentlicht pages (public/ vom master build-pwa oder release-build)
+pages:
+  stage: deploy
+  script:
+    - echo "Pages artifact published"
+  artifacts:
+    paths:
+      - public
+  dependencies:
+    - build-pwa
+    - release-build
+  only:
+    - master
+    - release
+
 release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
@@ -99,7 +129,7 @@ release:
         --description changelog-notes.txt
         --assets-link "{\"name\":\"Magus-Release.zip\",\"url\":\"${CI_PROJECT_URL}/-/jobs/${PAGES_JOB_ID}/artifacts/raw/Magus-Release.zip\"}"'
   needs:
-    - pages
+    - release-build
   only:
     - release
 
