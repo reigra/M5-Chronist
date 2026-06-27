@@ -144,7 +144,7 @@ export async function saveFileAs(
     try {
       const handle = await (window as any).showSaveFilePicker({
         suggestedName: fileName,
-        types: [{ description: 'Datei', accept: { [mimeType]: [fileName.split('.').pop() ?? ''] } }],
+        types: [{ description: 'Datei', accept: { [mimeType]: ['.' + (fileName.split('.').pop() ?? '')] } }],
       })
       const writable = await handle.createWritable()
       await writable.write(blob)
