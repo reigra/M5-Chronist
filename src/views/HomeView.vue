@@ -6,6 +6,7 @@ import { rulesStorage } from '../services/RulesStorage'
 import { RulesLoader } from '../services/RulesLoader'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
+import type { EquipmentItem } from '../types/Equipment'
 import type { RulesData } from '../types/Rules'
 import type { SourceSummary } from '../services/RulesStorage'
 
@@ -120,6 +121,37 @@ function computeDiff(existing: Character, incoming: Character): DiffEntry[] {
   for (const [id, newFw] of incomingSkillMap) {
     if (!existingSkillMap.has(id)) {
       entries.push({ label: `Skill: ${id}`, oldValue: '(new)', newValue: `FW ${newFw}` })
+    }
+  }
+
+  // Inventory — compare by item id
+  const existingItems = existing.inventory ?? []
+  const incomingItems = incoming.inventory ?? []
+
+  if (existingItems.length > 0 || incomingItems.length > 0) {
+    const oldMap = new Map<string, EquipmentItem>()
+    const newMap = new Map<string, EquipmentItem>()
+
+    for (const item of existingItems) {
+      oldMap.set(item.id || `${item.name}|${item.group}`, item)
+    }
+    for (const item of incomingItems) {
+      newMap.set(item.id || `${item.name}|${item.group}`, item)
+    }
+
+    for (const [key, oldItem] of oldMap) {
+      const newItem = newMap.get(key)
+      if (!newItem) {
+        entries.push({ label: `Equipment: ${oldItem.name}`, oldValue: '(present)', newValue: '(removed)' })
+      } else if (JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+        entries.push({ label: `Equipment: ${oldItem.name}`, oldValue: '(changed)', newValue: '(changed)' })
+      }
+    }
+
+    for (const [key, newItem] of newMap) {
+      if (!oldMap.has(key)) {
+        entries.push({ label: `Equipment: ${newItem.name}`, oldValue: '(none)', newValue: '(added)' })
+      }
     }
   }
 
