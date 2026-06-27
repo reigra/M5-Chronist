@@ -75,8 +75,8 @@ declare global {
           client_id: string
           scope: string
           ux_mode: 'popup' | 'redirect'
-          code_challenge: string
-          code_challenge_method: string
+          code_challenge?: string
+          code_challenge_method?: string
           state?: string
           callback: (response: { code?: string; error?: string }) => void
         }): { requestCode(): void }
@@ -181,37 +181,24 @@ const STORAGE_REFRESH_KEY = 'magusng_gdrive_refresh_token'
 /** Margin in ms: request a new token 5 minutes before it actually expires. */
 const TOKEN_EXPIRY_MARGIN_MS = 5 * 60 * 1000
 
-// ── PKCE helpers ──────────────────────────────────────────────────────────────
-
-function base64url(buffer: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-}
-
-function generateCodeVerifier(): string {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return base64url(array.buffer)
-}
-
-async function deriveCodeChallenge(verifier: string): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
-  return base64url(hash)
-}
-
 /**
  * GoogleDriveProvider — uses Google Picker API for file selection and Drive API v3
  * for download (files.get?alt=media) and upload (multipart).
  *
  * Manages a folder tree: MagusNG/characters or MagusNG/rules.
  *
- * Authentication uses the Authorization Code flow with PKCE (RFC 7636) to obtain
- * a long-lived refresh token. The access token is refreshed silently afterwards,
- * so the Google account picker appears only on the very first use.
+ * Authentication uses the Authorization Code flow with client_secret
+ * (Google Cloud Console client type: "Web application").  The access token
+ * is refreshed silently afterwards, so the Google account picker appears
+ * only on the very first use.
  *
  * Tokens are persisted in localStorage and survive browser restarts.
+ *
+ * Note: PKCE (RFC 7636) is intentionally not used here.  The Google Cloud
+ * Console OAuth client for this project is registered as "Web application",
+ * which requires client_secret in the token exchange.  Switching to a
+ * "Public" client type would allow PKCE, but that type does not support
+ * the Drive API scopes used by this application.
  */
 export class GoogleDriveProvider implements FileProvider {
   readonly name = 'Google Drive'
@@ -291,7 +278,7 @@ export class GoogleDriveProvider implements FileProvider {
    *  1. Module-level cache (fastest)
    *  2. localStorage (survives restarts)
    *  3. Silent refresh via stored refresh token (no UI)
-   *  4. Full PKCE auth flow (account picker — once per user)
+   *  4. Full auth flow (account picker — once per user)
    */
   private async ensureAccessToken(): Promise<string> {
     // 1. Module-level cache
@@ -319,52 +306,42 @@ export class GoogleDriveProvider implements FileProvider {
       }
     }
 
-    // 4. Full PKCE auth flow (first time or after revoke)
+    // 4. Full auth flow (first time or after revoke)
     return this.authenticateWithPkce()
   }
 
   /**
-   * Authorization Code flow (with PKCE when no client_secret is configured).
+   * Authorization Code flow.
+   *
+   * Uses client_secret for token exchange because the Google Cloud Console OAuth
+   * client is registered as "Web application" type.  PKCE would require a "Public"
+   * client type, but that type is not available for Drive API scopes in our setup.
+   *
    * Called once per user lifetime — afterwards the refresh token keeps access
    * alive silently.
    */
   private async authenticateWithPkce(): Promise<string> {
     await this.loadGisApi()
 
-    const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
-    const usePkce = !clientSecret
-
-    let codeVerifier: string | undefined
-    let codeChallenge: string | undefined
-    if (usePkce) {
-      codeVerifier = generateCodeVerifier()
-      codeChallenge = await deriveCodeChallenge(codeVerifier)
-    }
-
     const tokens = await new Promise<{
       access_token: string
       expires_in: number
       refresh_token: string
     }>((resolve, reject) => {
-      const config: Record<string, unknown> = {
+      google.accounts.oauth2.initCodeClient({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
         scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
         ux_mode: 'popup',
         callback: async (response: any) => {
           if (response.error) { reject(new Error(response.error)); return }
           try {
-            const result = await this.exchangeCodeForTokens(response.code!, codeVerifier)
+            const result = await this.exchangeCodeForTokens(response.code!)
             resolve(result)
           } catch (e) {
             reject(e)
           }
         },
-      }
-      if (codeChallenge) {
-        config.code_challenge = codeChallenge
-        config.code_challenge_method = 'S256'
-      }
-      google.accounts.oauth2.initCodeClient(config as any).requestCode()
+      } as any).requestCode()
     })
 
     cachedAccessToken = tokens.access_token
@@ -379,20 +356,14 @@ export class GoogleDriveProvider implements FileProvider {
    */
   private async exchangeCodeForTokens(
     code: string,
-    codeVerifier?: string,
   ): Promise<{ access_token: string; expires_in: number; refresh_token: string }> {
     const body = new URLSearchParams({
       code,
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
       redirect_uri: 'postmessage',
       grant_type: 'authorization_code',
+      client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET as string,
     })
-    const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
-    if (clientSecret) {
-      body.set('client_secret', clientSecret)
-    } else if (codeVerifier) {
-      body.set('code_verifier', codeVerifier)
-    }
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -613,12 +584,12 @@ export async function revokeDriveAccess(): Promise<void> {
   clearTokens()
 }
 
-/**
- * Fetch the email address of the currently authenticated Google account.
- * Requires the `userinfo.email` scope (added during authenticateWithPkce).
- * Silently refreshes the access token if needed (no UI popup).
- * Returns `null` if no token is available or the request fails.
- */
+  /**
+   * Fetch the email address of the currently authenticated Google account.
+   * Requires the `userinfo.email` scope (included in the OAuth request).
+   * Silently refreshes the access token if needed (no UI popup).
+   * Returns `null` if no token is available or the request fails.
+   */
 export async function getDriveUserEmail(): Promise<string | null> {
   loadTokensFromStorage()
 
