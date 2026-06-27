@@ -1,10 +1,16 @@
 
 ### Google Drive Integration
-- Token-Persistenz: Access-Token und Refresh-Token werden jetzt in localStorage gespeichert und über Browser-Neustarts hinweg vorgehalten
+- Token-Persistenz: Access-Token und Refresh-Token werden in localStorage gespeichert und über Browser-Neustarts hinweg vorgehalten
 - Refresh-Token ermöglicht stumme Erneuerung des Access-Tokens ohne erneute Kontoauswahl
-- PKCE-Auth-Flow (Authorization Code) implementiert (Fallback auf `client_secret` für Web-App-Clients)
+- Zugriff widerrufbar: "Trennen"-Button im Nav-Bar ruft Google-Revoke-Endpoint auf + löscht lokale Tokens
+- Account-Anzeige im Nav-Bar: "Verbunden als mail@…" bei aktivem Token, sonst "Google Drive: nicht verbunden"
+- Reaktives UI-Update: Custom-Event bei Token-Änderung – kein Seiten-Neuladen nötig
+- Fehlermeldungen enthalten jetzt HTTP-Status + Response-Body (erleichtert Debugging)
+- PKCE entfernt: Google Cloud Console OAuth-Client ist als "Web application" registriert und benötigt `client_secret` im Token-Exchange
 
 ### UI & Navigation
+- "+ Neuer Charakter" aus Nav-Bar entfernt, stattdessen als primärer Button auf der Startseite
+- Google Drive-Status-Info im Nav-Bar (nur sichtbar wenn Drive-Features aktiviert sind)
 - Versionsbanner: In Dev-Builds wird der normale Versionstext ausgeblendet, nur der DEV-Badge bleibt sichtbar
 
 ### Installation & CI
