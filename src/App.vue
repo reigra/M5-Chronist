@@ -1,11 +1,42 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { UI } from './constants/ui'
 import UpdateBanner from './components/UpdateBanner.vue'
 import DevBanner from './components/DevBanner.vue'
+import {
+  hasDriveTokens,
+  revokeDriveAccess,
+  getDriveUserEmail,
+} from './services/FileProvider'
 
 // __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
 const appVersion = __APP_VERSION__
 const isDev = __APP_VERSION__.includes('-dev.')
+const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+
+const driveEmail = ref<string | null>(null)
+const driveHasTokens = ref(false)
+
+async function updateDriveStatus(): Promise<void> {
+  const hasTokens = hasDriveTokens()
+  driveHasTokens.value = hasTokens
+  driveEmail.value = hasTokens ? await getDriveUserEmail() : null
+}
+
+onMounted(() => {
+  if (!isDriveVisible) return
+  window.addEventListener('magusng:drive-changed', updateDriveStatus)
+  updateDriveStatus()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('magusng:drive-changed', updateDriveStatus)
+})
+
+async function revokeDrive(): Promise<void> {
+  await revokeDriveAccess()
+  // clearTokens dispatches the event → updateDriveStatus will fire
+}
 </script>
 
 <template>
@@ -15,7 +46,13 @@ const isDev = __APP_VERSION__.includes('-dev.')
       <template v-if="!isDev">Version {{ appVersion }}</template>
       <DevBanner />
     </span>
-    <router-link to="/character/new" class="nav-link">{{ UI.appNewChar }}</router-link>
+    <span v-if="isDriveVisible" class="nav-drive">
+      <template v-if="driveHasTokens">
+        <span class="nav-drive-email">{{ driveEmail ? `${UI.driveConnectedAs} ${driveEmail}` : UI.driveStatusConnected }}</span>
+        <button class="nav-drive-revoke" @click="revokeDrive">{{ UI.driveRevokeBtn }}</button>
+      </template>
+      <span v-else class="nav-drive-none">{{ UI.driveStatusNone }}</span>
+    </span>
     <router-link to="/help" class="nav-link nav-link--help">{{ UI.helpNav }}</router-link>
   </nav>
   <RouterView />
@@ -74,5 +111,43 @@ body { margin: 0; background: #fff; }
 
 .nav-link--help:hover {
   opacity: 1;
+}
+
+.nav-drive {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #c8d8f0;
+  font-size: 0.8rem;
+  font-family: sans-serif;
+}
+
+.nav-drive-email {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.nav-drive-revoke {
+  background: none;
+  border: 1px solid #8aaad0;
+  color: #c8d8f0;
+  font-size: 0.75rem;
+  font-family: sans-serif;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav-drive-revoke:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.nav-drive-none {
+  opacity: 0.6;
 }
 </style>

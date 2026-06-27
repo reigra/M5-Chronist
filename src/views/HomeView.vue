@@ -224,6 +224,8 @@ onMounted(loadList)
         <p v-else class="empty-hint">{{ UI.emptyChars }}</p>
 
         <div class="btn-row">
+          <router-link to="/character/new" class="btn-create">{{ UI.appNewChar }}</router-link>
+
           <button class="btn-import" :disabled="!browserSupported" :title="!browserSupported ? UI.browserUnsupportedHint : ''" @click="importCharacter">
             {{ UI.homeImportBtn }}
           </button>
@@ -402,6 +404,24 @@ onMounted(loadList)
 
 .rules-link {
   color: #333;
+}
+
+.btn-create {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 3px;
+  background: #2a4a7a;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-create:hover {
+  background: #1e3559;
 }
 
 </style>

@@ -284,4 +284,10 @@ export const UI = {
   driveImportRules:     'Regelwerk aus Google Drive importieren',
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
+
+  // ── Google Drive (Status im Nav-Bar) ─────────────────────────────────────────
+  driveConnectedAs:    'Verbunden als',
+  driveStatusConnected: 'Verbunden',
+  driveRevokeBtn:      'Trennen',
+  driveStatusNone:     'Google Drive: nicht verbunden',
 } as const

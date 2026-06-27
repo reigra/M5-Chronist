@@ -242,7 +242,10 @@ export class GoogleDriveProvider implements FileProvider {
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
       { method: 'POST', body: form },
     )
-    if (!res.ok) throw new Error('Google Drive upload failed')
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Drive upload failed (${res.status}): ${text}`)
+    }
   }
 
   isAvailable(): boolean {
@@ -345,7 +348,7 @@ export class GoogleDriveProvider implements FileProvider {
     }>((resolve, reject) => {
       const config: Record<string, unknown> = {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
-        scope: 'https://www.googleapis.com/auth/drive.file',
+        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
         ux_mode: 'popup',
         callback: async (response: any) => {
           if (response.error) { reject(new Error(response.error)); return }
@@ -430,32 +433,15 @@ export class GoogleDriveProvider implements FileProvider {
   // ── localStorage helpers ─────────────────────────────────────────────────────
 
   private loadTokensFromStorage(): void {
-    if (cachedAccessToken && cachedRefreshToken !== null) return
-    try {
-      cachedAccessToken = localStorage.getItem(STORAGE_TOKEN_KEY)
-      const expiryStr = localStorage.getItem(STORAGE_EXPIRY_KEY)
-      cachedTokenExpiry = expiryStr ? parseInt(expiryStr, 10) : null
-      cachedRefreshToken = localStorage.getItem(STORAGE_REFRESH_KEY)
-    } catch { /* ignore */ }
+    loadTokensFromStorage()
   }
 
   private persistTokens(): void {
-    try {
-      localStorage.setItem(STORAGE_TOKEN_KEY, cachedAccessToken ?? '')
-      localStorage.setItem(STORAGE_EXPIRY_KEY, (cachedTokenExpiry ?? 0).toString())
-      localStorage.setItem(STORAGE_REFRESH_KEY, cachedRefreshToken ?? '')
-    } catch { /* ignore */ }
+    persistTokens()
   }
 
   private clearTokens(): void {
-    cachedAccessToken = null
-    cachedRefreshToken = null
-    cachedTokenExpiry = null
-    try {
-      localStorage.removeItem(STORAGE_TOKEN_KEY)
-      localStorage.removeItem(STORAGE_EXPIRY_KEY)
-      localStorage.removeItem(STORAGE_REFRESH_KEY)
-    } catch { /* ignore */ }
+    clearTokens()
   }
 
   private async loadGisApi(): Promise<void> {
@@ -488,7 +474,10 @@ export class GoogleDriveProvider implements FileProvider {
     const searchRes = await this.fetchWithToken(
       `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&pageSize=5`,
     )
-    if (!searchRes.ok) throw new Error('Failed to search for Drive folder')
+    if (!searchRes.ok) {
+      const text = await searchRes.text()
+      throw new Error(`Drive folder search failed (${searchRes.status}): ${text}`)
+    }
 
     const searchData = await searchRes.json()
     const files = searchData.files as Array<{ id: string }> | undefined
@@ -501,7 +490,10 @@ export class GoogleDriveProvider implements FileProvider {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!createRes.ok) throw new Error(`Failed to create Drive folder "${name}"`)
+    if (!createRes.ok) {
+      const text = await createRes.text()
+      throw new Error(`Drive folder creation failed (${createRes.status}): ${text}`)
+    }
     const createData = await createRes.json()
     return createData.id as string
   }
@@ -542,7 +534,129 @@ export class GoogleDriveProvider implements FileProvider {
     const res = await this.fetchWithToken(
       `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
     )
-    if (!res.ok) throw new Error('Failed to download file from Google Drive')
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Drive download failed (${res.status}): ${text}`)
+    }
     return res.text()
+  }
+}
+
+// ── Module-level token helpers (shared across all GoogleDriveProvider instances) ──
+
+function loadTokensFromStorage(): void {
+  if (cachedAccessToken && cachedRefreshToken !== null) return
+  try {
+    cachedAccessToken = localStorage.getItem(STORAGE_TOKEN_KEY)
+    const expiryStr = localStorage.getItem(STORAGE_EXPIRY_KEY)
+    cachedTokenExpiry = expiryStr ? parseInt(expiryStr, 10) : null
+    cachedRefreshToken = localStorage.getItem(STORAGE_REFRESH_KEY)
+  } catch { /* ignore */ }
+}
+
+function persistTokens(): void {
+  try {
+    localStorage.setItem(STORAGE_TOKEN_KEY, cachedAccessToken ?? '')
+    localStorage.setItem(STORAGE_EXPIRY_KEY, (cachedTokenExpiry ?? 0).toString())
+    localStorage.setItem(STORAGE_REFRESH_KEY, cachedRefreshToken ?? '')
+  } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent('magusng:drive-changed'))
+}
+
+function clearTokens(): void {
+  cachedAccessToken = null
+  cachedRefreshToken = null
+  cachedTokenExpiry = null
+  try {
+    localStorage.removeItem(STORAGE_TOKEN_KEY)
+    localStorage.removeItem(STORAGE_EXPIRY_KEY)
+    localStorage.removeItem(STORAGE_REFRESH_KEY)
+  } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent('magusng:drive-changed'))
+}
+
+/**
+ * Check whether the user has previously authenticated with Google Drive.
+ * Tokens are stored in localStorage and survive browser restarts.
+ */
+export function hasDriveTokens(): boolean {
+  try {
+    return !!localStorage.getItem(STORAGE_REFRESH_KEY)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Revoke Google Drive access:
+ * 1. Call the Google OAuth revoke endpoint to invalidate tokens server-side.
+ * 2. Clear all cached and stored tokens locally.
+ *
+ * After calling this, the next Drive operation will show the account picker again.
+ */
+export async function revokeDriveAccess(): Promise<void> {
+  loadTokensFromStorage()
+
+  const token = cachedRefreshToken || cachedAccessToken
+  if (token) {
+    try {
+      await fetch('https://oauth2.googleapis.com/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token }),
+      })
+    } catch {
+      // Ignore network errors — still clear local tokens
+    }
+  }
+
+  clearTokens()
+}
+
+/**
+ * Fetch the email address of the currently authenticated Google account.
+ * Requires the `userinfo.email` scope (added during authenticateWithPkce).
+ * Silently refreshes the access token if needed (no UI popup).
+ * Returns `null` if no token is available or the request fails.
+ */
+export async function getDriveUserEmail(): Promise<string | null> {
+  loadTokensFromStorage()
+
+  // Silent refresh if the access token is expired but a refresh token exists
+  if ((!cachedAccessToken || !cachedTokenExpiry || Date.now() >= cachedTokenExpiry) && cachedRefreshToken) {
+    try {
+      const body = new URLSearchParams({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
+        grant_type: 'refresh_token',
+        refresh_token: cachedRefreshToken,
+      })
+      const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
+      if (clientSecret) body.set('client_secret', clientSecret)
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      })
+      if (res.ok) {
+        const result = await res.json()
+        cachedAccessToken = result.access_token
+        cachedTokenExpiry = Date.now() + result.expires_in * 1000 - TOKEN_EXPIRY_MARGIN_MS
+        persistTokens()
+      }
+    } catch { /* ignore — fall through */ }
+  }
+
+  const token = cachedAccessToken
+  if (!token) return null
+
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return (data as { email?: string }).email ?? null
+  } catch {
+    return null
   }
 }
