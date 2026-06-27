@@ -170,7 +170,7 @@ export class LatexExportService {
     for (const item of inventoryWeapons) {
       const refName = item.skillId ? this.toAsciiRef(item.skillId) : ''
       const hasRef = refName && weaponSkillIds.has(item.skillId!)
-      const descName = this.toAsciiRef(item.name)
+      const descName = this.esc(item.name)
 
       const mod = (item.anb ?? 0) + (item.spezialwaffe ? 2 : 0)
       const modStr = mod !== 0 ? `[${mod > 0 ? '+' : ''}${mod}]` : ''
