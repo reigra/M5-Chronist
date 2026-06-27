@@ -1,4 +1,7 @@
 
+## [v0.11.5] - 2026-06-27
+
+
 ### Google Drive Integration
 - Token-Persistenz: Access-Token und Refresh-Token werden in localStorage gespeichert und über Browser-Neustarts hinweg vorgehalten
 - Refresh-Token ermöglicht stumme Erneuerung des Access-Tokens ohne erneute Kontoauswahl
