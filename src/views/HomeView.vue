@@ -11,9 +11,6 @@ import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { SourceSummary } from '../services/RulesStorage'
 
-// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
-const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** Holds the parsed incoming character and the computed diff while awaiting confirmation. */
@@ -230,7 +227,7 @@ onMounted(loadList)
             {{ UI.homeImportBtn }}
           </button>
 
-          <button v-if="isDriveVisible" class="btn-import" @click="importCharacterFromDrive">
+          <button class="btn-import" @click="importCharacterFromDrive">
             {{ UI.importGoogleDrive }}
           </button>
         </div>

@@ -12,7 +12,6 @@ import {
 // __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
 const appVersion = __APP_VERSION__
 const isDev = __APP_VERSION__.includes('-dev.')
-const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
 
 const driveEmail = ref<string | null>(null)
 const driveHasTokens = ref(false)
@@ -24,8 +23,7 @@ async function updateDriveStatus(): Promise<void> {
 }
 
 onMounted(() => {
-  if (!isDriveVisible) return
-  window.addEventListener('magusng:drive-changed', updateDriveStatus)
+      window.addEventListener('magusng:drive-changed', updateDriveStatus)
   updateDriveStatus()
 })
 
@@ -46,7 +44,7 @@ async function revokeDrive(): Promise<void> {
       <template v-if="!isDev">Version {{ appVersion }}</template>
       <DevBanner />
     </span>
-    <span v-if="isDriveVisible" class="nav-drive">
+    <span class="nav-drive">
       <template v-if="driveHasTokens">
         <span class="nav-drive-email">{{ driveEmail ? `${UI.driveConnectedAs} ${driveEmail}` : UI.driveStatusConnected }}</span>
         <button class="nav-drive-revoke" @click="revokeDrive">{{ UI.driveRevokeBtn }}</button>
@@ -125,9 +123,6 @@ body { margin: 0; background: #fff; }
 
 .nav-drive-email {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
 }
 
 .nav-drive-revoke {

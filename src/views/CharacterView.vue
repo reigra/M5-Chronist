@@ -13,9 +13,6 @@ import { latexExportService } from '../services/LatexExportService'
 import { sanitizeFileName, saveFileAs } from '../services/FileProvider'
 import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
 
-// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
-const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /**
@@ -392,7 +389,6 @@ onMounted(async () => {
             @click="exportLatexPdf"
           >{{ UI.sheetExportLatexPdf }}</button>
           <button
-            v-if="isDriveVisible"
             class="btn-nav"
             @click="exportToDrive"
           >{{ UI.exportGoogleDrive }}</button>
