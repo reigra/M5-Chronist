@@ -8,6 +8,9 @@ import { sheetSkillService } from '../services/SheetSkillService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
+import { latexExportService } from '../services/LatexExportService'
+import { sanitizeFileName, saveFileAs } from '../services/FileProvider'
+import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
 
 // ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
 const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
@@ -55,6 +58,9 @@ const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
+const isOnline = ref(navigator.onLine)
+window.addEventListener('online', () => { isOnline.value = true })
+window.addEventListener('offline', () => { isOnline.value = false })
 const showSpellDetail = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
@@ -284,6 +290,60 @@ async function exportToDrive(): Promise<void> {
   }
 }
 
+/** Export the character as a .tex file download. */
+async function exportLatex(): Promise<void> {
+  const char = character.value; const r = rules.value
+  if (!char || !r) return
+  try {
+    const tex = latexExportService.generate(char, r)
+    const name = sanitizeFileName(char.name) + '.tex'
+    await saveFileAs(tex, name, 'text/plain')
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'LaTeX export failed.'
+  }
+}
+
+/**
+ * Export the character as a compiled PDF via TeXLive.net.
+ *
+ * Uses a programmatic <form> submit with target="_blank" to bypass CORS:
+ * the browser natively sends the multipart POST across origins, and the
+ * resulting PDF (or error log) opens in a new tab.
+ */
+function exportLatexPdf(): void {
+  const char = character.value; const r = rules.value
+  if (!char || !r) return
+  if (!isOnline.value) {
+    errorMessage.value = 'PDF-Export benötigt eine Internetverbindung.'
+    return
+  }
+
+  const tex = latexExportService.generate(char, r)
+  const form = document.createElement('form')
+  form.action = 'https://texlive.net/cgi-bin/latexcgi'
+  form.method = 'POST'
+  form.enctype = 'multipart/form-data'
+  form.target = '_blank'
+
+  const addField = (name: string, value: string) => {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    form.appendChild(input)
+  }
+
+  addField('filename[]', 'document.tex')
+  addField('filecontents[]', tex)
+  addField('filename[]', 'm5figur-mv.cls')
+  addField('filecontents[]', clsContent)
+  addField('return', 'pdf')
+
+  document.body.appendChild(form)
+  form.submit()
+  document.body.removeChild(form)
+}
+
 onMounted(async () => {
   try {
     const id = route.params.id as string
@@ -337,6 +397,17 @@ onMounted(async () => {
             class="btn-nav"
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
+          <button
+            class="btn-nav"
+            :disabled="isUnsupportedType"
+            @click="exportLatex"
+          >{{ UI.sheetExportLatex }}</button>
+          <button
+            class="btn-nav"
+            :disabled="isUnsupportedType || !isOnline"
+            :title="!isOnline ? 'PDF-Export benötigt Internet' : ''"
+            @click="exportLatexPdf"
+          >{{ UI.sheetExportLatexPdf }}</button>
           <button
             v-if="isDriveVisible"
             class="btn-nav"
