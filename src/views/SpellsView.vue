@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
+import { isCaster as checkCaster } from '../services/CharacterService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
@@ -49,11 +50,7 @@ const charType = computed(() => {
 })
 
 /** True if the character type has spellCosts (can learn spells). */
-const isCaster = computed(() => {
-  const t = charType.value
-  const sc = t?.spellCosts
-  return !!sc && Object.keys(sc).length > 0
-})
+const isCaster = computed(() => checkCaster(charType.value ?? undefined))
 
 /** Sum of PP per spellGroup across all learned spells. */
 const groupPp = computed(() => {

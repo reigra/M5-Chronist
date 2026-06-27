@@ -5,6 +5,7 @@ import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad, esForNextGrad } from '../services/GradUtils'
 import { sheetSkillService } from '../services/SheetSkillService'
+import { isCaster as checkCaster } from '../services/CharacterService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
@@ -102,8 +103,7 @@ const isCaster = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return false
   const t = r.types.find(x => x.id === c.typeId)
-  const sc = t?.spellCosts
-  return !!sc && Object.keys(sc).length > 0
+  return checkCaster(t)
 })
 
 /**
