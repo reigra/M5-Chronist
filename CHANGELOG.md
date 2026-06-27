@@ -1,4 +1,7 @@
 
+## [v0.11.5] - 2026-06-27
+
+
 ### Google Drive Integration
 - Token-Persistenz: Access-Token und Refresh-Token werden in localStorage gespeichert und über Browser-Neustarts hinweg vorgehalten
 - Refresh-Token ermöglicht stumme Erneuerung des Access-Tokens ohne erneute Kontoauswahl
@@ -7,6 +10,7 @@
 - Reaktives UI-Update: Custom-Event bei Token-Änderung – kein Seiten-Neuladen nötig
 - Fehlermeldungen enthalten jetzt HTTP-Status + Response-Body (erleichtert Debugging)
 - PKCE entfernt: Google Cloud Console OAuth-Client ist als "Web application" registriert und benötigt `client_secret` im Token-Exchange
+- Integration ist jetzt in Production und für alle nutzbar
 
 ### UI & Navigation
 - "+ Neuer Charakter" aus Nav-Bar entfernt, stattdessen als primärer Button auf der Startseite
