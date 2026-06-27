@@ -126,3 +126,93 @@ export function isCaster(type: CharacterType | undefined): boolean {
   const sc = type?.spellCosts
   return !!sc && Object.keys(sc).length > 0
 }
+
+/**
+ * Migrate a raw object to the current Character schema.
+ * Handles old-format migration (baseProperties → properties),
+ * ensures innate skills are present, and adds default values
+ * for pp on skills and spells.
+ *
+ * @param raw - The raw object parsed from storage or file.
+ * @returns A valid Character object.
+ */
+export function migrate(raw: any): Character {
+  if (raw.baseProperties && !raw.properties) {
+    const bp = raw.baseProperties ?? {}
+    const dp = raw.derivedProperties ?? {}
+    raw = {
+      ...raw,
+      properties: {
+        St: bp.St ?? 0, Gs: bp.Gs ?? 0, Gw: bp.Gw ?? 0,
+        Ko: bp.Ko ?? 0, In: bp.In ?? 0, Zt: bp.Zt ?? 0,
+        pA: dp.pA ?? 0, Wk: dp.Wk ?? 0, Au: dp.Au ?? 0,
+        LP: dp.LP ?? 0, AP: dp.AP ?? 0, B: dp.B ?? 0,
+      },
+      boni: {
+        AusB:  dp.AusB  ?? 0,
+        SchB:  dp.SchB  ?? 0,
+        AnB:   dp.AnB   ?? 0,
+        AbB:   dp.AbB   ?? 0,
+        ZauB:  dp.ZauB  ?? 0,
+        ResBg: dp.ResBg ?? 0,
+        ResBk: dp.ResBk ?? dp.ResB ?? 0,
+      },
+    }
+    delete raw.baseProperties
+    delete raw.derivedProperties
+  }
+
+  // Ensure innate skills are present with correct starting values.
+  const knownIds = new Set((raw.skills ?? []).map((s: any) => s.skillId))
+  const props = raw.properties ?? {}
+  const boni = raw.boni ?? {}
+
+  // Raufen: (St+Gw)/20 + AnB, Zwerge +1
+  if (!knownIds.has('Raufen')) {
+    const rv = Math.floor(((props.St ?? 0) + (props.Gw ?? 0)) / 20)
+             + (boni.AnB ?? 0)
+             + (raw.raceId === 'zwerg' ? 1 : 0)
+    raw.skills = [...(raw.skills ?? []), { skillId: 'Raufen', value: Math.max(0, rv) }]
+  }
+
+  // Trinken: Ko/10
+  if (!knownIds.has('Trinken')) {
+    const tv = Math.floor((props.Ko ?? 0) / 10)
+    raw.skills = [...(raw.skills ?? []), { skillId: 'Trinken', value: Math.max(0, tv) }]
+  }
+
+  // Wahrnehmung: FW 6
+  if (!knownIds.has('Wahrnehmung')) {
+    raw.skills = [...(raw.skills ?? []), { skillId: 'Wahrnehmung', value: 6 }]
+  }
+
+  // Abwehr: FW 11
+  if (!knownIds.has('Abwehr')) {
+    raw.skills = [...(raw.skills ?? []), { skillId: 'Abwehr', value: 11 }]
+  }
+
+  // Resistenz: FW 11
+  if (!knownIds.has('Resistenz')) {
+    raw.skills = [...(raw.skills ?? []), { skillId: 'Resistenz', value: 11 }]
+  }
+
+  // Zaubern: FW 11 für Charaktere mit Zaubersprüchen
+  if (Array.isArray(raw.spells) && raw.spells.length > 0 && !knownIds.has('Zaubern')) {
+    raw.skills = [...(raw.skills ?? []), { skillId: 'Zaubern', value: 11 }]
+  }
+
+  // Migrate skills: add pp if missing
+  if (Array.isArray(raw.skills)) {
+    raw.skills = raw.skills.map((s: any) => s.pp === undefined ? { ...s, pp: 0 } : s)
+  }
+
+  // Migrate spells: convert string[] to CharacterSpell[], add pp if missing
+  if (Array.isArray(raw.spells)) {
+    raw.spells = raw.spells.map((s: any) => {
+      if (typeof s === 'string') return { spellId: s, pp: 0 }
+      return s.pp === undefined ? { ...s, pp: 0 } : s
+    })
+  }
+
+  return raw
+}
