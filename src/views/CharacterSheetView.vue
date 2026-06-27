@@ -393,6 +393,8 @@ onMounted(async () => {
           >{{ UI.spells }}</router-link>
           <router-link :to="{ name: 'character-edit', params: { id: character.id } }" class="btn-nav">{{ UI.navEdit }}</router-link>
           <router-link :to="{ name: 'equipment', params: { id: character.id } }" class="btn-nav">{{ UI.navEquipment }}</router-link>
+        </nav>
+        <nav class="sheet-nav sheet-nav--export">
           <button
             class="btn-nav"
             @click="exportCharacter"
@@ -733,11 +735,20 @@ onMounted(async () => {
 
 .sheet-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.sheet-nav {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sheet-nav--export {
+  width: 100%;
 }
 
 .sheet-title {
@@ -756,12 +767,6 @@ onMounted(async () => {
   font-size: 0.85em;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.sheet-nav {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
 }
 
 .card {

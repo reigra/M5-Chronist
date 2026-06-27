@@ -189,11 +189,11 @@ export const UI = {
   homeManageRules:    'Regeln verwalten',
 
   // ── Charakterbogen (CharacterSheetView) ──────────────────────────────────────
-  sheetExport:          'Auf Festplatte exportieren',
+  sheetExport:          'Download Charakter',
   sheetExportHint:      'Charakter exportieren',
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
-  sheetExportLatex:     'Als LaTeX exportieren',
-  sheetExportLatexPdf:  'Als PDF (LaTeX) exportieren',
+  sheetExportLatex:     'Download LaTeX',
+  sheetExportLatexPdf:  'Download PDF',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
   advAddEp:             'EP hinzufügen',
@@ -279,8 +279,8 @@ export const UI = {
   helpNotFoundText:   'Die angeforderte Hilfeseite existiert nicht.',
 
   // ── Google Drive (Datei-Import/Export) ───────────────────────────────────────
-  importGoogleDrive:    'Aus Google Drive importieren',
-  exportGoogleDrive:    'Nach Google Drive exportieren',
+  importGoogleDrive:    'Charakter von Google Drive importieren',
+  exportGoogleDrive:    'Google Drive export',
   driveImportRules:     'Regelwerk aus Google Drive importieren',
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
