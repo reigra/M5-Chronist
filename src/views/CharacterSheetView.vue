@@ -55,7 +55,6 @@ const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
-const browserSupported = 'showSaveFilePicker' in window
 const showSpellDetail = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
@@ -336,8 +335,6 @@ onMounted(async () => {
           <router-link :to="{ name: 'equipment', params: { id: character.id } }" class="btn-nav">{{ UI.navEquipment }}</router-link>
           <button
             class="btn-nav"
-            :disabled="!browserSupported"
-            :title="browserSupported ? UI.sheetExportHint : UI.browserUnsupportedHint"
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
           <button

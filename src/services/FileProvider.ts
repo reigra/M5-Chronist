@@ -124,6 +124,49 @@ export function sanitizeFileName(s: string): string {
   return s.replace(/[\\/:*?"<>|]/g, '_').trim()
 }
 
+/**
+ * Save a file to disk.
+ *
+ * Uses the File System Access API (`showSaveFilePicker`) in Chromium browsers
+ * (Chrome, Edge, Opera) so the user can pick the target location. Falls back to
+ * a direct Blob download via `<a download>` when the API is unavailable.
+ *
+ * If the user cancels the save dialog, the function silently returns.
+ */
+export async function saveFileAs(
+  content: string | Blob,
+  fileName: string,
+  mimeType: string,
+): Promise<void> {
+  const blob = typeof content === 'string' ? new Blob([content], { type: mimeType }) : content
+
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'Datei', accept: { [mimeType]: [fileName.split('.').pop() ?? ''] } }],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(blob)
+      await writable.close()
+      return
+    } catch (e) {
+      // User cancelled → silently ignore
+      if (e instanceof Error && e.name === 'AbortError') return
+      // Re-throw unexpected errors
+      throw e
+    }
+  }
+
+  // Fallback for browsers without File System Access API
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── Module-level token cache (shared across all GoogleDriveProvider instances) ──
 
 let cachedAccessToken: string | null = null

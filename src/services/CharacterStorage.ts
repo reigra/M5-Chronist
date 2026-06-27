@@ -1,5 +1,5 @@
 import type { Character } from '../types/Character'
-import { GoogleDriveProvider, formatDate, sanitizeFileName } from './FileProvider'
+import { GoogleDriveProvider, formatDate, sanitizeFileName, saveFileAs } from './FileProvider'
 
 const DB_NAME = 'MagusNG'
 const DB_VERSION = 1
@@ -213,28 +213,9 @@ export class CharacterStorage {
    * @throws Error if the File System Access API is not available.
    */
   async exportToFile(character: Character): Promise<void> {
-    if (!('showSaveFilePicker' in window)) {
-      throw new Error(
-        'File System Access API is not supported in this browser. ' +
-        'Please use Chrome, Edge, or Opera.',
-      )
-    }
-
-    let fileHandle: FileSystemFileHandle
-    try {
-      fileHandle = await (window as any).showSaveFilePicker({
-        suggestedName: `${character.name}.json`,
-        types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }],
-      })
-    } catch (e) {
-      // User cancelled the dialog — nothing to do.
-      if (e instanceof Error && e.name === 'AbortError') return
-      throw e
-    }
-
-    const writable = await fileHandle.createWritable()
-    await writable.write(JSON.stringify(character, null, 2))
-    await writable.close()
+    const content = JSON.stringify(character, null, 2)
+    const fileName = `${sanitizeFileName(character.name)}.json`
+    await saveFileAs(content, fileName, 'application/json')
   }
 
   /**
