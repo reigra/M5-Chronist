@@ -188,7 +188,7 @@ export const UI = {
   homeNoRules:        'Keine Regeln geladen.',
   homeManageRules:    'Regeln verwalten',
 
-  // ── Charakterbogen (CharacterSheetView) ──────────────────────────────────────
+  // ── Charakterbogen (CharacterView) ──────────────────────────────────────
   sheetExport:          'Download Charakter',
   sheetExportHint:      'Charakter exportieren',
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
@@ -236,7 +236,7 @@ export const UI = {
   rulesEmptyHint:
     'Keine Regeln geladen. Importiere eine Regelwerk-Datei, um zu beginnen.',
 
-  // ── Charakterformular (CharacterFormView) ────────────────────────────────────
+  // ── Charakterformular (CharacterEditView) ────────────────────────────────────
   formEditTitle:             'Charakter bearbeiten',
   formNewTitle:              'Neuer Charakter',
   formLoadingRules:          'Regeln werden geladen…',

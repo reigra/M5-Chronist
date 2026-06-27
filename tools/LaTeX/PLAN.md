@@ -95,7 +95,7 @@ Erzeugt vollständigen `.tex`-Inhalt:
 - `src/constants/ui.ts`: +2 Strings
   - `sheetExportLatex: 'Als LaTeX exportieren'`
   - `sheetExportLatexPdf: 'Als PDF (LaTeX) exportieren'`
-- `CharacterSheetView.vue`: Zwei Buttons (oder einer mit Split-Button / Menü)
+- `CharacterView.vue`: Zwei Buttons (oder einer mit Split-Button / Menü)
   1. **„Als LaTeX exportieren"** — lädt `.tex` herunter (wie bisher geplant)
   2. **„Als PDF (LaTeX) exportieren"** — ruft `compileToPdf()` auf, speichert das
      resultierende PDF via `showSaveFilePicker` (`<sanitized_name>.pdf`)
@@ -115,7 +115,7 @@ Erzeugt vollständigen `.tex`-Inhalt:
 | `tools/LaTeX/PLAN.md` | diese Datei |
 | `src/services/LatexExportService.ts` | **NEU** |
 | `src/constants/ui.ts` | +2 Strings |
-| `src/views/CharacterSheetView.vue` | 2 Buttons + Handler |
+| `src/views/CharacterView.vue` | 2 Buttons + Handler |
 
 ## Nicht abgedeckt (Phase 2)
 
