@@ -5,7 +5,7 @@ import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad, esForNextGrad } from '../services/GradUtils'
 import { sheetSkillService } from '../services/SheetSkillService'
-import { isCaster as checkCaster } from '../services/CharacterService'
+import { isCaster as checkCaster, resolveName } from '../services/CharacterService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
@@ -74,29 +74,10 @@ const nextGradEs = computed(() =>
   character.value ? esForNextGrad(character.value.totalEs) : 0,
 )
 
-const raceName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.raceId ?? '—'
-  return r.races.find(x => x.id === c.raceId)?.name ?? c.raceId
-})
-
-const typeName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.typeId ?? '—'
-  return r.types.find(x => x.id === c.typeId)?.name ?? c.typeId
-})
-
-const originName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.originId ?? '—'
-  return r.origins.find(x => x.id === c.originId)?.name ?? c.originId
-})
-
-const statusName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.socialStatusId ?? '—'
-  return r.socialStatuses.find(x => x.id === c.socialStatusId)?.name ?? c.socialStatusId
-})
+const raceName  = computed(() => resolveName(rules.value?.races,          character.value?.raceId))
+const typeName  = computed(() => resolveName(rules.value?.types,          character.value?.typeId))
+const originName = computed(() => resolveName(rules.value?.origins,       character.value?.originId))
+const statusName = computed(() => resolveName(rules.value?.socialStatuses, character.value?.socialStatusId))
 
 /** True if the character's type has spellCosts (can learn spells). */
 const isCaster = computed(() => {

@@ -128,6 +128,23 @@ export function isCaster(type: CharacterType | undefined): boolean {
 }
 
 /**
+ * Look up the display name for an ID in a rules array.
+ * Falls back to the ID itself (or a custom fallback) if not found.
+ *
+ * @param items - Array of objects with id and name (e.g. rules.races).
+ * @param id - The ID to look up.
+ * @param fallback - Optional fallback string (defaults to the id itself).
+ */
+export function resolveName<T extends { id: string; name: string }>(
+  items: T[] | undefined,
+  id: string | undefined,
+  fallback?: string,
+): string {
+  if (!items || !id) return fallback ?? id ?? '—'
+  return items.find(x => x.id === id)?.name ?? fallback ?? id
+}
+
+/**
  * Migrate a raw object to the current Character schema.
  * Handles old-format migration (baseProperties → properties),
  * ensures innate skills are present, and adds default values
