@@ -36,3 +36,5 @@ Thumbs.db
 /docs/Siandra_von_Kalmaran.json
 /docs/todo.md
 /tools/scripts/skill_sort.py
+/nginx/magus.conf
+/tools/LaTeX/m5bsp-mv.tex

@@ -132,6 +132,23 @@ export class RulesStorage {
   }
 
   /**
+   * Return all stored sources with their full data payload.
+   *
+   * Used by BackupService to include all rulebook sources in a backup archive.
+   *
+   * @returns Array of StoredSource, one per stored source.
+   */
+  async getAllSources(): Promise<StoredSource[]> {
+    const db = await this.open()
+    return new Promise((resolve, reject) => {
+      const tx      = db.transaction(STORE, 'readonly')
+      const request = tx.objectStore(STORE).getAll()
+      request.onsuccess = () => { db.close(); resolve(request.result as StoredSource[]) }
+      request.onerror   = () => { db.close(); reject(request.error) }
+    })
+  }
+
+  /**
    * Return a summary list of all stored sources (no data payload).
    *
    * @returns Array of SourceSummary, one per stored source.

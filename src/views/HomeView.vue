@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { characterStorage } from '../services/CharacterStorage'
 import { rulesStorage } from '../services/RulesStorage'
 import { RulesLoader } from '../services/RulesLoader'
+import { createBackup } from '../services/BackupService'
 import { computeDiff } from '../services/CharacterService'
 import type { DiffEntry } from '../services/CharacterService'
 import { UI } from '../constants/ui'
@@ -25,6 +26,9 @@ const router = useRouter()
 const characters = ref<Array<{ id: string; name: string; typeId: string }>>([])
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
+const backupError = ref<string | null>(null)
+const backupSuccess = ref(false)
+const backingUp = ref(false)
 const pendingImport = ref<PendingImport | null>(null)
 const activeSources = ref<SourceSummary[]>([])
 const rules = ref<RulesData | null>(null)
@@ -151,6 +155,24 @@ function cancelImport(): void {
   pendingImport.value = null
 }
 
+/** Start a full backup download (ZIP with all characters, rules and metadata). */
+async function doBackup(): Promise<void> {
+  backupError.value = null
+  backupSuccess.value = false
+  backingUp.value = true
+  try {
+    const saved = await createBackup()
+    if (saved) {
+      backupSuccess.value = true
+      setTimeout(() => { backupSuccess.value = false }, 3000)
+    }
+  } catch (e) {
+    backupError.value = e instanceof Error ? e.message : 'Unknown error'
+  } finally {
+    backingUp.value = false
+  }
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(loadList)
@@ -250,6 +272,14 @@ onMounted(loadList)
           </table>
           <p v-else class="rules-table-empty">{{ UI.homeNoRules }}</p>
           <router-link :to="{ name: 'rules' }" class="btn-rules">{{ UI.homeManageRules }}</router-link>
+        </div>
+
+        <div class="backup-section">
+          <h2 class="backup-title">{{ UI.backupTitle }}</h2>
+          <p class="backup-hint">{{ UI.backupHint }}</p>
+          <button class="btn-backup" :disabled="backingUp" @click="doBackup">{{ backingUp ? UI.backupRunning : UI.backupBtn }}</button>
+          <p v-if="backupSuccess" class="backup-success">{{ UI.backupSuccess }}</p>
+          <p v-if="backupError" class="backup-error">{{ UI.backupError }} {{ backupError }}</p>
         </div>
       </template>
 
@@ -419,6 +449,64 @@ onMounted(loadList)
 
 .btn-create:hover {
   background: #1e3559;
+}
+
+/* ── Backup section ── */
+
+.backup-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+}
+
+.backup-title {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.backup-hint {
+  color: #777;
+  font-size: 0.85em;
+  margin: 0 0 0.75rem;
+}
+
+.btn-backup {
+  padding: 0.4rem 1rem;
+  border: 1px solid #2a4a7a;
+  border-radius: 3px;
+  background: transparent;
+  color: #2a4a7a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-backup:hover {
+  background: #2a4a7a;
+  color: #fff;
+}
+
+.btn-backup:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-backup:disabled:hover {
+  background: transparent;
+  color: #2a4a7a;
+}
+
+.backup-success {
+  color: #1a6e1a;
+  font-size: 0.85em;
+  margin: 0.5rem 0 0;
+}
+
+.backup-error {
+  color: #c00;
+  font-size: 0.85em;
+  margin: 0.5rem 0 0;
 }
 
 </style>

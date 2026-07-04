@@ -285,6 +285,14 @@ export const UI = {
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
 
+  // ── Backup ────────────────────────────────────────────────────────────────────
+  backupTitle:    'Backup',
+  backupBtn:      'Komplett-Backup (ZIP)',
+  backupRunning:  'Backup wird erstellt…',
+  backupSuccess:  'Backup erfolgreich erstellt.',
+  backupHint:     'Alle Charaktere, Regelwerke und Metadaten als ZIP-Archiv herunterladen.',
+  backupError:    'Backup fehlgeschlagen:',
+
   // ── Google Drive (Status im Nav-Bar) ─────────────────────────────────────────
   driveConnectedAs:    'Verbunden als',
   driveStatusConnected: 'Verbunden',
