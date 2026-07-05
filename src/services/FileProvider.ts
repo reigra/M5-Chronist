@@ -474,7 +474,7 @@ export class GoogleDriveProvider implements FileProvider {
    * For 'backup', the backup ZIP goes directly into MagusNG (no subfolder).
    * For 'characters' and 'rules', a subfolder is created.
    */
-  private async ensureFolderTree(): Promise<string> {
+  async ensureFolderTree(): Promise<string> {
     if (this.folderId) return this.folderId
 
     const rootId = await this.findOrCreateFolder(null, 'MagusNG')
@@ -609,6 +609,25 @@ export function hasDriveTokens(): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Initiate Google Drive authentication and create the folder structure.
+ *
+ * Calling this triggers the OAuth flow (account picker) if no valid
+ * token is cached. After successful auth the MagusNG/, MagusNG/characters/
+ * and MagusNG/rules/ folders are created eagerly and sequentially
+ * to avoid Drive API race conditions.
+ *
+ * Safe to call when already authenticated — returns immediately.
+ */
+export async function connectDrive(): Promise<void> {
+  const charProvider = new GoogleDriveProvider('characters')
+  await charProvider.ensureFolderTree()
+  // After the first call the token is cached; a second instance uses it silently.
+
+  const rulesProvider = new GoogleDriveProvider('rules')
+  await rulesProvider.ensureFolderTree()
 }
 
 /**

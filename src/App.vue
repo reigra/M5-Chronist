@@ -7,6 +7,7 @@ import {
   hasDriveTokens,
   revokeDriveAccess,
   getDriveUserEmail,
+  connectDrive,
 } from './services/FileProvider'
 
 // __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
@@ -31,6 +32,14 @@ onUnmounted(() => {
   window.removeEventListener('magusng:drive-changed', updateDriveStatus)
 })
 
+async function handleDriveConnect(): Promise<void> {
+  try {
+    await connectDrive()
+  } catch {
+    // OAuth failure or user cancelled — status stays "nicht verbunden"
+  }
+}
+
 async function revokeDrive(): Promise<void> {
   await revokeDriveAccess()
   // clearTokens dispatches the event → updateDriveStatus will fire
@@ -49,7 +58,10 @@ async function revokeDrive(): Promise<void> {
         <span class="nav-drive-email">{{ driveEmail ? `${UI.driveConnectedAs} ${driveEmail}` : UI.driveStatusConnected }}</span>
         <button class="nav-drive-revoke" @click="revokeDrive">{{ UI.driveRevokeBtn }}</button>
       </template>
-      <span v-else class="nav-drive-none">{{ UI.driveStatusNone }}</span>
+      <template v-else>
+        <span class="nav-drive-none">{{ UI.driveStatusNone }}</span>
+        <button class="nav-drive-connect" @click="handleDriveConnect">{{ UI.driveConnectBtn }}</button>
+      </template>
     </span>
     <router-link to="/help" class="nav-link nav-link--help">{{ UI.helpNav }}</router-link>
   </nav>
@@ -125,7 +137,8 @@ body { margin: 0; background: #fff; }
   white-space: nowrap;
 }
 
-.nav-drive-revoke {
+.nav-drive-revoke,
+.nav-drive-connect {
   background: none;
   border: 1px solid #8aaad0;
   color: #c8d8f0;
@@ -137,7 +150,8 @@ body { margin: 0; background: #fff; }
   white-space: nowrap;
 }
 
-.nav-drive-revoke:hover {
+.nav-drive-revoke:hover,
+.nav-drive-connect:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }

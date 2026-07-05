@@ -310,6 +310,7 @@ export const UI = {
   restoreError:         'Restore fehlgeschlagen:',
 
   // ── Google Drive (Status im Nav-Bar) ─────────────────────────────────────────
+  driveConnectBtn:    'Verbinden',
   driveConnectedAs:    'Verbunden als',
   driveStatusConnected: 'Verbunden',
   driveRevokeBtn:      'Trennen',
