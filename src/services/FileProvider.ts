@@ -205,7 +205,7 @@ export class GoogleDriveProvider implements FileProvider {
   private readonly folder: string
   private folderId: string | null = null
 
-  constructor(folder: 'characters' | 'rules') {
+  constructor(folder: 'characters' | 'rules' | 'backup') {
     this.folder = folder
   }
 
@@ -224,6 +224,54 @@ export class GoogleDriveProvider implements FileProvider {
     const form = new FormData()
     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
     form.append('file', new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+
+    const res = await this.fetchWithToken(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: 'POST', body: form },
+    )
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Drive upload failed (${res.status}): ${text}`)
+    }
+  }
+
+  /**
+   * Open a picker and read the selected file as a Blob (binary data).
+   * Used by BackupService to read backup ZIPs from Drive.
+   */
+  async readBlob(): Promise<{ blob: Blob; fileName: string }> {
+    const token = await this.ensureAccessToken()
+    await this.ensureFolderTree()
+    const doc = await this.openPicker(token)
+    const blob = await this.downloadBlob(doc.id)
+    return { blob, fileName: doc.name }
+  }
+
+  /**
+   * Download a file as Blob via Drive API v3 (files.get with alt=media).
+   */
+  private async downloadBlob(fileId: string): Promise<Blob> {
+    const res = await this.fetchWithToken(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    )
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Drive download failed (${res.status}): ${text}`)
+    }
+    return res.blob()
+  }
+
+  /**
+   * Upload a Blob (e.g. a ZIP archive) to the configured Drive folder.
+   * Unlike writeFile(), this accepts an arbitrary Blob with its own MIME type.
+   */
+  async writeBlob(blob: Blob, suggestedName: string): Promise<void> {
+    await this.ensureAccessToken()
+    const folderId = await this.ensureFolderTree()
+    const metadata = { name: suggestedName, mimeType: blob.type, parents: [folderId] }
+    const form = new FormData()
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
+    form.append('file', blob)
 
     const res = await this.fetchWithToken(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
@@ -422,13 +470,18 @@ export class GoogleDriveProvider implements FileProvider {
   }
 
   /**
-   * Ensure the MagusNG/{folder} tree exists and return the sub-folder ID.
-   * Minimises API calls: root folder is fetched/created once, sub-folder once.
+   * Ensure the MagusNG/{folder} tree exists and return the folder ID.
+   * For 'backup', the backup ZIP goes directly into MagusNG (no subfolder).
+   * For 'characters' and 'rules', a subfolder is created.
    */
   private async ensureFolderTree(): Promise<string> {
     if (this.folderId) return this.folderId
 
     const rootId = await this.findOrCreateFolder(null, 'MagusNG')
+    if (this.folder === 'backup') {
+      this.folderId = rootId
+      return rootId
+    }
     const subId = await this.findOrCreateFolder(rootId, this.folder)
     this.folderId = subId
     return subId

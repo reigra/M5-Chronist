@@ -132,6 +132,44 @@ export class RulesStorage {
   }
 
   /**
+   * Import a single RulebookData object directly into IndexedDB.
+   *
+   * Used by BackupService during restore — accepts an already-parsed
+   * RulebookData (no file picker involved). Overwrites any existing
+   * source with the same metadata.id.
+   *
+   * @param data - The rulebook data to import.
+   * @returns Summary of the imported source.
+   * @throws Error if metadata.id or metadata.title is missing.
+   */
+  async importFromData(data: RulebookData): Promise<SourceSummary> {
+    if (!data.metadata?.id || !data.metadata?.title) {
+      throw new Error('Invalid rules data — missing metadata.id or metadata.title.')
+    }
+
+    this.normalizeIds(data)
+
+    const entry: StoredSource = {
+      id:        data.metadata.id,
+      title:     data.metadata.title,
+      version:   data.metadata.version ?? '?',
+      priority:  await this.nextFreePriority(data.metadata.priority ?? 999),
+      enabled:   true,
+      data,
+    }
+
+    const db = await this.open()
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      tx.objectStore(STORE).put(entry)
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror    = () => { db.close(); reject(tx.error) }
+    })
+
+    return { id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true }
+  }
+
+  /**
    * Return all stored sources with their full data payload.
    *
    * Used by BackupService to include all rulebook sources in a backup archive.

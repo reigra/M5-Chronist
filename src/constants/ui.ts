@@ -287,11 +287,27 @@ export const UI = {
 
   // ── Backup ────────────────────────────────────────────────────────────────────
   backupTitle:    'Backup',
-  backupBtn:      'Komplett-Backup (ZIP)',
+  backupBtn:      'Download Backup',
+  backupDriveBtn: 'Backup to Drive',
   backupRunning:  'Backup wird erstellt…',
   backupSuccess:  'Backup erfolgreich erstellt.',
   backupHint:     'Alle Charaktere, Regelwerke und Metadaten als ZIP-Archiv herunterladen.',
   backupError:    'Backup fehlgeschlagen:',
+
+  // ── Restore ───────────────────────────────────────────────────────────────────
+  restoreBtn:           'Restore Backup',
+  restoreDriveBtn:      'Restore from Drive',
+  restoreBusy:          'Backup wird eingelesen…',
+  restoreTitle:         'Backup wiederherstellen',
+  restoreSummary:       'Regelwerke: {rules} — Charaktere: {chars}',
+  restoreConflicts:     'Folgende Charaktere sind bereits vorhanden:',
+  restoreNoConflicts:   'Keine Konflikte — alle Charaktere sind neu.',
+  restoreOverwriteAll:  'Alle überschreiben',
+  restoreAskEach:       'Einzeln fragen',
+  restoreSkip:          'Überspringen',
+  restoreDiffPfx:       'Konflikt {n} von {total}:',
+  restoreSuccess:       'Backup erfolgreich wiederhergestellt.',
+  restoreError:         'Restore fehlgeschlagen:',
 
   // ── Google Drive (Status im Nav-Bar) ─────────────────────────────────────────
   driveConnectedAs:    'Verbunden als',

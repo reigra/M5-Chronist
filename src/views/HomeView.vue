@@ -4,7 +4,14 @@ import { useRouter } from 'vue-router'
 import { characterStorage } from '../services/CharacterStorage'
 import { rulesStorage } from '../services/RulesStorage'
 import { RulesLoader } from '../services/RulesLoader'
-import { createBackup } from '../services/BackupService'
+import {
+  createBackup,
+  uploadBackupToDrive,
+  restoreFromBackup,
+  restoreFromDrive,
+  executeRestore,
+} from '../services/BackupService'
+import type { RestoreInfo } from '../services/BackupService'
 import { computeDiff } from '../services/CharacterService'
 import type { DiffEntry } from '../services/CharacterService'
 import { UI } from '../constants/ui'
@@ -27,9 +34,20 @@ const characters = ref<Array<{ id: string; name: string; typeId: string }>>([])
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 const backupError = ref<string | null>(null)
+const backupDriveError = ref<string | null>(null)
 const backupSuccess = ref(false)
 const backingUp = ref(false)
+const backingUpDrive = ref(false)
 const pendingImport = ref<PendingImport | null>(null)
+
+// ── Restore state ──
+const restoreInfo = ref<RestoreInfo | null>(null)
+const restorePhase = ref<'idle' | 'busy' | 'conflict' | 'ask'>('idle')
+const restoreError = ref<string | null>(null)
+const restoreSuccess = ref(false)
+const askIndex = ref(0)
+const askResolutions = ref<Map<string, boolean>>(new Map()) // charId → overwrite = true
+const askCurrentDiff = ref<DiffEntry[] | null>(null)
 const activeSources = ref<SourceSummary[]>([])
 const rules = ref<RulesData | null>(null)
 
@@ -173,6 +191,157 @@ async function doBackup(): Promise<void> {
   }
 }
 
+/** Upload a backup ZIP to Google Drive. */
+async function doBackupDrive(): Promise<void> {
+  backupDriveError.value = null
+  backingUpDrive.value = true
+  try {
+    await uploadBackupToDrive()
+    backupSuccess.value = true
+    setTimeout(() => { backupSuccess.value = false }, 3000)
+  } catch (e) {
+    backupDriveError.value = e instanceof Error ? e.message : 'Unknown error'
+  } finally {
+    backingUpDrive.value = false
+  }
+}
+
+// ── Restore ─────────────────────────────────────────────────────────────────
+
+/** Open a local ZIP file and parse the backup. */
+async function doRestore(): Promise<void> {
+  restoreError.value = null
+  restoreSuccess.value = false
+  restoreInfo.value = null
+  restorePhase.value = 'busy'
+  try {
+    const info = await restoreFromBackup()
+    showRestoreConflicts(info)
+  } catch (e) {
+    if (e instanceof Error && e.name !== 'AbortError') {
+      restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    }
+    restorePhase.value = 'idle'
+  }
+}
+
+/** Open a Drive picker and parse the backup. */
+async function doRestoreDrive(): Promise<void> {
+  restoreError.value = null
+  restoreSuccess.value = false
+  restoreInfo.value = null
+  restorePhase.value = 'busy'
+  try {
+    const info = await restoreFromDrive()
+    showRestoreConflicts(info)
+  } catch (e) {
+    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    restorePhase.value = 'idle'
+  }
+}
+
+/** After parsing: show conflict dialog or execute immediately. */
+function showRestoreConflicts(info: RestoreInfo): void {
+  if (info.conflicts.length === 0) {
+    // No conflicts — import everything immediately
+    restorePhase.value = 'busy'
+    executeRestore(info, 'all')
+      .then(() => {
+        restoreSuccess.value = true
+        restorePhase.value = 'idle'
+        setTimeout(() => { restoreSuccess.value = false }, 4000)
+        loadList()
+      })
+      .catch(e => {
+        restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+        restorePhase.value = 'idle'
+      })
+  } else {
+    restoreInfo.value = info
+    restorePhase.value = 'conflict'
+  }
+}
+
+/** User chose "Alle überschreiben" — import everything. */
+async function confirmRestoreAll(): Promise<void> {
+  const info = restoreInfo.value
+  if (!info) return
+  restorePhase.value = 'busy'
+  restoreInfo.value = null
+  try {
+    await executeRestore(info, 'all')
+    restoreSuccess.value = true
+    setTimeout(() => { restoreSuccess.value = false }, 4000)
+    loadList()
+  } catch (e) {
+    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+  } finally {
+    restorePhase.value = 'idle'
+  }
+}
+
+/** User chose "Einzeln fragen" — start sequential diff dialogs. */
+function startAskMode(): void {
+  askIndex.value = 0
+  askResolutions.value = new Map()
+  showNextAskConflict()
+  restorePhase.value = 'ask'
+}
+
+/** Show the diff for the current conflict in ask mode. */
+function showNextAskConflict(): void {
+  const info = restoreInfo.value
+  if (!info || askIndex.value >= info.conflicts.length) {
+    // All resolved — execute
+    finishAskMode()
+    return
+  }
+  const conflict = info.conflicts[askIndex.value]
+  askCurrentDiff.value = computeDiff(conflict.existing, conflict.incoming)
+}
+
+/** User chose "Überschreiben" for the current conflict. */
+function resolveAskOverwrite(): void {
+  const info = restoreInfo.value
+  if (!info) return
+  askResolutions.value.set(info.conflicts[askIndex.value].incoming.id, true)
+  askIndex.value++
+  showNextAskConflict()
+}
+
+/** User chose "Überspringen" for the current conflict. */
+function resolveAskSkip(): void {
+  const info = restoreInfo.value
+  if (!info) return
+  askResolutions.value.set(info.conflicts[askIndex.value].incoming.id, false)
+  askIndex.value++
+  showNextAskConflict()
+}
+
+/** All ask conflicts resolved — execute the restore. */
+async function finishAskMode(): Promise<void> {
+  const info = restoreInfo.value
+  if (!info) return
+  restorePhase.value = 'busy'
+  restoreInfo.value = null
+  try {
+    await executeRestore(info, askResolutions.value)
+    restoreSuccess.value = true
+    setTimeout(() => { restoreSuccess.value = false }, 4000)
+    loadList()
+  } catch (e) {
+    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+  } finally {
+    restorePhase.value = 'idle'
+  }
+}
+
+/** Cancel the entire restore. */
+function cancelRestore(): void {
+  restoreInfo.value = null
+  restorePhase.value = 'idle'
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(loadList)
@@ -220,6 +389,58 @@ onMounted(loadList)
           <button class="btn-cancel" @click="cancelImport">{{ UI.cancel }}</button>
         </div>
       </div>
+
+      <!-- ── Restore conflict dialog ── -->
+      <div v-else-if="restorePhase === 'conflict' && restoreInfo" class="diff-panel">
+        <h2>{{ UI.restoreTitle }}</h2>
+        <p>{{ UI.restoreSummary.replace('{rules}', String(restoreInfo.rules.length)).replace('{chars}', String(restoreInfo.newCharacters.length + restoreInfo.conflicts.length)) }}</p>
+        <p class="diff-subtitle">{{ UI.restoreConflicts }}</p>
+        <ul class="conflict-list">
+          <li v-for="c in restoreInfo.conflicts" :key="c.incoming.id">
+            <strong>{{ c.incoming.name }}</strong>
+          </li>
+        </ul>
+        <div class="diff-buttons">
+          <button class="btn-confirm" @click="confirmRestoreAll">{{ UI.restoreOverwriteAll }}</button>
+          <button class="btn-ask" @click="startAskMode">{{ UI.restoreAskEach }}</button>
+          <button class="btn-cancel" @click="cancelRestore">{{ UI.cancel }}</button>
+        </div>
+      </div>
+
+      <!-- ── Sequential ask diff ── -->
+      <div v-else-if="restorePhase === 'ask' && askCurrentDiff !== null" class="diff-panel">
+        <h2>{{ UI.restoreTitle }}</h2>
+        <p>{{ UI.restoreDiffPfx.replace('{n}', String(askIndex + 1)).replace('{total}', String(restoreInfo?.conflicts.length ?? 0)) }}
+          <strong>{{ restoreInfo?.conflicts[askIndex]?.incoming.name }}</strong>
+        </p>
+        <template v-if="askCurrentDiff.length > 0">
+          <p class="diff-subtitle">{{ UI.homeDiffSubtitle }}</p>
+          <table class="diff-table">
+            <thead>
+              <tr>
+                <th>{{ UI.colField }}</th>
+                <th>{{ UI.colSaved }}</th>
+                <th>{{ UI.colIncoming }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="entry in askCurrentDiff" :key="entry.label">
+                <td>{{ entry.label }}</td>
+                <td class="diff-old">{{ entry.oldValue }}</td>
+                <td class="diff-new">{{ entry.newValue }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+        <p v-else class="no-diff">{{ UI.homeNoDiff }}</p>
+        <div class="diff-buttons">
+          <button class="btn-confirm" @click="resolveAskOverwrite">{{ UI.homeOverwriteBtn }}</button>
+          <button class="btn-cancel" @click="resolveAskSkip">{{ UI.restoreSkip }}</button>
+        </div>
+      </div>
+
+      <!-- ── Busy / loading ── -->
+      <div v-else-if="restorePhase === 'busy'" class="status">{{ UI.restoreBusy }}</div>
 
       <!-- Character list -->
       <template v-else>
@@ -277,9 +498,19 @@ onMounted(loadList)
         <div class="backup-section">
           <h2 class="backup-title">{{ UI.backupTitle }}</h2>
           <p class="backup-hint">{{ UI.backupHint }}</p>
-          <button class="btn-backup" :disabled="backingUp" @click="doBackup">{{ backingUp ? UI.backupRunning : UI.backupBtn }}</button>
+          <div class="backup-buttons">
+            <button class="btn-backup" :disabled="backingUp" @click="doBackup">{{ backingUp ? UI.backupRunning : UI.backupBtn }}</button>
+            <button class="btn-backup" :disabled="backingUpDrive" @click="doBackupDrive">{{ backingUpDrive ? UI.backupRunning : UI.backupDriveBtn }}</button>
+          </div>
           <p v-if="backupSuccess" class="backup-success">{{ UI.backupSuccess }}</p>
           <p v-if="backupError" class="backup-error">{{ UI.backupError }} {{ backupError }}</p>
+          <p v-if="backupDriveError" class="backup-error">{{ UI.backupError }} {{ backupDriveError }}</p>
+          <p v-if="restoreSuccess" class="restore-success">{{ UI.restoreSuccess }}</p>
+          <p v-if="restoreError" class="restore-error">{{ UI.restoreError }} {{ restoreError }}</p>
+          <div class="backup-buttons">
+            <button class="btn-backup" :disabled="!browserSupported" :title="!browserSupported ? UI.browserUnsupportedHint : ''" @click="doRestore">{{ UI.restoreBtn }}</button>
+            <button class="btn-backup" @click="doRestoreDrive">{{ UI.restoreDriveBtn }}</button>
+          </div>
         </div>
       </template>
 
@@ -471,6 +702,16 @@ onMounted(loadList)
   margin: 0 0 0.75rem;
 }
 
+.backup-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.backup-section .backup-buttons + .backup-buttons {
+  margin-top: 0.75rem;
+}
+
 .btn-backup {
   padding: 0.4rem 1rem;
   border: 1px solid #2a4a7a;
@@ -508,6 +749,43 @@ onMounted(loadList)
   font-size: 0.85em;
   margin: 0.5rem 0 0;
 }
+
+.restore-success {
+  color: #1a6e1a;
+  font-size: 0.85em;
+  margin: 0.5rem 0 0;
+}
+
+.restore-error {
+  color: #c00;
+  font-size: 0.85em;
+  margin: 0.5rem 0 0;
+}
+
+.conflict-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0 1rem;
+  color: #333;
+  font-size: 0.9em;
+}
+
+.btn-ask {
+  padding: 0.4rem 1rem;
+  border: 1px solid #e67e22;
+  border-radius: 3px;
+  background: transparent;
+  color: #e67e22;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-ask:hover {
+  background: #e67e22;
+  color: #fff;
+}
+
 
 </style>
 
