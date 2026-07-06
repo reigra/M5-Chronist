@@ -5,8 +5,46 @@ import MarkdownIt from 'markdown-it'
 import MarkdownItGitHubAlerts from 'markdown-it-github-alerts'
 import { UI } from '../constants/ui'
 
+const helpImages = import.meta.glob('../help/*.png', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
+const imgMap: Record<string, string> = {}
+for (const [path, url] of Object.entries(helpImages)) {
+  const filename = path.replace(/^.*[/\\]/, '')
+  imgMap[filename] = url as string
+}
+
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\w]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 const md = new MarkdownIt()
 md.use(MarkdownItGitHubAlerts)
+
+const defaultImageRenderer = md.renderer.rules.image
+
+md.renderer.rules.image = (tokens, idx, options, env, self) => {
+  const token = tokens[idx]
+  const src = token.attrGet('src') ?? ''
+  const resolved = imgMap[src] ?? src
+  token.attrSet('src', resolved)
+  return defaultImageRenderer!(tokens, idx, options, env, self)
+}
+
+md.renderer.rules.heading_open = (tokens, idx, options, _env, self) => {
+  const token = tokens[idx]
+  const nextIdx = idx + 1
+  if (nextIdx < tokens.length && tokens[nextIdx].type === 'inline' && tokens[nextIdx].content) {
+    const id = slugify(tokens[nextIdx].content)
+    token.attrSet('id', id)
+  }
+  return self.renderToken(tokens, idx, options)
+}
 
 const route = useRoute()
 const router = useRouter()
