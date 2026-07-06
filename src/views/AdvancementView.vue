@@ -489,7 +489,7 @@ onMounted(async () => {
           <div class="confirmation-buttons">
             <button
               class="btn-confirm"
-              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
+              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || pendingAction.epToPayWithGold < 0 || pendingAction.epToPayWithGold > pendingAction.maxGoldEp || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
               @click="confirmAction"
             >{{ UI.confirm }}</button>
             <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>
