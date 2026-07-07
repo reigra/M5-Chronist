@@ -188,10 +188,12 @@ export const UI = {
   homeNoRules:        'Keine Regeln geladen.',
   homeManageRules:    'Regeln verwalten',
 
-  // ── Charakterbogen (CharacterSheetView) ──────────────────────────────────────
-  sheetExport:          'Auf Festplatte exportieren',
+  // ── Charakterbogen (CharacterView) ──────────────────────────────────────
+  sheetExport:          'Download Charakter',
   sheetExportHint:      'Charakter exportieren',
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
+  sheetExportLatex:     'Download LaTeX',
+  sheetExportLatexPdf:  'Download PDF',
 
   // ── Fortschritt (AdvancementView) ────────────────────────────────────────────
   advAddEp:             'EP hinzufügen',
@@ -234,7 +236,7 @@ export const UI = {
   rulesEmptyHint:
     'Keine Regeln geladen. Importiere eine Regelwerk-Datei, um zu beginnen.',
 
-  // ── Charakterformular (CharacterFormView) ────────────────────────────────────
+  // ── Charakterformular (CharacterEditView) ────────────────────────────────────
   formEditTitle:             'Charakter bearbeiten',
   formNewTitle:              'Neuer Charakter',
   formLoadingRules:          'Regeln werden geladen…',
@@ -277,9 +279,40 @@ export const UI = {
   helpNotFoundText:   'Die angeforderte Hilfeseite existiert nicht.',
 
   // ── Google Drive (Datei-Import/Export) ───────────────────────────────────────
-  importGoogleDrive:    'Aus Google Drive importieren',
-  exportGoogleDrive:    'Nach Google Drive exportieren',
+  importGoogleDrive:    'Charakter von Google Drive importieren',
+  exportGoogleDrive:    'Google Drive export',
   driveImportRules:     'Regelwerk aus Google Drive importieren',
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
+
+  // ── Backup ────────────────────────────────────────────────────────────────────
+  backupTitle:    'Backup',
+  backupBtn:      'Download Backup',
+  backupDriveBtn: 'Backup to Drive',
+  backupRunning:  'Backup wird erstellt…',
+  backupSuccess:  'Backup erfolgreich erstellt.',
+  backupHint:     'Alle Charaktere, Regelwerke und Metadaten als ZIP-Archiv herunterladen.',
+  backupError:    'Backup fehlgeschlagen:',
+
+  // ── Restore ───────────────────────────────────────────────────────────────────
+  restoreBtn:           'Restore Backup',
+  restoreDriveBtn:      'Restore from Drive',
+  restoreBusy:          'Backup wird eingelesen…',
+  restoreTitle:         'Backup wiederherstellen',
+  restoreSummary:       'Regelwerke: {rules} — Charaktere: {chars}',
+  restoreConflicts:     'Folgende Charaktere sind bereits vorhanden:',
+  restoreNoConflicts:   'Keine Konflikte — alle Charaktere sind neu.',
+  restoreOverwriteAll:  'Alle überschreiben',
+  restoreAskEach:       'Einzeln fragen',
+  restoreSkip:          'Überspringen',
+  restoreDiffPfx:       'Konflikt {n} von {total}:',
+  restoreSuccess:       'Backup erfolgreich wiederhergestellt.',
+  restoreError:         'Restore fehlgeschlagen:',
+
+  // ── Google Drive (Status im Nav-Bar) ─────────────────────────────────────────
+  driveConnectBtn:    'Verbinden',
+  driveConnectedAs:    'Verbunden als',
+  driveStatusConnected: 'Verbunden',
+  driveRevokeBtn:      'Trennen',
+  driveStatusNone:     'Google Drive: nicht verbunden',
 } as const

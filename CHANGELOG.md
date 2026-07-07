@@ -1,10 +1,30 @@
+
+## [v0.11.5] - 2026-06-27
+
+
+### Google Drive Integration
+- Token-Persistenz: Access-Token und Refresh-Token werden in localStorage gespeichert und über Browser-Neustarts hinweg vorgehalten
+- Refresh-Token ermöglicht stumme Erneuerung des Access-Tokens ohne erneute Kontoauswahl
+- Zugriff widerrufbar: "Trennen"-Button im Nav-Bar ruft Google-Revoke-Endpoint auf + löscht lokale Tokens
+- Account-Anzeige im Nav-Bar: "Verbunden als mail@…" bei aktivem Token, sonst "Google Drive: nicht verbunden"
+- Reaktives UI-Update: Custom-Event bei Token-Änderung – kein Seiten-Neuladen nötig
+- Fehlermeldungen enthalten jetzt HTTP-Status + Response-Body (erleichtert Debugging)
+- PKCE entfernt: Google Cloud Console OAuth-Client ist als "Web application" registriert und benötigt `client_secret` im Token-Exchange
+- Integration ist jetzt in Production und für alle nutzbar
+
+### UI & Navigation
+- "+ Neuer Charakter" aus Nav-Bar entfernt, stattdessen als primärer Button auf der Startseite
+- Google Drive-Status-Info im Nav-Bar (nur sichtbar wenn Drive-Features aktiviert sind)
+- Versionsbanner: In Dev-Builds wird der normale Versionstext ausgeblendet, nur der DEV-Badge bleibt sichtbar
+
+### Installation & CI
+- CI-Pipeline aktualisiert
+- Installationsskripte laden fehlende Abhängigkeiten nur noch bei Bedarf (kein erneuter Download wenn bereits vorhanden)
+
+### Sonstiges
+- Vorbereitungen für PDF-Export von Charakterblättern
+
 ## [v0.11.3] - 2026-06-19
-
-## [v0.11.2] - 2026-06-19
-
-## [v0.11.1] - 2026-06-19
-
-# Changelog
 
 ### Google Drive Integration
 - Import/Export von Charakteren und Regelwerken via Google Drive

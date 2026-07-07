@@ -68,9 +68,13 @@ class OutputDialog:
 
 def download_zip(xml_dir):
     os.makedirs(xml_dir, exist_ok=True)
+    expected = [os.path.join(xml_dir, xml_name) for xml_name, _ in XML_FILES.values()]
+    if all(os.path.isfile(p) for p in expected):
+        return False
     with urllib.request.urlopen(EVA_ZIP_URL) as response:
         with open(TEMP_ZIP, "wb") as f:
             shutil.copyfileobj(response, f)
+    return True
 
 
 def extract_xmls(xml_dir):
@@ -113,6 +117,8 @@ def parse_all(xml_dir, json_dir):
 
 
 def download_pdf(pdf_dst):
+    if os.path.isfile(pdf_dst):
+        return
     os.makedirs(os.path.dirname(pdf_dst), exist_ok=True)
     with urllib.request.urlopen(PDF_URL) as response:
         with open(pdf_dst, "wb") as f:
@@ -133,20 +139,22 @@ def main():
     dialog = OutputDialog()
 
     def log(text):
-        dialog.append(text)
+        dialog.append(text + '\n')
 
     def run_pipeline():
         try:
             # --- EVA Teil ---
             dialog.append("=== Schritt 1/7: EVA-Download ===\n\n")
-            download_zip(XML_DIR)
-            dialog.append("\u2713 EVA-Zip erfolgreich geladen\n\n")
+            downloaded = download_zip(XML_DIR)
+            if downloaded:
+                dialog.append("\u2713 EVA-Zip erfolgreich geladen\n\n")
+                dialog.append("=== Schritt 2/7: Extrahieren ===\n\n")
+                extract_xmls(XML_DIR)
+                dialog.append(f"\u2713 XML-Dateien extrahiert nach: {XML_DIR}\n\n")
+            else:
+                dialog.append("\u2713 XML-Dateien bereits vorhanden \u2013 Download \u00fcbersprungen\n\n")
 
-            dialog.append("=== Schritt 2/7: Extrahieren ===\n\n")
-            extract_xmls(XML_DIR)
-            dialog.append(f"\u2713 XML-Dateien extrahiert nach: {XML_DIR}\n\n")
-
-            dialog.append("=== Schritt 3/7: EVA-XML parsed ===\n\n")
+            dialog.append("=== Schritt 3/7: EVA-XML parsen ===\n\n")
             results = parse_all(XML_DIR, JSON_DIR)
             for key in results:
                 _, json_name = XML_FILES[key]
@@ -160,13 +168,13 @@ def main():
             download_pdf(PDF_DST)
             dialog.append(f"\u2713 PDF gespeichert als: {PDF_DST}\n\n")
 
-            dialog.append("=== Schritt 5/7: Lerntabellen parsed ===\n\n")
+            dialog.append("=== Schritt 5/7: Lerntabellen parsen ===\n\n")
             mogadil_out = os.path.join(JSON_DIR, "mogadil.json")
             parse_mogadil_document(PDF_DST, mogadil_out, log=log)
             dialog.append("\n")
 
             # --- Arkanum PDF Parsing ---
-            dialog.append("=== Schritt 6/7: Arkanum PDF parsed ===\n\n")
+            dialog.append("=== Schritt 6/7: Arkanum PDF parsen ===\n\n")
             project_dir = os.path.dirname(TOOLS_DIR)
             arkanum_script = os.path.join(TOOLS_DIR, "scripts", "RuleBookParser", "parse_arkanum.py")
             result = subprocess.run(

@@ -5,12 +5,14 @@ import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad, esForNextGrad } from '../services/GradUtils'
 import { sheetSkillService } from '../services/SheetSkillService'
+import { isCaster as checkCaster, resolveName } from '../services/CharacterService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
-
-// ── Google Drive Sichtbarkeit ─────────────────────────────────────────────────
-const isDriveVisible = import.meta.env.DEV || import.meta.env.VITE_GOOGLE_DRIVE_VISIBLE === 'true'
+import { latexExportService } from '../services/LatexExportService'
+import { sanitizeFileName, saveFileAs } from '../services/FileProvider'
+//import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
+import clsContent from '../../tools/LaTeX/m5figur-magusng.cls?raw'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +57,9 @@ const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
-const browserSupported = 'showSaveFilePicker' in window
+const isOnline = ref(navigator.onLine)
+window.addEventListener('online', () => { isOnline.value = true })
+window.addEventListener('offline', () => { isOnline.value = false })
 const showSpellDetail = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
@@ -68,37 +72,17 @@ const nextGradEs = computed(() =>
   character.value ? esForNextGrad(character.value.totalEs) : 0,
 )
 
-const raceName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.raceId ?? '—'
-  return r.races.find(x => x.id === c.raceId)?.name ?? c.raceId
-})
-
-const typeName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.typeId ?? '—'
-  return r.types.find(x => x.id === c.typeId)?.name ?? c.typeId
-})
-
-const originName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.originId ?? '—'
-  return r.origins.find(x => x.id === c.originId)?.name ?? c.originId
-})
-
-const statusName = computed(() => {
-  const c = character.value; const r = rules.value
-  if (!c || !r) return c?.socialStatusId ?? '—'
-  return r.socialStatuses.find(x => x.id === c.socialStatusId)?.name ?? c.socialStatusId
-})
+const raceName  = computed(() => resolveName(rules.value?.races,          character.value?.raceId))
+const typeName  = computed(() => resolveName(rules.value?.types,          character.value?.typeId))
+const originName = computed(() => resolveName(rules.value?.origins,       character.value?.originId))
+const statusName = computed(() => resolveName(rules.value?.socialStatuses, character.value?.socialStatusId))
 
 /** True if the character's type has spellCosts (can learn spells). */
 const isCaster = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return false
   const t = r.types.find(x => x.id === c.typeId)
-  const sc = t?.spellCosts
-  return !!sc && Object.keys(sc).length > 0
+  return checkCaster(t)
 })
 
 /**
@@ -285,6 +269,61 @@ async function exportToDrive(): Promise<void> {
   }
 }
 
+/** Export the character as a .tex file download. */
+async function exportLatex(): Promise<void> {
+  const char = character.value; const r = rules.value
+  if (!char || !r) return
+  try {
+    const tex = latexExportService.generate(char, r)
+    const name = sanitizeFileName(char.name) + '.tex'
+    await saveFileAs(tex, name, 'text/plain')
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'LaTeX export failed.'
+  }
+}
+
+/**
+ * Export the character as a compiled PDF via TeXLive.net.
+ *
+ * Uses a programmatic <form> submit with target="_blank" to bypass CORS:
+ * the browser natively sends the multipart POST across origins, and the
+ * resulting PDF (or error log) opens in a new tab.
+ */
+function exportLatexPdf(): void {
+  const char = character.value; const r = rules.value
+  if (!char || !r) return
+  if (!isOnline.value) {
+    errorMessage.value = 'PDF-Export benötigt eine Internetverbindung.'
+    return
+  }
+
+  const tex = latexExportService.generate(char, r)
+  const form = document.createElement('form')
+  form.action = 'https://texlive.net/cgi-bin/latexcgi'
+  form.method = 'POST'
+  form.enctype = 'multipart/form-data'
+  form.target = '_blank'
+
+  const addField = (name: string, value: string) => {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    form.appendChild(input)
+  }
+
+  addField('filename[]', 'document.tex')
+  addField('filecontents[]', tex)
+  addField('filename[]', 'm5figur-magusng.cls')
+//  addField('filename[]', 'm5figur-mv.cls')
+  addField('filecontents[]', clsContent)
+  addField('return', 'pdf')
+
+  document.body.appendChild(form)
+  form.submit()
+  document.body.removeChild(form)
+}
+
 onMounted(async () => {
   try {
     const id = route.params.id as string
@@ -334,14 +373,24 @@ onMounted(async () => {
           >{{ UI.spells }}</router-link>
           <router-link :to="{ name: 'character-edit', params: { id: character.id } }" class="btn-nav">{{ UI.navEdit }}</router-link>
           <router-link :to="{ name: 'equipment', params: { id: character.id } }" class="btn-nav">{{ UI.navEquipment }}</router-link>
+        </nav>
+        <nav class="sheet-nav sheet-nav--export">
           <button
             class="btn-nav"
-            :disabled="!browserSupported"
-            :title="browserSupported ? UI.sheetExportHint : UI.browserUnsupportedHint"
             @click="exportCharacter"
           >{{ UI.sheetExport }}</button>
           <button
-            v-if="isDriveVisible"
+            class="btn-nav"
+            :disabled="isUnsupportedType"
+            @click="exportLatex"
+          >{{ UI.sheetExportLatex }}</button>
+          <button
+            class="btn-nav"
+            :disabled="isUnsupportedType || !isOnline"
+            :title="!isOnline ? 'PDF-Export benötigt Internet' : ''"
+            @click="exportLatexPdf"
+          >{{ UI.sheetExportLatexPdf }}</button>
+          <button
             class="btn-nav"
             @click="exportToDrive"
           >{{ UI.exportGoogleDrive }}</button>
@@ -665,11 +714,20 @@ onMounted(async () => {
 
 .sheet-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.sheet-nav {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sheet-nav--export {
+  width: 100%;
 }
 
 .sheet-title {
@@ -688,12 +746,6 @@ onMounted(async () => {
   font-size: 0.85em;
   font-weight: 600;
   white-space: nowrap;
-}
-
-.sheet-nav {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
 }
 
 .card {

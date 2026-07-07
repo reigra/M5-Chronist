@@ -28,6 +28,12 @@ export interface Skill {
   linkedProperty: string
   /** Optional derived bonus key to add on top (e.g. AnB, AbB, ZauB, ResBg, ResBk) */
   bonusKey?: 'AusB' | 'SchB' | 'AnB' | 'AbB' | 'ZauB' | 'ResBg' | 'ResBk'
+  /**
+   * Optional: ID der Basis-Fertigkeit bei gestapelten Fertigkeiten (Stacked Skill).
+   * Der effektive FW ergibt sich aus FW der Basis-Fertigkeit + FW dieser Fertigkeit.
+   * Beispiel: Sehen (FW 2) mit baseSkillId "Wahrnehmung" (FW 6) → effektiver FW 8.
+   */
+  baseSkillId?: string
   /** Optional notes or rule exceptions */
   notes: string
   /**

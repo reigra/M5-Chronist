@@ -43,6 +43,21 @@ function computeEw(character: Character, skill: Skill, fw: number): number {
   return fw + propertyBonus + derivedBonus
 }
 
+/**
+ * Resolve the effective FW for a skill.
+ *
+ * For stacked skills (skills with baseSkillId), the effective FW is the
+ * sum of the base skill's character value and this skill's character value.
+ * Falls the base skill nicht gelernt wurde, wird 0 als Basis angenommen.
+ * For regular skills, the FW is returned as-is.
+ */
+function resolveFw(character: Character, skill: Skill, csValue: number): number {
+  if (!skill.baseSkillId) return csValue
+  const baseCharSkill = character.skills.find(s => s.skillId === skill.baseSkillId)
+  const baseFw = baseCharSkill?.value ?? 0
+  return baseFw + csValue
+}
+
 export class SheetSkillService {
   /**
    * Build all skill rows for the character sheet.
@@ -96,7 +111,7 @@ export class SheetSkillService {
         const displayName = cs.skillId.replace(':', ': ')
         learnedRows.push({
           name: displayName,
-          displayEw: computeEw(character, baseSkill, cs.value),
+          displayEw: computeEw(character, baseSkill, resolveFw(character, baseSkill, cs.value)),
           linkedProperty: baseSkill.linkedProperty ?? '—',
           unlearned: false,
           isWeapon: false,
@@ -112,7 +127,7 @@ export class SheetSkillService {
 
       learnedRows.push({
         name: skill.name,
-        displayEw: computeEw(character, skill, cs.value),
+        displayEw: computeEw(character, skill, resolveFw(character, skill, cs.value)),
         linkedProperty: skill.linkedProperty ?? '—',
         unlearned: false,
         isWeapon: skill.typ === 'Waffenfertigkeit',

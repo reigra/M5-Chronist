@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
+import { isCaster as checkCaster } from '../services/CharacterService'
 import type { Character, CharacterSkill, CharacterSpell } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
@@ -134,8 +135,7 @@ const isCaster = computed(() => {
   const r = rules.value
   if (!r || !typeId.value) return false
   const t = r.types.find(x => x.id === typeId.value)
-  const sc = t?.spellCosts
-  return !!sc && Object.keys(sc).length > 0
+  return checkCaster(t)
 })
 
 /** Spells available to add: in the type’s spell groups, not yet on the character. */

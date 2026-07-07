@@ -42,6 +42,8 @@ def parse_tekosten(el: ET.Element) -> dict:
 
 SKIP_SKILLS = {'AP verbessern', 'Fechten tevarrischer Stil'}
 
+STACKED_SKILLS = {'Hören', 'Nachtsicht', 'Riechen', 'Sechster Sinn', 'Sehen'}
+
 SKILL_NAME_CORRECTIONS = {
     'Alchimie': 'Alchemie',
     'Thaumatographie': 'Thaumagraphie',
@@ -350,6 +352,9 @@ def parse_kodex_document(xml_path: str) -> dict:
         elif typ == 'angeboreneFertigkeit':
             skill = parse_angeborene_fertigkeit(el)
             skills.append(skill)
+
+        if name in STACKED_SKILLS:
+            skill['baseSkillId'] = 'Wahrnehmung'
                 
     types = [parse_klasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Klasse']
     races = [parse_rasse(el) for el in lernstoffe if attr(el, 'Typ') == 'Rasse']

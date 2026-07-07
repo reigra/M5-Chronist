@@ -241,8 +241,8 @@ MagusNG-PWA/
 │   │   └── Spell.ts
 │   └── views/                     ← Page-level Vue components
 │       ├── AdvancementView.vue    ← EP management: Lernen / Steigern for skills
-│       ├── CharacterFormView.vue  ← Create a new character or edit an existing one
-│       ├── CharacterSheetView.vue ← Read-only character display with JSON export
+│       ├── CharacterEditView.vue  ← Create a new character or edit an existing one
+│       ├── CharacterView.vue ← Read-only character display with JSON export
 │       ├── HomeView.vue           ← Dashboard: character list + active rulebooks
 │       ├── RulesView.vue          ← Import and manage rulebook sources (IndexedDB)
 │       └── SpellsView.vue         ← EP-based spell learning for caster types
@@ -267,8 +267,8 @@ MagusNG-PWA/
 | `CharacterStorage` | IndexedDB: list/load/save characters; JSON file export and import |
 | `GradUtils` | Pure functions for Grad thresholds and next-Grad ES targets |
 | `HomeView` | Dashboard: character list, active-rulebook summary, JSON import entry point |
-| `CharacterFormView` | Unified create/edit form; validates against loaded rules |
-| `CharacterSheetView` | Read-only display of all character data with JSON export |
+| `CharacterEditView` | Unified create/edit form; validates against loaded rules |
+| `CharacterView` | Read-only display of all character data with JSON export |
 | `AdvancementView` | EP management UI: add EP, learn new skills, advance known skills |
 | `SpellsView` | Spell learning UI: displays learnable spells by type, deducts EP on confirm |
 | `RulesView` | Rules management: import rulebook JSON files, enable/disable sources |

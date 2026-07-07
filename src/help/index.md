@@ -85,6 +85,28 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
 **Regelwerke sichern:** Unter **Regeln** kannst du Regeldateien exportieren (Google Drive) oder lokal speichern.
 
-**Google Drive:** Falls verfügbar, kannst du Charaktere und Regeln mit Google Drive synchronisieren. Dafür ist eine Internetverbindung erforderlich.
+**Google Drive:** Du kannst Charaktere und Regeln mit Google Drive synchronisieren.
+
+1. Klicke in der Titelleiste auf das Google Drive Symbol, um dich zu verbinden.
+   ![Google Drive Verbinden](GoogleDriveConnect.png)
+2. Es öffnet sich ein Dialog – gewähre der App die erforderlichen Zugriffsrechte.
+   ![Google Drive Zugriff](GoogleDriveAccess.png)
+3. Nach erfolgreicher Verbindung kannst du über die Export/Import-Buttons deine Daten mit Google Drive synchronisieren.
+
+> [!WARNING] Zugriffsrechte
+> Du musst der App die Berechtigung erteilen, auf dein Google Drive zuzugreifen. Ohne diese Bestätigung kann keine Synchronisation stattfinden.
+
+> [!TIP]
+> Neben dem Export einzelner Charaktere kannst du auch ein **vollständiges Backup** aller Daten erstellen.
+
+**Backup erstellen:** Scrolle auf der Startseite nach unten zum Bereich **Backup**.
+
+- **Download Backup** — Lädt alle Charaktere und Regelwerke als ZIP-Datei herunter (`MagusNG-Backup_YYYY-MM-DD.zip`).
+- **Backup to Drive** — Lädt dasselbe Backup in dein Google Drive hoch (erfordert Verbindung).
+
+**Backup wiederherstellen:** Klicke auf **Restore Backup** oder **Restore from Drive**, um eine zuvor erstellte ZIP-Datei auszuwählen.
+
+- Bestehende Charaktere können überschrieben, einzeln abgefragt oder übersprungen werden.
+- Alle Regelwerke werden mit ihren Prioritäten und Aktivierungsstatus wiederhergestellt.
 
 Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)

@@ -12,17 +12,17 @@ const router = createRouter({
     {
       path: '/character/new',
       name: 'character-new',
-      component: () => import('../views/CharacterFormView.vue'),
+      component: () => import('../views/CharacterEditView.vue'),
     },
     {
       path: '/character/:id',
       name: 'character-sheet',
-      component: () => import('../views/CharacterSheetView.vue'),
+      component: () => import('../views/CharacterView.vue'),
     },
     {
       path: '/character/:id/edit',
       name: 'character-edit',
-      component: () => import('../views/CharacterFormView.vue'),
+      component: () => import('../views/CharacterEditView.vue'),
     },
     {
       path: '/character/:id/advancement',

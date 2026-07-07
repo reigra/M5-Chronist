@@ -120,7 +120,7 @@ Diese Variablen müssen auch in den GitLab-CI-Variablen hinterlegt werden (Setti
 | `src/services/CharacterStorage.ts` | Geändert | Neue Methoden `readFromDrive()` / `importFromDrive()` / `exportToDrive()` / `remove()` |
 | `src/services/RulesStorage.ts` | Geändert | Neue Methoden `importFromDrive()` / `exportToDrive()` |
 | `src/views/HomeView.vue` | Geändert | Button für Google Drive Charakter-Import (mit Diff/Overwrite-Dialog) |
-| `src/views/CharacterSheetView.vue` | Geändert | Button für Export nach Google Drive |
+| `src/views/CharacterView.vue` | Geändert | Button für Export nach Google Drive |
 | `src/views/RulesView.vue` | Geändert | Buttons für Import/Export von Regelwerken via Google Drive |
 
 ### 3.2 Interface `FileProvider`
@@ -567,7 +567,7 @@ driveErrorPrefix:       'Google Drive Fehler:',
 
 Der Import-Drive-Dialog zeigt bei existierendem Charakter (gleiche `id`) eine Diff-Ansicht und fragt nach Bestätigung zum Überschreiben.
 
-**CharacterSheetView** — Export-Button für Google Drive:
+**CharacterView** — Export-Button für Google Drive:
 
 ```html
 <button class="btn-nav" @click="exportToDrive">

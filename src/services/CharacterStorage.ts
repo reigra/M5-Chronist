@@ -1,5 +1,6 @@
 import type { Character } from '../types/Character'
-import { GoogleDriveProvider, formatDate, sanitizeFileName } from './FileProvider'
+import { migrate } from './CharacterService'
+import { GoogleDriveProvider, formatDate, sanitizeFileName, saveFileAs } from './FileProvider'
 
 const DB_NAME = 'MagusNG'
 const DB_VERSION = 1
@@ -67,95 +68,10 @@ export class CharacterStorage {
         db.close()
         const raw = request.result
         if (!raw) { resolve(null); return }
-        resolve(CharacterStorage.migrate(raw) as Character)
+        resolve(migrate(raw) as Character)
       }
       request.onerror = () => { db.close(); reject(request.error) }
     })
-  }
-
-  /**
-   * Migrate a raw IndexedDB record to the current Character schema.
-   * Handles the old format (baseProperties + derivedProperties) transparently.
-   */
-  private static migrate(raw: any): Character {
-    if (raw.baseProperties && !raw.properties) {
-      const bp = raw.baseProperties ?? {}
-      const dp = raw.derivedProperties ?? {}
-      raw = {
-        ...raw,
-        properties: {
-          St: bp.St ?? 0, Gs: bp.Gs ?? 0, Gw: bp.Gw ?? 0,
-          Ko: bp.Ko ?? 0, In: bp.In ?? 0, Zt: bp.Zt ?? 0,
-          pA: dp.pA ?? 0, Wk: dp.Wk ?? 0, Au: dp.Au ?? 0,
-          LP: dp.LP ?? 0, AP: dp.AP ?? 0, B: dp.B ?? 0,
-        },
-        boni: {
-          AusB:  dp.AusB  ?? 0,
-          SchB:  dp.SchB  ?? 0,
-          AnB:   dp.AnB   ?? 0,
-          AbB:   dp.AbB   ?? 0,
-          ZauB:  dp.ZauB  ?? 0,
-          ResBg: dp.ResBg ?? 0,
-          ResBk: dp.ResBk ?? dp.ResB ?? 0,
-        },
-      }
-      delete raw.baseProperties
-      delete raw.derivedProperties
-    }
-
-    // Ensure innate skills are present with correct starting values.
-    const knownIds = new Set((raw.skills ?? []).map((s: any) => s.skillId))
-    const props = raw.properties ?? {}
-    const boni = raw.boni ?? {}
-
-    // Raufen: (St+Gw)/20 + AnB, Zwerge +1
-    if (!knownIds.has('Raufen')) {
-      const rv = Math.floor(((props.St ?? 0) + (props.Gw ?? 0)) / 20)
-               + (boni.AnB ?? 0)
-               + (raw.raceId === 'zwerg' ? 1 : 0)
-      raw.skills = [...(raw.skills ?? []), { skillId: 'Raufen', value: Math.max(0, rv) }]
-    }
-
-    // Trinken: Ko/10
-    if (!knownIds.has('Trinken')) {
-      const tv = Math.floor((props.Ko ?? 0) / 10)
-      raw.skills = [...(raw.skills ?? []), { skillId: 'Trinken', value: Math.max(0, tv) }]
-    }
-
-    // Wahrnehmung: FW 6
-    if (!knownIds.has('Wahrnehmung')) {
-      raw.skills = [...(raw.skills ?? []), { skillId: 'Wahrnehmung', value: 6 }]
-    }
-
-    // Abwehr: FW 11
-    if (!knownIds.has('Abwehr')) {
-      raw.skills = [...(raw.skills ?? []), { skillId: 'Abwehr', value: 11 }]
-    }
-
-    // Resistenz: FW 11
-    if (!knownIds.has('Resistenz')) {
-      raw.skills = [...(raw.skills ?? []), { skillId: 'Resistenz', value: 11 }]
-    }
-
-    // Zaubern: FW 11 für Charaktere mit Zaubersprüchen
-    if (Array.isArray(raw.spells) && raw.spells.length > 0 && !knownIds.has('Zaubern')) {
-      raw.skills = [...(raw.skills ?? []), { skillId: 'Zaubern', value: 11 }]
-    }
-
-    // Migrate skills: add pp if missing
-    if (Array.isArray(raw.skills)) {
-      raw.skills = raw.skills.map((s: any) => s.pp === undefined ? { ...s, pp: 0 } : s)
-    }
-
-    // Migrate spells: convert string[] to CharacterSpell[], add pp if missing
-    if (Array.isArray(raw.spells)) {
-      raw.spells = raw.spells.map((s: any) => {
-        if (typeof s === 'string') return { spellId: s, pp: 0 }
-        return s.pp === undefined ? { ...s, pp: 0 } : s
-      })
-    }
-
-    return raw
   }
 
   /**
@@ -197,7 +113,7 @@ export class CharacterStorage {
 
     const file = await fileHandle.getFile()
     const text = await file.text()
-    return CharacterStorage.migrate(JSON.parse(text)) as Character
+    return migrate(JSON.parse(text)) as Character
   }
 
   /**
@@ -213,28 +129,9 @@ export class CharacterStorage {
    * @throws Error if the File System Access API is not available.
    */
   async exportToFile(character: Character): Promise<void> {
-    if (!('showSaveFilePicker' in window)) {
-      throw new Error(
-        'File System Access API is not supported in this browser. ' +
-        'Please use Chrome, Edge, or Opera.',
-      )
-    }
-
-    let fileHandle: FileSystemFileHandle
-    try {
-      fileHandle = await (window as any).showSaveFilePicker({
-        suggestedName: `${character.name}.json`,
-        types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }],
-      })
-    } catch (e) {
-      // User cancelled the dialog — nothing to do.
-      if (e instanceof Error && e.name === 'AbortError') return
-      throw e
-    }
-
-    const writable = await fileHandle.createWritable()
-    await writable.write(JSON.stringify(character, null, 2))
-    await writable.close()
+    const content = JSON.stringify(character, null, 2)
+    const fileName = `${sanitizeFileName(character.name)}.json`
+    await saveFileAs(content, fileName, 'application/json')
   }
 
   /**
@@ -264,7 +161,7 @@ export class CharacterStorage {
 
     const file = await fileHandle.getFile()
     const text = await file.text()
-    const character = CharacterStorage.migrate(JSON.parse(text)) as Character
+    const character = migrate(JSON.parse(text)) as Character
     await this.save(character)
     return character
   }
@@ -279,7 +176,7 @@ export class CharacterStorage {
   async readFromDrive(): Promise<Character> {
     const provider = new GoogleDriveProvider('characters')
     const { data } = await provider.readFile()
-    return CharacterStorage.migrate(data) as Character
+    return migrate(data) as Character
   }
 
   /**
