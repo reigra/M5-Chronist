@@ -11,7 +11,7 @@ import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import { latexExportService } from '../services/LatexExportService'
 import { sanitizeFileName, saveFileAs } from '../services/FileProvider'
-import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
+import clsContent from '../../tools/LaTeX/m5figur-magusng.cls?raw'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -313,7 +313,7 @@ function exportLatexPdf(): void {
 
   addField('filename[]', 'document.tex')
   addField('filecontents[]', tex)
-  addField('filename[]', 'm5figur-mv.cls')
+  addField('filename[]', 'm5figur-magusng.cls')
   addField('filecontents[]', clsContent)
   addField('return', 'pdf')
 
