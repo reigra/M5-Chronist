@@ -779,7 +779,7 @@
 	   \toolboxIfElse{\ifnum#1>80 }{\def\mg@WertLeit{1}}{}}}}}}
 \newcommand{\mg@Leit}[1]{\LetData\mg@tmpB{#1}%
 	\expandafter\mg@calcLeit\expandafter{\mg@tmpB}}
-\newcommand{\mg@LeitX}[3]{\renewcommand{\mg@tmpA}[1]{\mg@calcLeit{###2}}%
+\newcommand{\mg@LeitX}[3]{\renewcommand{\mg@tmpA}[#1]{\mg@calcLeit{###2}}%
 	\LetData\mg@tmpB{#3}\expandafter\mg@tmpA\mg@tmpB}
 \newcommand{\mg@SetWertLeit}[2]{\toolboxTokDef{#1}\mg@WertLeit}
 \newcommand{\mg@calcWert}[2]{\toolboxTokDef{#1}\mg@WertMod

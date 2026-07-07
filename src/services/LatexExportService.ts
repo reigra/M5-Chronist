@@ -25,6 +25,7 @@ export class LatexExportService {
     const push = (...args: string[]) => { for (const a of args) lines.push(a) }
 
     // ── Preamble ──────────────────────────────────────────────────────────────
+//    push('\\documentclass{m5figur-mv}[2026/07/07]')
     push('\\documentclass{m5figur-magusng}[2026/07/07]')
     push('')
     push('\\begin{document}')
@@ -100,7 +101,17 @@ export class LatexExportService {
     push('')
     push('% Fertigkeiten — Figurenblatt')
 
-    // Separate weapon and non-weapon skills
+    // Mappings für Sinne (eigenes \DefData-Format statt \Fertigkeit1)
+    const SENSE_LATEX_KEYS: Record<string, string> = {
+      'Hören': 'Hoeren',
+      'Nachtsicht': 'Nachtsicht',
+      'Riechen': 'Riechen',
+      'Sechster Sinn': 'SechsterSinn',
+      'Sehen': 'Sehen',
+    }
+    const SENSE_IDS = new Set(Object.keys(SENSE_LATEX_KEYS))
+    const senses: Array<{ latexKey: string; modifier: number; effective: number }> = []
+
     const weaponSkillIds = new Set<string>()
     const weaponSkills: Array<{ id: string; value: number; pp: number }> = []
     const nonWeaponSkills: Array<{ id: string; value: number; pp: number }> = []
@@ -113,12 +124,28 @@ export class LatexExportService {
       const isWeapon = skillDef?.typ === 'Waffenfertigkeit'
         || this.isMultiInstanceWeapon(cs.skillId, rules)
 
+      // Bei gestapelten Fertigkeiten (baseSkillId) den effektiven FW berechnen
+      const effectiveValue = skillDef?.baseSkillId
+        ? (character.skills.find(s => s.skillId === skillDef.baseSkillId)?.value ?? 0) + cs.value
+        : cs.value
+
+      // Sinne haben ihr eigenes \DefData-Format statt \Fertigkeit1
+      if (SENSE_IDS.has(cs.skillId)) {
+        senses.push({ latexKey: SENSE_LATEX_KEYS[cs.skillId], modifier: cs.value, effective: effectiveValue })
+        continue
+      }
+
       if (isWeapon) {
-        weaponSkills.push({ id: cs.skillId, value: cs.value, pp: cs.pp ?? 0 })
+        weaponSkills.push({ id: cs.skillId, value: effectiveValue, pp: cs.pp ?? 0 })
         weaponSkillIds.add(cs.skillId)
       } else {
-        nonWeaponSkills.push({ id: cs.skillId, value: cs.value, pp: cs.pp ?? 0 })
+        nonWeaponSkills.push({ id: cs.skillId, value: effectiveValue, pp: cs.pp ?? 0 })
       }
+    }
+
+    // Sinne als \DefData ausgeben (Format: {modifier}{effectiveFW})
+    for (const s of senses) {
+      push(`\\DefData{${s.latexKey}}{{${s.modifier}}{${s.effective}}}`)
     }
 
     // Non-weapon: \Fertigkeit1

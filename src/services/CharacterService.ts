@@ -203,6 +203,14 @@ export function migrate(raw: any): Character {
     raw.skills = [...(raw.skills ?? []), { skillId: 'Wahrnehmung', value: 6 }]
   }
 
+  // Gestapelte Fertigkeiten auf Basis von Wahrnehmung: default FW 0
+  const stackedWahrnehmung = ['Hören', 'Nachtsicht', 'Riechen', 'Sechster Sinn', 'Sehen']
+  for (const skillId of stackedWahrnehmung) {
+    if (!knownIds.has(skillId)) {
+      raw.skills = [...(raw.skills ?? []), { skillId, value: 0 }]
+    }
+  }
+
   // Abwehr: FW 11
   if (!knownIds.has('Abwehr')) {
     raw.skills = [...(raw.skills ?? []), { skillId: 'Abwehr', value: 11 }]
