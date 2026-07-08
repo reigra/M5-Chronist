@@ -3,6 +3,7 @@ import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
 import type { SkillRulesConfig } from '../types/SkillRules'
 
+// TODO: not imported externally — export can be removed
 export interface SheetSkillRow {
   skillId: string
   name: string
@@ -58,6 +59,7 @@ function resolveFw(character: Character, skill: Skill, csValue: number): number 
   return baseFw + csValue
 }
 
+// TODO: not imported by name — only `sheetSkillService` singleton is used externally
 export class SheetSkillService {
   /**
    * Build all skill rows for the character sheet.

@@ -12,6 +12,7 @@ const STORE = 'characters'
  * All public methods open the database on demand and close it when done.
  * Characters are identified by their `id` field (used as the object store key).
  */
+// TODO: not imported by name — only `characterStorage` singleton is used externally
 export class CharacterStorage {
   /**
    * Open (or create) the IndexedDB database.

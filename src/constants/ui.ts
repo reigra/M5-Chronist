@@ -168,6 +168,7 @@ export const UI = {
   equipLabelSkill:       'Fertigkeit',
 
   // ── Leere-Listen-Hinweise ────────────────────────────────────────────────────
+  // TODO: unused — can be removed
   emptySkillsLearned: 'Noch keine Fertigkeiten gelernt.',
   emptySkillsForm:    'Noch keine Fertigkeiten hinzugefügt.',
   emptySpellsLearned: 'Noch keine Zaubersprüche gelernt.',
@@ -190,6 +191,7 @@ export const UI = {
 
   // ── Charakterbogen (CharacterView) ──────────────────────────────────────
   sheetExport:          'Download Charakter',
+  // TODO: unused — can be removed
   sheetExportHint:      'Charakter exportieren',
   sheetUnsupportedType: 'Charakter wird von geladenen Regelwerken nicht unterstützt.',
   sheetExportLatex:     'Download LaTeX',
@@ -301,6 +303,7 @@ export const UI = {
   restoreTitle:         'Backup wiederherstellen',
   restoreSummary:       'Regelwerke: {rules} — Charaktere: {chars}',
   restoreConflicts:     'Folgende Charaktere sind bereits vorhanden:',
+  // TODO: unused — can be removed
   restoreNoConflicts:   'Keine Konflikte — alle Charaktere sind neu.',
   restoreOverwriteAll:  'Alle überschreiben',
   restoreAskEach:       'Einzeln fragen',

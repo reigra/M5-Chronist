@@ -44,6 +44,7 @@ export interface EquipmentItem {
   skillId?: string
 }
 
+// TODO: unused — can be removed
 export interface CharacterEquipmentItem {
   name: string
   group: string

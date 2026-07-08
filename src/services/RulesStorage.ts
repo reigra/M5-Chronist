@@ -15,6 +15,7 @@ const SPELL_GROUPS = [
  * One source entry as stored in IndexedDB.
  * Contains the full rulebook data plus display metadata and an enabled flag.
  */
+// TODO: not imported externally — export can be removed
 export interface StoredSource {
   id: string
   title: string
@@ -52,6 +53,7 @@ export interface AssetLink {
  *   const summary = await rulesStorage.importFiles()
  *   const rules   = await rulesStorage.loadActive()
  */
+// TODO: not imported by name — only `rulesStorage` singleton is used externally
 export class RulesStorage {
   /**
    * Open (or create) the IndexedDB database.

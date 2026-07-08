@@ -11,6 +11,7 @@ import { computeGrad } from './GradUtils'
  *   const tex = latexExportService.generate(character, rules)
  *   const blob = await latexExportService.compileToPdf(tex, clsContent)
  */
+// TODO: not imported by name — only `latexExportService` singleton is used externally
 export class LatexExportService {
 
   /**
