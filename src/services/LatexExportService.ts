@@ -301,30 +301,40 @@ export class LatexExportService {
   /**
    * Format the damage string for a weapon item.
    *
-   * - Nahkampf (not Fernkampf): replace trailing "+N" with "\PlusSB{N}"
-   *   so LaTeX automatically adds the character's Schadensbonus.
-   * - Fernkampf: keep as-is (no strength bonus).
-   * - No match: return raw damage or empty string.
+   * Extracts the numeric modifier from the dice string (e.g. "-1" from "1W6-1"),
+   * adds the item-specific damage bonus (schb), and:
+   *
+   * - Nahkampf: outputs "...\PlusSB{sum}" so LaTeX adds the character's Schadensbonus.
+   * - Fernkampf: outputs "Würfel+sum" flat (no \PlusSB, no SchB).
    */
   private formatWeaponDamage(item: EquipmentItem): string {
     const dmg = item.damage ?? ''
     if (!dmg) return ''
 
-    // Determine if this is a ranged weapon — check skill group
-    // Items without skillId or unknown group get \PlusSB (safer for melee defaults)
-    if (item.skillId && /fern/i.test(item.skillId)) {
-      return dmg
+    // Determine if this is a ranged weapon — check group or waffentyp or skillId
+    const isRanged =
+      (item.waffentyp === 'Fern') ||
+      (item.group?.includes('Fern')) ||
+      (!!item.skillId && /fern/i.test(item.skillId))
+
+    // Parse the dice string: e.g. "1W6-1" → dice="1W6", modifier=-1
+    const clean = dmg.replace(/\s+/g, '')
+    const match = clean.match(/^(\d+W\d+)([+-]\d+)?$/i)
+    if (!match) return dmg // fallback for unexpected format
+
+    const dice = match[1]
+    const baseMod = match[2] ? parseInt(match[2], 10) : 0
+    const totalMod = baseMod + (item.schb ?? 0)
+
+    if (isRanged) {
+      // Flat damage string, no \PlusSB — SchB does not apply
+      if (totalMod === 0) return dice
+      const sign = totalMod >= 0 ? '+' : ''
+      return `${dice}${sign}${totalMod}`
     }
 
-    // Match trailing "+<number>", e.g. "1W6+1" → prefix="1W6", bonus="1"
-    const match = dmg.match(/^(.+?)\+(\d+)$/)
-    if (match) {
-      return `${match[1]}\\PlusSB{${match[2]}}`
-    }
-
-    // No trailing bonus — still add bare \PlusSB{0} so LaTeX applies SchB
-    // e.g. "1W6" → "1W6\PlusSB{0}"
-    return `${dmg}\\PlusSB{0}`
+    // Melee: use \PlusSB so LaTeX adds the character's Schadensbonus
+    return `${dice}\\PlusSB{${totalMod}}`
   }
 
 }
