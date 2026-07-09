@@ -41,8 +41,7 @@ def parse_zauber(el: ET.Element) -> dict:
         'effectArea': attr(dp, 'Wirkungsbereich'),
         'duration': attr(dp, 'Wirkungsdauer'),
         'origin': attr(dp, 'Ursprung'),
-        'shortDescription': '',   # nicht in EVA-XML
-        'source': ''             # nicht in EVA-XML
+        # shortDescription und source werden nicht gesetzt (Merge kann sie aus anderen Quellen füllen)
     }
 
 def parse_arkanum_document(xml_path: str) -> dict:

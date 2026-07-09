@@ -35,7 +35,6 @@ def parse_ding(el: ET.Element) -> dict:
     }
     if attr(el, 'gruppe') in WEAPON_GROUPS:
         item['waffe'] = True
-        item['damage'] = ''
         item['propertyRestrictions'] = {}
         item['distance'] = []
         item['saveAP'] = 0

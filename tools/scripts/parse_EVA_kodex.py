@@ -94,11 +94,11 @@ def parse_fertigkeit(el: ET.Element):
         'baseValue': tek['baseValue'],
         'maxValue': tek['maxValue'],
         'linkedProperty': attr(dp, 'Attribut'),
-        'notes': ''
     }
 
     if attr(el, 'Typ') == 'Waffengruppe':
-        skill['bonusKey'] = 'AnB' if not name in ('Parierwaffen', 'Schilde') else ''
+        if name not in ('Parierwaffen', 'Schilde'):
+            skill['bonusKey'] = 'AnB'
     
     ung = attr(dp, 'EWungelernt')
     if ung:
@@ -151,7 +151,6 @@ def parse_angeborene_fertigkeit(el: ET.Element):
         'advancementCosts': [],
         'baseValue': 0,
         'maxValue': 0,
-        'notes': '',
     }
 
     if name in BONUS_KEY_OVERRIDE:
@@ -295,7 +294,6 @@ def parse_land(el: ET.Element) -> dict:
     return {
         'id': name,
         'name': name,
-        'description': '',
         'languages': languages
     }
 
