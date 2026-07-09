@@ -482,12 +482,14 @@ onMounted(loadList)
               <tr>
                 <th>{{ UI.colTitle }}</th>
                 <th>{{ UI.colVersion }}</th>
+                <th>{{ UI.colScriptVersion }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="src in activeSources" :key="src.id">
                 <td>{{ src.title }}</td>
                 <td class="rules-table-version">{{ src.version }}</td>
+                <td class="rules-table-version">{{ src.scriptVersion ?? '—' }}</td>
               </tr>
             </tbody>
           </table>

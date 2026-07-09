@@ -33,6 +33,7 @@ export interface SourceSummary {
   id: string
   title: string
   version: string
+  scriptVersion?: string
   /** Numerische Priorität dieser Quelle. */
   priority: number
   enabled: boolean
@@ -127,7 +128,7 @@ export class RulesStorage {
         tx.onerror    = () => { db.close(); reject(tx.error) }
       })
 
-      imported.push({ id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true })
+      imported.push({ id: entry.id, title: entry.title, version: entry.version, scriptVersion: entry.data.metadata.scriptVersion, priority: entry.priority, enabled: true })
     }
 
     return imported
@@ -168,7 +169,7 @@ export class RulesStorage {
       tx.onerror    = () => { db.close(); reject(tx.error) }
     })
 
-    return { id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true }
+    return { id: entry.id, title: entry.title, version: entry.version, scriptVersion: entry.data.metadata.scriptVersion, priority: entry.priority, enabled: true }
   }
 
   /**
@@ -205,6 +206,7 @@ export class RulesStorage {
             id:        s.id,
             title:     s.title,
             version:   s.version,
+            scriptVersion: s.data?.metadata?.scriptVersion,
             priority:  s.priority ?? 999,
             enabled:   s.enabled,
           }))
@@ -609,7 +611,7 @@ export class RulesStorage {
       tx.onerror    = () => { db.close(); reject(tx.error) }
     })
 
-    return { id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true }
+    return { id: entry.id, title: entry.title, version: entry.version, scriptVersion: entry.data.metadata.scriptVersion, priority: entry.priority, enabled: true }
   }
 
   /**

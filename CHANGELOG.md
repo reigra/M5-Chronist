@@ -1,8 +1,14 @@
 
+### Sonstiges
+- Kontakt-E-Mail geändert
+
+### Rule Parse Scripte
+- Version der Scripte wird in Rule Metadaten geschrieben
 
 ### Fixes
 - Berechnung des Schadens im LaTeX-Export korrigiert
 - Abwehr mit Verteidigungswaffe: Parierwaffen-/Schilde-FW wird im LaTeX-Sheet berücksichtigt
+- Scripte schreiben keine leeren Properties mehr
 
 ## [v0.12.2] - 2026-07-07
 

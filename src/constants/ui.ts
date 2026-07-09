@@ -58,6 +58,7 @@ export const UI = {
   colCost:     'Kosten',
   colTitle:    'Titel',
   colVersion:  'Version',
+  colScriptVersion: 'Skript-Version',
   colActive:   'Aktiv',
   colNextCost: 'Nächste Kosten',
   colBaseFw:   'Basis-FW',
