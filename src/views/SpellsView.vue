@@ -318,7 +318,7 @@ onMounted(async () => {
                   <p><span class="detail-label">Wirkungsbereich:</span> {{ infoSpellRow.spell.effectArea }}</p>
                   <p><span class="detail-label">Wirkungsdauer:</span> {{ infoSpellRow.spell.duration }}</p>
                   <p><span class="detail-label">Ursprung:</span> {{ infoSpellRow.spell.origin }}</p>
-                  <p><span class="detail-label">Quelle:</span> {{ infoSpellRow.spell.source }}</p>
+                  <p><span class="detail-label">Quelle:</span> {{ infoSpellRow.spell.source ?? '—' }}</p>
                 </div>
               </div>
               <div v-if="infoSpellRow.description" class="spell-info-desc">

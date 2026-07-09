@@ -171,6 +171,7 @@ onMounted(loadList)
           <tr>
             <th>{{ UI.colTitle }}</th>
             <th>{{ UI.colVersion }}</th>
+            <th>{{ UI.colScriptVersion }}</th>
             <th v-if="!reorderMode">{{ UI.colActive }}</th>
             <th v-else>{{ UI.rulesReorderCol }}</th>
             <th></th>
@@ -184,6 +185,7 @@ onMounted(loadList)
           >
             <td>{{ source.title }}</td>
             <td class="col-version">{{ source.version }}</td>
+            <td class="col-version">{{ source.scriptVersion ?? '—' }}</td>
             <template v-if="!reorderMode">
               <td class="col-toggle">
                 <input

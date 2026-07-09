@@ -15,6 +15,7 @@ const SPELL_GROUPS = [
  * One source entry as stored in IndexedDB.
  * Contains the full rulebook data plus display metadata and an enabled flag.
  */
+// TODO: not imported externally — export can be removed
 export interface StoredSource {
   id: string
   title: string
@@ -32,6 +33,7 @@ export interface SourceSummary {
   id: string
   title: string
   version: string
+  scriptVersion?: string
   /** Numerische Priorität dieser Quelle. */
   priority: number
   enabled: boolean
@@ -52,6 +54,7 @@ export interface AssetLink {
  *   const summary = await rulesStorage.importFiles()
  *   const rules   = await rulesStorage.loadActive()
  */
+// TODO: not imported by name — only `rulesStorage` singleton is used externally
 export class RulesStorage {
   /**
    * Open (or create) the IndexedDB database.
@@ -125,7 +128,7 @@ export class RulesStorage {
         tx.onerror    = () => { db.close(); reject(tx.error) }
       })
 
-      imported.push({ id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true })
+      imported.push({ id: entry.id, title: entry.title, version: entry.version, scriptVersion: entry.data.metadata.scriptVersion, priority: entry.priority, enabled: true })
     }
 
     return imported
@@ -166,7 +169,7 @@ export class RulesStorage {
       tx.onerror    = () => { db.close(); reject(tx.error) }
     })
 
-    return { id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true }
+    return { id: entry.id, title: entry.title, version: entry.version, scriptVersion: entry.data.metadata.scriptVersion, priority: entry.priority, enabled: true }
   }
 
   /**
@@ -203,6 +206,7 @@ export class RulesStorage {
             id:        s.id,
             title:     s.title,
             version:   s.version,
+            scriptVersion: s.data?.metadata?.scriptVersion,
             priority:  s.priority ?? 999,
             enabled:   s.enabled,
           }))
@@ -607,7 +611,7 @@ export class RulesStorage {
       tx.onerror    = () => { db.close(); reject(tx.error) }
     })
 
-    return { id: entry.id, title: entry.title, version: entry.version, priority: entry.priority, enabled: true }
+    return { id: entry.id, title: entry.title, version: entry.version, scriptVersion: entry.data.metadata.scriptVersion, priority: entry.priority, enabled: true }
   }
 
   /**

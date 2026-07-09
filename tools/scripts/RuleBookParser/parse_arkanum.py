@@ -256,7 +256,6 @@ class SpellData:
             "effectArea":       self.effect_area,
             "duration":         self.duration,
             "origin":           self.origin,
-            "shortDescription": "",
             "source":           self.source,
         }
         if self.parse_warning:

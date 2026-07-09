@@ -31,6 +31,7 @@ export interface RulebookMetadata {
   id: string
   title: string
   version: string
+  scriptVersion?: string
   /** Numerische Priorität: niedriger Wert = höhere Priorität (0 = höchste). */
   priority?: number
   createdAt: string

@@ -16,6 +16,7 @@ import type { CharacterType } from '../types/CharacterType'
  * map that matches any of the skill's groups. This allows the player to learn a skill
  * under the most favourable group for their type.
  */
+// TODO: not imported by name — only `advancementService` singleton is used externally
 export class AdvancementService {
   /**
    * Find the cheapest EP-per-TE cost factor for a skill given a character type.

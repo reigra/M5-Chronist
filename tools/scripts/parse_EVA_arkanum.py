@@ -2,7 +2,7 @@ import json
 import argparse
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
-from helpers import attr, get_child, SPELL_GROUP_MAP
+from helpers import attr, get_child, get_app_version, SPELL_GROUP_MAP
 
 def parse_zauber(el: ET.Element) -> dict:
     name = attr(el, 'Name')
@@ -41,8 +41,7 @@ def parse_zauber(el: ET.Element) -> dict:
         'effectArea': attr(dp, 'Wirkungsbereich'),
         'duration': attr(dp, 'Wirkungsdauer'),
         'origin': attr(dp, 'Ursprung'),
-        'shortDescription': '',   # nicht in EVA-XML
-        'source': ''             # nicht in EVA-XML
+        # shortDescription und source werden nicht gesetzt (Merge kann sie aus anderen Quellen füllen)
     }
 
 def parse_arkanum_document(xml_path: str) -> dict:
@@ -56,6 +55,7 @@ def parse_arkanum_document(xml_path: str) -> dict:
         'id': 'eva-arkanum',
         'title': 'Arkanum (EVA)',
         'version': '1.0.0',
+        'scriptVersion': get_app_version(),
         'priority': 1,
         'createdAt': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
         'notes': 'Automatisch konvertiert aus m5arkanum.xml (EVA-Charaktersoftware) via Python'

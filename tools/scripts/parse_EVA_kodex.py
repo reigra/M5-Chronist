@@ -4,7 +4,7 @@ import argparse
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 from helpers import (
-    attr, get_child, normalize_group_name, 
+    attr, get_child, get_app_version, normalize_group_name, 
     SPELL_GROUP_KEYS, SPELL_GROUP_MAP, RACE_PROPERTY_KEYS
 )
 
@@ -94,11 +94,11 @@ def parse_fertigkeit(el: ET.Element):
         'baseValue': tek['baseValue'],
         'maxValue': tek['maxValue'],
         'linkedProperty': attr(dp, 'Attribut'),
-        'notes': ''
     }
 
     if attr(el, 'Typ') == 'Waffengruppe':
-        skill['bonusKey'] = 'AnB' if not name in ('Parierwaffen', 'Schilde') else ''
+        if name not in ('Parierwaffen', 'Schilde'):
+            skill['bonusKey'] = 'AnB'
     
     ung = attr(dp, 'EWungelernt')
     if ung:
@@ -151,7 +151,6 @@ def parse_angeborene_fertigkeit(el: ET.Element):
         'advancementCosts': [],
         'baseValue': 0,
         'maxValue': 0,
-        'notes': '',
     }
 
     if name in BONUS_KEY_OVERRIDE:
@@ -295,7 +294,6 @@ def parse_land(el: ET.Element) -> dict:
     return {
         'id': name,
         'name': name,
-        'description': '',
         'languages': languages
     }
 
@@ -365,6 +363,7 @@ def parse_kodex_document(xml_path: str) -> dict:
         'id': 'eva-kodex',
         'title': 'M5 Kodex (EVA)',
         'version': '1.0.0',
+        'scriptVersion': get_app_version(),
         'priority': 1,
         'createdAt': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
         'notes': 'Automatisch konvertiert aus m5kodex.xml (EVA-Charaktersoftware) via Python'

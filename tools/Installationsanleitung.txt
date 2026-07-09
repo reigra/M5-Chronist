@@ -31,4 +31,4 @@ Falls du einen Fehler findest oder was fehlt, kannst du unter
 https://gitlab.com/silbaer/magusng-pwa/-/work_items?sort=created_date&state=opened&first_page_size=20 
 oben rechts ein neues Issue erstellen.
 
-Oder eine E-Mail an silbaer@gmail.com schreiben.
+Oder eine E-Mail an MagusNG@silbaer.de schreiben.

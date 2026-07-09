@@ -25,6 +25,8 @@ import re
 import subprocess
 import sys
 
+from helpers import get_app_version
+
 try:
     import pdfplumber
 except ImportError:
@@ -750,13 +752,13 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     skills = []
     skipped = 0
     waffen_pattern_id = None
-    waffen_property = ''  # default, overridden if "Waffen" entry exists
+    waffen_property = None  # default, overridden if "Waffen" entry exists
 
     for r in all_rows:
         if r['name'] == 'Waffen':
             key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
             waffen_pattern_id = pattern_map.get(key)
-            waffen_property = '' # r['property']
+            waffen_property = None  # r['property']
             log(f'  Found "Waffen" entry, patternId={waffen_pattern_id}, property={waffen_property}')
             continue
 
@@ -780,7 +782,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'advancementCosts': lookup['costs'],
             'baseValue': lookup['baseValue'],
             'maxValue': 18,
-            'linkedProperty': r['property'],
+            **({'linkedProperty': r['property']} if r['property'] else {}),
             'costPatternId': pattern_id,
             'source': source,
         })
@@ -807,7 +809,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
                         'advancementCosts': lookup['costs'],
                         'baseValue': lookup['baseValue'],
                         'maxValue': max_val,
-                        'linkedProperty': waffen_property,
+                        **({'linkedProperty': waffen_property} if waffen_property else {}),
                         'costPatternId': waffen_pattern_id,
                     })
     else:
@@ -821,6 +823,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'id': 'mogadil-lerntabellen',
             'title': 'Mogadil Lerntabellen',
             'version': version,
+            'scriptVersion': get_app_version(),
             'priority': 0,
         },
         'costColumns': cost_columns,

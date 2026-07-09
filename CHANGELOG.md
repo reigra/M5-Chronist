@@ -1,5 +1,39 @@
+
+### Sonstiges
+- Kontakt-E-Mail geändert
+
+### Rule Parse Scripte
+- Version der Scripte wird in Rule Metadaten geschrieben
+
+### Fixes
+- Berechnung des Schadens im LaTeX-Export korrigiert
+- Abwehr mit Verteidigungswaffe: Parierwaffen-/Schilde-FW wird im LaTeX-Sheet berücksichtigt
+- Scripte schreiben keine leeren Properties mehr
+
+## [v0.12.2] - 2026-07-07
+
+### Fixes
+- Sinne können im Charakter-Editor negative Werte annehmen
+
 ## [v0.12.0] - 2026-07-07
 
+### Backup & Wiederherstellung
+- Backup aller Charaktere und Regelwerke als einzelne JSON-Datei (Download)
+- Wiederherstellen eines Backups (Restore)
+
+### LaTeX / PDF-Export
+- Erste vollständige Version des LaTeX-Exports mit eigenem `.cls`
+- Fix: Sinne werden im PDF korrekt dargestellt
+- Fix: Fehlende Fertigkeiten im Charakter-Sheet ergänzt
+
+### Google Drive
+- Connect-Button im Nav-Bar zur einmaligen Autorisierung
+
+### Hilfe
+- Hilfe-Seite erweitert
+
+### Fixes
+- Steigern mit Gold: Es konnten mehr GS ausgegeben werden als der Charakter besitzt
 
 ## [v0.11.5] - 2026-06-27
 

@@ -67,6 +67,9 @@ release-build:
         fs.writeFileSync('CHANGELOG.md', header + content);
       "
 
+    # VERSION-Datei für Python-Skripte ablegen
+    - 'echo -n "$NEW_VERSION" > tools/VERSION'
+
     # Alles in einem Commit + Tag
     - 'git add -A'
     - 'git commit -m "chore: release v$NEW_VERSION [skip ci]"'

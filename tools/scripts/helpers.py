@@ -1,4 +1,14 @@
+import os
 import xml.etree.ElementTree as ET
+
+
+def get_app_version() -> str:
+    """App-Version aus tools/VERSION."""
+    vpath = os.path.join(os.path.dirname(__file__), '..', 'VERSION')
+    if os.path.isfile(vpath):
+        with open(vpath) as f:
+            return f.read().strip()
+    return '0.0.0'
 
 # ── Mappings ──────────────────────────────────────────────────────────────────
 

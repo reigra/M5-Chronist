@@ -43,10 +43,14 @@ if (trackedChanges.length > 0) {
 console.log('Bumping patch version…')
 run('npm version patch')
 
-// 4. Read new version and commit
+// 4. Read new version, update changelog header (wie CI)
 const newVersion = capture('node -p "require(\'./package.json\').version"')
+const header = `## [v${newVersion}] - ${new Date().toISOString().slice(0, 10)}\n\n`
+const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8')
+fs.writeFileSync(path.join(ROOT, 'CHANGELOG.md'), header + changelog)
+
 console.log(`Committing release v${newVersion}…`)
-run(`git add package.json${fs.existsSync(path.join(ROOT, 'package-lock.json')) ? ' package-lock.json' : ''}`)
+run(`git add package.json CHANGELOG.md${fs.existsSync(path.join(ROOT, 'package-lock.json')) ? ' package-lock.json' : ''}`)
 run(`git commit -m "chore: release v${newVersion}"`)
 
 // 5. Build with production defaults

@@ -4,6 +4,7 @@
  * Implementations: LocalFileProvider (FS Access API), GoogleDriveProvider (Picker + Drive API).
  */
 
+// TODO: not imported externally — export can be removed
 export interface FileProvider {
   readonly name: string
 
@@ -20,6 +21,7 @@ export interface FileProvider {
 /**
  * LocalFileProvider — uses the File System Access API (Chromium only).
  */
+// TODO: unused — never instantiated, can be removed
 export class LocalFileProvider implements FileProvider {
   readonly name = 'Lokales Dateisystem'
 

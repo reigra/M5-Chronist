@@ -185,18 +185,25 @@ const playableTypes = computed(() => {
 
 /** For display: look up skill names from rules.
  *  Multi-Instanz-Skills (z.B. "Sprache:Albisch") werden als "Sprache: Albisch" angezeigt. */
+/**
+ * Aggregierte Liste der bekannten Fertigkeiten für die Tabelle.
+ * Jeder Eintrag enthält die CharacterSkill-Daten sowie den Anzeigenamen
+ * und ein Flag isStacked für gestapelte Fertigkeiten (baseSkillId).
+ */
 const skillRows = computed(() => {
   const r = rules.value
-  if (!r || !r.skillRules) return skills.value.map(s => ({ ...s, name: s.skillId }))
+  if (!r || !r.skillRules) return skills.value.map(s => ({ ...s, name: s.skillId, isStacked: false }))
   const sr = r.skillRules
   return skills.value.map(cs => {
+    const ruleSkill = r.skills.find(s => s.id === cs.skillId)
+    let name = ruleSkill?.name ?? cs.skillId
     const multiRule = sr.multiInstanceSkills.find(m => cs.skillId.startsWith(m.idPrefix))
     if (multiRule) {
       const baseSkill = r.skills.find(s => s.id === multiRule.baseSkillId)
       const instanceName = cs.skillId.slice(multiRule.idPrefix.length)
-      return { ...cs, name: (baseSkill?.name ?? multiRule.baseSkillId) + ': ' + instanceName }
+      name = (baseSkill?.name ?? multiRule.baseSkillId) + ': ' + instanceName
     }
-    return { ...cs, name: r.skills.find(s => s.id === cs.skillId)?.name ?? cs.skillId }
+    return { ...cs, name, isStacked: !!ruleSkill?.baseSkillId }
   }).sort((a, b) => a.name.localeCompare(b.name))
 })
 /** Ob der gewählte Typ eine Waffenspezialisierung wählen kann (Kämpfer oder KampfZauberer). */
@@ -707,7 +714,7 @@ onMounted(async () => {
                 <input
                   :value="row.value"
                   type="number"
-                  min="1"
+                  :min="row.isStacked ? undefined : 1"
                   max="18"
                   class="fw-input"
                   @change="e => {
