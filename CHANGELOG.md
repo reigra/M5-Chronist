@@ -1,3 +1,5 @@
+## [v0.13.0] - 2026-07-09
+
 
 ### Sonstiges
 - Kontakt-E-Mail geändert
