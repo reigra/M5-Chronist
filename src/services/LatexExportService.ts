@@ -167,7 +167,17 @@ export class LatexExportService {
     // These are referenced via \Fertigkeit1 in the example, but the actual
     // display values come from \DefData{Abwehr}, \DefData{Resistenz}, \DefData{Zaubern}
     const abwehr = character.skills.find(s => s.skillId === 'Abwehr')
-    if (abwehr) push(`\\Fertigkeit1{Abwehr}[${abwehr.value}]`)
+    if (abwehr) {
+      push(`\\Fertigkeit1{Abwehr}[${abwehr.value}]`)
+
+      // Abwehr mit Verteidigungswaffe: Parierwaffen- oder Schilde-FW addieren
+      const parierSkill = character.skills.find(
+        s => s.skillId === 'Parierwaffen' || s.skillId === 'Schilde'
+      )
+      const verteidigungsFw = parierSkill?.value ?? 0
+      push(`\\DefData{Abwehr}{{\\StandardAbwehrPlus{0}}% Normal`)
+      push(`{\\StandardAbwehrPlus{${verteidigungsFw}}}}% Mit Verteidigungswaffe`)
+    }
 
     const zaubern = character.skills.find(s => s.skillId === 'Zaubern')
     if (zaubern) push(`\\Fertigkeit1{Zaubern}[${zaubern.value}]`)
