@@ -3,7 +3,7 @@ import json
 import argparse
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
-from helpers import attr
+from helpers import attr, get_app_version
 
 WEAPON_GROUPS = {'Waffen (Fern)', 'Waffen (Angriff)'}
 
@@ -53,6 +53,7 @@ def parse_dinge_document(xml_path: str) -> dict:
         'id': 'eva-weapons',
         'title': 'Waffen & Ausrüstung (EVA)',
         'version': '1.0.0',
+        'scriptVersion': get_app_version(),
         'priority': 1,
         'createdAt': datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + 'Z',
         'notes': 'Automatisch konvertiert aus dinge.xml (EVA-Charaktersoftware) via Python'

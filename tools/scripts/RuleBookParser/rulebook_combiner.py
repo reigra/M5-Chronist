@@ -14,6 +14,9 @@ import os
 import sys
 from datetime import date
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from helpers import get_app_version
+
 
 def load_meta(input_dir: str) -> dict:
     """
@@ -113,9 +116,10 @@ def combine(input_dir: str, output_file: str) -> None:
 
     output: dict = {
         "metadata": {
-            "id":          meta["id"],
-            "title":       meta["title"],
-            "version":     meta["version"],
+            "id":              meta["id"],
+            "title":           meta["title"],
+            "version":         meta["version"],
+            "scriptVersion":   get_app_version(),
             "priority":      meta.get("priority", 0),
             "createdAt":   date.today().isoformat(),
             "notes":       meta.get("notes", ""),
