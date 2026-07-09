@@ -2,6 +2,7 @@
 
 ### Fixes
 - Berechnung des Schadens im LaTeX-Export korrigiert
+- Abwehr mit Verteidigungswaffe: Parierwaffen-/Schilde-FW wird im LaTeX-Sheet berücksichtigt
 
 ## [v0.12.2] - 2026-07-07
 
