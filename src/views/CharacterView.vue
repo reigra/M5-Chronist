@@ -10,7 +10,7 @@ import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import { latexExportService } from '../services/LatexExportService'
-import { sanitizeFileName, saveFileAs } from '../services/FileProvider'
+import { sanitizeFileName, saveFileAs, isDriveAvailable } from '../services/FileProvider'
 //import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
 import clsContent from '../../tools/LaTeX/m5figur-magusng.cls?raw'
 
@@ -391,6 +391,7 @@ onMounted(async () => {
             @click="exportLatexPdf"
           >{{ UI.sheetExportLatexPdf }}</button>
           <button
+            v-if="isDriveAvailable()"
             class="btn-nav"
             @click="exportToDrive"
           >{{ UI.exportGoogleDrive }}</button>

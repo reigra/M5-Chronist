@@ -15,6 +15,7 @@ import type { RestoreInfo } from '../services/BackupService'
 import { computeDiff } from '../services/CharacterService'
 import type { DiffEntry } from '../services/CharacterService'
 import { UI } from '../constants/ui'
+import { isDriveAvailable } from '../services/FileProvider'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { SourceSummary } from '../services/RulesStorage'
@@ -50,6 +51,7 @@ const askResolutions = ref<Map<string, boolean>>(new Map()) // charId → overwr
 const askCurrentDiff = ref<DiffEntry[] | null>(null)
 const activeSources = ref<SourceSummary[]>([])
 const rules = ref<RulesData | null>(null)
+const driveAvailable = isDriveAvailable()
 
 /**
  * True if a character's type is not fully supported by the loaded rules.
@@ -472,7 +474,7 @@ onMounted(loadList)
             {{ UI.homeImportBtn }}
           </button>
 
-          <button class="btn-import" @click="importCharacterFromDrive">
+          <button v-if="driveAvailable" class="btn-import" @click="importCharacterFromDrive">
             {{ UI.importGoogleDrive }}
           </button>
         </div>
@@ -504,7 +506,7 @@ onMounted(loadList)
           <p class="backup-hint">{{ UI.backupHint }}</p>
           <div class="backup-buttons">
             <button class="btn-backup" :disabled="backingUp" @click="doBackup">{{ backingUp ? UI.backupRunning : UI.backupBtn }}</button>
-            <button class="btn-backup" :disabled="backingUpDrive" @click="doBackupDrive">{{ backingUpDrive ? UI.backupRunning : UI.backupDriveBtn }}</button>
+            <button v-if="driveAvailable" class="btn-backup" :disabled="backingUpDrive" @click="doBackupDrive">{{ backingUpDrive ? UI.backupRunning : UI.backupDriveBtn }}</button>
           </div>
           <p v-if="backupSuccess" class="backup-success">{{ UI.backupSuccess }}</p>
           <p v-if="backupError" class="backup-error">{{ UI.backupError }} {{ backupError }}</p>
@@ -513,7 +515,7 @@ onMounted(loadList)
           <p v-if="restoreError" class="restore-error">{{ UI.restoreError }} {{ restoreError }}</p>
           <div class="backup-buttons">
             <button class="btn-backup" :disabled="!browserSupported" :title="!browserSupported ? UI.browserUnsupportedHint : ''" @click="doRestore">{{ UI.restoreBtn }}</button>
-            <button class="btn-backup" @click="doRestoreDrive">{{ UI.restoreDriveBtn }}</button>
+            <button v-if="driveAvailable" class="btn-backup" @click="doRestoreDrive">{{ UI.restoreDriveBtn }}</button>
           </div>
         </div>
       </template>

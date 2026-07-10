@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { rulesStorage } from '../services/RulesStorage'
 import { UI } from '../constants/ui'
+import { isDriveAvailable } from '../services/FileProvider'
 import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ const errorMessage   = ref<string | null>(null)
 const assetLinks     = ref<AssetLink[]>([])
 const reorderMode    = ref(false)
 const savingPriority = ref(false)
+const driveAvailable = isDriveAvailable()
 
 /** True if the current browser supports the File System Access API. */
 const browserSupported = 'showOpenFilePicker' in window
@@ -196,7 +198,7 @@ onMounted(loadList)
               </td>
               <td class="col-action">
                   <button
-                    v-if="source.enabled"
+                    v-if="driveAvailable && source.enabled"
                   class="btn-icon btn-drive-export"
                   @click="exportRuleToDrive(source.id)"
                   :title="UI.driveExportRules"
@@ -235,6 +237,7 @@ onMounted(loadList)
           {{ UI.rulesImportBtn }}
         </button>
         <button
+          v-if="driveAvailable"
           class="btn-import"
           @click="importRuleFromDrive"
         >

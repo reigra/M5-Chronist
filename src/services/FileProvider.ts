@@ -83,6 +83,10 @@ export function sanitizeFileName(s: string): string {
   return s.replace(/[\\/:*?"<>|]/g, '_').trim()
 }
 
+export function isDriveAvailable(): boolean {
+  return !!import.meta.env.VITE_GOOGLE_CLIENT_ID
+}
+
 /**
  * Save a file to disk.
  *
