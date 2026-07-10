@@ -140,6 +140,12 @@ const learnableSpellRows = computed(() => {
  * Stage a spell to learn — shows the confirmation modal.
  * @param spell - The spell the player selected.
  */
+function clampEpGold(action: PendingSpellAction): void {
+  if (action.epToPayWithGold > action.maxGoldEp) {
+    action.epToPayWithGold = action.maxGoldEp
+  }
+}
+
 function requestLearn(spell: Spell): void {
   const type = charType.value
   if (!type?.spellCosts) return
@@ -298,7 +304,7 @@ onMounted(async () => {
             </label>
             <label class="gold-cost-row">
               {{ UI.advGoldEpReplacement }}
-              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+               <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
               <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
             </label>
             <p class="ep-breakdown">
@@ -309,7 +315,7 @@ onMounted(async () => {
             <div class="confirmation-buttons">
               <button
                 class="btn-confirm"
-                :disabled="(character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
+                :disabled="pendingAction.epToPayWithGold > pendingAction.maxGoldEp || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
                 @click="confirmLearn"
               >{{ UI.confirm }}</button>
               <button class="btn-cancel" @click="cancelLearn">{{ UI.cancel }}</button>

@@ -1,3 +1,7 @@
+
+### UX/UI
+- Eingabe von Gold beim Steigern begrenzt
+
 ## [v0.13.1] - 2026-07-10
 
 ### Fixes

@@ -264,6 +264,12 @@ function requestLearn(skill: Skill): void {
  * @param currentValue - The character's current FW for this skill.
  * @param instanceId   - Optional: die vollständige Instanz-ID bei Multi-Instanz-Skills.
  */
+function clampEpGold(action: PendingAction): void {
+  if (action.epToPayWithGold > action.maxGoldEp) {
+    action.epToPayWithGold = action.maxGoldEp
+  }
+}
+
 function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
   const type = charType.value
   if (!type) return
@@ -482,7 +488,7 @@ onMounted(async () => {
             </label>
             <label class="gold-cost-row">
               {{ UI.advGoldEpReplacement }}
-              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+               <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
               <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
             </label>
             <p class="ep-breakdown">
