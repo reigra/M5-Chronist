@@ -1,3 +1,5 @@
+## [v0.13.1] - 2026-07-10
+
 ### Fixes
 - Bezeichnung der Spellgruppen Wundertaten und Zauberlieder hat nicht gepasst
 - Eingesetztes Gold wird beim Steigern geprüft
