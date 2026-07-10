@@ -39,40 +39,26 @@ if (trackedChanges.length > 0) {
   process.exit(1)
 }
 
-// 3. Bump patch version (bumps package.json only — .npmrc disables commit/tag)
-console.log('Bumping patch version…')
-run('npm version patch')
-
-// 4. Read new version, update changelog header (wie CI)
-const newVersion = capture('node -p "require(\'./package.json\').version"')
-const header = `## [v${newVersion}] - ${new Date().toISOString().slice(0, 10)}\n\n`
-const changelog = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8')
-fs.writeFileSync(path.join(ROOT, 'CHANGELOG.md'), header + changelog)
-
-console.log(`Committing release v${newVersion}…`)
-run(`git add package.json CHANGELOG.md${fs.existsSync(path.join(ROOT, 'package-lock.json')) ? ' package-lock.json' : ''}`)
-run(`git commit -m "chore: release v${newVersion}"`)
-
-// 5. Build with production defaults
+// 3. Build with production defaults
 console.log('Building production version…')
 require('./build-prod.cjs')
 
-// 6. Create target directory on server (ignores existing)
+// 4. Create target directory on server (ignores existing)
 console.log('Ensuring target directory…')
 run(`ssh ${SERVER} mkdir -p ${TARGET}`)
 
-// 7. Clean old files on server
+// 5. Clean old files on server
 console.log('Cleaning server…')
 run(`ssh ${SERVER} rm -rf ${TARGET}/*`)
 
-// 8. Upload dist/ contents (one by one for Windows compat)
+// 6. Upload dist/ contents (one by one for Windows compat)
 console.log('Uploading…')
 for (const item of fs.readdirSync(DIST)) {
   const full = path.join(DIST, item)
   run(`scp -r "${full}" ${SERVER}:${TARGET}/`)
 }
 
-// 9. Fix permissions
+// 7. Fix permissions
 console.log('Setting permissions…')
 run(`ssh ${SERVER} chmod -R a+rX ${TARGET}/`)
 
