@@ -14,7 +14,7 @@ const assetLinks     = ref<AssetLink[]>([])
 const reorderMode    = ref(false)
 const savingPriority = ref(false)
 const driveAvailable = isDriveAvailable()
-const { error }      = useNotifications()
+const { error, ok }      = useNotifications()
 
 /** True if the current browser supports the File System Access API. */
 const browserSupported = 'showOpenFilePicker' in window
@@ -86,6 +86,7 @@ async function importRuleFromDrive(): Promise<void> {
 async function exportRuleToDrive(sourceId: string): Promise<void> {
   try {
     await rulesStorage.exportToDrive(sourceId)
+    ok(UI.driveExportSuccess)
   } catch (e) {
     if (e instanceof Error) {
       error(UI.driveErrorPrefix + ' ' + e.message)

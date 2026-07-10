@@ -289,6 +289,7 @@ export const UI = {
   driveImportRules:     'Regelwerk aus Google Drive importieren',
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
+  driveExportSuccess:   'In Google Drive gespeichert.',
 
   // ── Backup ────────────────────────────────────────────────────────────────────
   backupTitle:    'Backup',

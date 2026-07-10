@@ -57,7 +57,7 @@ const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
-const { error } = useNotifications()
+const { error, ok } = useNotifications()
 
 const isOnline = ref(navigator.onLine)
 window.addEventListener('online', () => { isOnline.value = true })
@@ -266,6 +266,7 @@ async function exportToDrive(): Promise<void> {
   if (!char) return
   try {
     await characterStorage.exportToDrive(char)
+    ok(UI.driveExportSuccess)
   } catch (e) {
     error(e instanceof Error ? (UI.driveErrorPrefix + ' ' + e.message) : 'Export failed.')
   }
