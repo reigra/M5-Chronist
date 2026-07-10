@@ -6,6 +6,7 @@
 
 ### Sonstiges
 - lokales Build und Deplay angepasst
+- Backupname enthält App-Version 
 
 ## [v0.13.0] - 2026-07-09
 
