@@ -8,6 +8,18 @@ import { isCaster as checkCaster } from '../services/CharacterService'
 import type { Character, CharacterSkill, CharacterSpell } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
+/** Map singular → plural for spell group names that differ between parsers and type definitions. */
+const SPELL_GROUP_FIX: Record<string, string> = {
+  'Wundertat': 'Wundertaten',
+  'Zauberlied': 'Zauberlieder',
+}
+
+/** Normalize a spell group name: apply SPELL_GROUP_FIX if known, pass through otherwise. */
+function normalizeGroup(g: string | null | undefined): string {
+  if (!g) return '—'
+  return SPELL_GROUP_FIX[g] ?? g
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const route = useRoute()
@@ -147,7 +159,7 @@ const availableSpells = computed(() => {
   const groups = new Set(Object.keys(t.spellCosts))
   const learned = new Set(spells.value.map(s => s.spellId))
   return r.spells
-    .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
+    .filter(s => groups.has(normalizeGroup(s.spellGroup)) && !learned.has(s.id))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
 
@@ -170,7 +182,7 @@ const spellRows = computed(() => {
   return spells.value
     .map(s => {
       const spell = r.spells.find(sp => sp.id === s.spellId)
-      return { id: s.spellId, name: spell?.name ?? s.spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—', pp: s.pp ?? 0 }
+      return { id: s.spellId, name: spell?.name ?? s.spellId, level: spell?.level ?? 0, spellGroup: normalizeGroup(spell?.spellGroup) ?? '—', pp: s.pp ?? 0 }
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })

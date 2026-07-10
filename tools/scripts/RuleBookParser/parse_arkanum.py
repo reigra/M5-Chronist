@@ -43,8 +43,10 @@ ARKANUM_DIR  = BASE_DIR / "arkanum"
 RULES_DIR    = BASE_DIR / "rules"
 
 sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR.parent))
 from rulebook_combiner import combine as combine_rulebook
 from pdf_imprint import extract_imprint_version
+from helpers import SPELL_GROUP_MAP
 
 
 def find_arkanum_pdf() -> str:
@@ -64,9 +66,9 @@ OUT_DESCRIPTIONS = str(ARKANUM_DIR / "spell-descriptions.json")
 # Spell sections: (first_book_page, last_book_page, derive_group_from_text, fixed_group)
 SECTIONS = [
     (63,  134, True,  None),
-    (135, 148, False, "Wundertat"),    # p135 contains Allheilung + start of Arm der Götter (inset box is also on this page)
+    (135, 148, False, "Wundertaten"),  # p135 contains Allheilung + start of Arm der Götter (inset box is also on this page)
     (149, 162, False, "Dweomer"),
-    (163, 172, False, "Zauberlied"),   # p164 contains Das Lied des Fesselns + Das Lied des Friedens (inset box is also on this page)
+    (163, 172, False, "Zauberlieder"), # p164 contains Das Lied des Fesselns + Das Lied des Friedens (inset box is also on this page)
 ]
 
 # Pages to skip entirely — no spell content, only inset continuation text.
@@ -85,13 +87,6 @@ SIZE_TITLE   = 11.0   # spell title
 SIZE_BODY    = 10.0   # type line, element line body, description
 SIZE_LABEL   = 9.0    # KV labels (AP-Verbrauch: etc.)
 SIZE_ELEMENT = 14.0   # element arrow/separator symbols
-
-# ── Spell group names (full expanded form, matching SPELL_GROUPS in the PWA) ──
-
-SPELL_GROUP_NAMES = {
-    "Beherrschen", "Bewegen", "Dweomer", "Erkennen", "Erschaffen",
-    "Formen", "Verändern", "Wundertat", "Zauberlied", "Zerstören",
-}
 
 # Lernkosten (LE) pro Spruchstufe — aus dem Arkanum-Regelwerk
 LEARN_COST_BY_LEVEL = {
@@ -246,7 +241,7 @@ class SpellData:
             "level":            self.level,
             "learnCost":        LEARN_COST_BY_LEVEL.get(self.level, 0),
             "spellType":        self.spell_type,
-            "spellGroup":       self.spell_group,
+            "spellGroup":       SPELL_GROUP_MAP.get(self.spell_group, self.spell_group),
             "elements":         self.elements,
             "material":         self.material,
             "apCost":           self.ap_cost,
@@ -509,7 +504,7 @@ class ColumnParser:
                 # But only if it looks like a short material description
                 # Try to detect element lines without 14pt symbols (fallback)
                 found_group = False
-                for group_name in SPELL_GROUP_NAMES:
+                for group_name in set(SPELL_GROUP_MAP.values()):
                     if text.startswith(group_name):
                         if not self.fixed_group:
                             self.current.spell_group = group_name

@@ -10,6 +10,18 @@ import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Spell } from '../types/Spell'
 
+/** Map singular → plural for spell group names that differ between parsers and type definitions. */
+const SPELL_GROUP_FIX: Record<string, string> = {
+  'Wundertat': 'Wundertaten',
+  'Zauberlied': 'Zauberlieder',
+}
+
+/** Normalize a spell group name: apply SPELL_GROUP_FIX if known, pass through otherwise. */
+function normalizeGroup(g: string | null | undefined): string {
+  if (!g) return '—'
+  return SPELL_GROUP_FIX[g] ?? g
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const route = useRoute()
@@ -62,7 +74,7 @@ const groupPp = computed(() => {
     const spell = r.spells.find(sp => sp.id === s.spellId)
     if (!spell) continue
     const pp = s.pp ?? 0
-    if (pp > 0) result[spell.spellGroup] = (result[spell.spellGroup] ?? 0) + pp
+    if (pp > 0) result[normalizeGroup(spell.spellGroup)] = (result[normalizeGroup(spell.spellGroup)] ?? 0) + pp
   }
   return result
 })
@@ -79,7 +91,7 @@ const learnedSpellRows = computed(() => {
     .map(s => {
       const spellId = typeof s === 'string' ? s : s.spellId
       const spell = r.spells.find(sp => sp.id === spellId)
-      return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—', pp: s.pp ?? 0 }
+      return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: normalizeGroup(spell?.spellGroup) ?? '—', pp: s.pp ?? 0 }
     })
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
 })
@@ -98,13 +110,13 @@ const learnableSpellRows = computed(() => {
   const learned = new Set((c.spells ?? []).map(s => typeof s === 'string' ? s : s.spellId))
 
   return r.spells
-    .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
+    .filter(s => groups.has(normalizeGroup(s.spellGroup)) && !learned.has(s.id))
     .map(s => {
       const lc = s.learnCost ?? 0
-      const ppAvailable = groupPp.value[s.spellGroup] ?? 0
+      const ppAvailable = groupPp.value[normalizeGroup(s.spellGroup)] ?? 0
       const ppUsed = Math.min(lc, ppAvailable)
-      const epCost = lc * (type.spellCosts![s.spellGroup] ?? 0)
-      const ppDiscount = ppUsed * (type.spellCosts![s.spellGroup] ?? 0)
+      const epCost = lc * (type.spellCosts![normalizeGroup(s.spellGroup)] ?? 0)
+      const ppDiscount = ppUsed * (type.spellCosts![normalizeGroup(s.spellGroup)] ?? 0)
       const netCost = epCost - ppDiscount
       return {
         spell: s,
@@ -130,10 +142,10 @@ function requestLearn(spell: Spell): void {
   const type = charType.value
   if (!type?.spellCosts) return
   const lc = spell.learnCost ?? 0
-  const ppAvailable = groupPp.value[spell.spellGroup] ?? 0
+  const ppAvailable = groupPp.value[normalizeGroup(spell.spellGroup)] ?? 0
   const ppUsed = Math.min(lc, ppAvailable)
-  const epCost = (lc - ppUsed) * (type.spellCosts[spell.spellGroup] ?? 0)
-  const originalEpCost = lc * (type.spellCosts[spell.spellGroup] ?? 0)
+  const epCost = (lc - ppUsed) * (type.spellCosts[normalizeGroup(spell.spellGroup)] ?? 0)
+  const originalEpCost = lc * (type.spellCosts[normalizeGroup(spell.spellGroup)] ?? 0)
   const goldCost = (lc - ppUsed) * 100
   const maxGoldEp = Math.floor(epCost / 2)
   pendingAction.value = { spell, epCost, originalEpCost, goldCost, epToPayWithGold: 0, maxGoldEp, ppUsed }
@@ -171,7 +183,7 @@ async function confirmLearn(): Promise<void> {
   const updatedSpells = (char.spells ?? []).map(s => {
     if (remainingPp <= 0) return s
     const spell = rules.value?.spells.find(sp => sp.id === s.spellId)
-    if (!spell || spell.spellGroup !== action.spell.spellGroup) return s
+    if (!spell || normalizeGroup(spell.spellGroup) !== normalizeGroup(action.spell.spellGroup)) return s
     const consume = Math.min(s.pp ?? 0, remainingPp)
     remainingPp -= consume
     return { ...s, pp: (s.pp ?? 0) - consume }
@@ -270,7 +282,7 @@ onMounted(async () => {
           <div class="modal-box">
             <p>
               {{ UI.confirmLearnPfx }} <strong>{{ pendingAction.spell.name }}</strong>
-              ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ pendingAction.spell.spellGroup }})
+              ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ normalizeGroup(pendingAction.spell.spellGroup) }})
               {{ UI.confirmFor }} <strong>{{ pendingAction.epCost }} {{ UI.unitEp }}</strong>?
             </p>
             <p v-if="pendingAction.ppUsed > 0" class="pp-used-note">
@@ -309,7 +321,7 @@ onMounted(async () => {
               <div class="spell-info-props">
                 <p class="spell-info-type">{{ infoSpellRow.spell.spellType }} der Stufe {{ infoSpellRow.spell.level }}</p>
                 <p v-if="infoSpellRow.spell.material" class="spell-info-material">{{ infoSpellRow.spell.material }}</p>
-                <p class="spell-info-group">{{ infoSpellRow.spell.spellGroup }} → {{ infoSpellRow.spell.elements[0] }} → {{ infoSpellRow.spell.elements[1] ?? '' }}</p>
+                <p class="spell-info-group">{{ normalizeGroup(infoSpellRow.spell.spellGroup) }} → {{ infoSpellRow.spell.elements[0] }} → {{ infoSpellRow.spell.elements[1] ?? '' }}</p>
                 <div class="spell-info-details">
                   <p><span class="detail-label">AP:</span> {{ infoSpellRow.spell.apCost }}</p>
                   <p><span class="detail-label">Zauberdauer:</span> {{ infoSpellRow.spell.castingTime }}</p>
@@ -381,8 +393,8 @@ onMounted(async () => {
                 <td>
                   <button class="btn-info" @click="showSpellInfo(row.spell.id)">{{ UI.spellDetailView }}</button>
                 </td>
-                <td>{{ row.spell.spellGroup }}</td>
-                <td class="pp-cell">{{ groupPp[row.spell.spellGroup] ?? 0 }}</td>
+                <td>{{ normalizeGroup(row.spell.spellGroup) }}</td>
+                <td class="pp-cell">{{ groupPp[normalizeGroup(row.spell.spellGroup)] ?? 0 }}</td>
                 <td>
                   <template v-if="row.ppUsed > 0">
                     <span class="cost-strikethrough">{{ row.originalCost }} {{ UI.unitEp }}</span>
