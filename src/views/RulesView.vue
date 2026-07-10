@@ -72,7 +72,7 @@ async function importRuleFromDrive(): Promise<void> {
     await rulesStorage.importFromDrive()
     await loadList()
   } catch (e) {
-    if (e instanceof Error) {
+    if (e instanceof Error && e.name !== 'AbortError') {
       errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
     }
   }

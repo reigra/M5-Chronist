@@ -135,7 +135,7 @@ async function importCharacterFromDrive(): Promise<void> {
     const diff = computeDiff(existing, incoming)
     pendingImport.value = { incoming, diff }
   } catch (e) {
-    if (e instanceof Error) {
+    if (e instanceof Error && e.name !== 'AbortError') {
       errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
     }
   }
@@ -235,7 +235,9 @@ async function doRestoreDrive(): Promise<void> {
     const info = await restoreFromDrive()
     showRestoreConflicts(info)
   } catch (e) {
-    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    if (e instanceof Error && e.name !== 'AbortError') {
+      restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    }
     restorePhase.value = 'idle'
   }
 }
