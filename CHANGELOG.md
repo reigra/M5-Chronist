@@ -1,4 +1,8 @@
 
+### UX/UI
+- Abbruch bei Drive File Selector wird behandelt (App hängt nicht mehr)
+- Rückmeldung bei Aktionen via Chips (Ok, Warnung, Fehler)
+
 ### Sonstiges
 - lokales Build und Deplay angepasst
 

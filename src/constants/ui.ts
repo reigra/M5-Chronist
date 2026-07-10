@@ -6,7 +6,9 @@
 export const UI = {
 
   // ── Allgemein ────────────────────────────────────────────────────────────────
-  loading:       'Wird geladen…',
+  loading:    'Wird geladen…',
+  failedToLoad: 'Laden fehlgeschlagen.',
+
   confirm:       'Bestätigen',
   cancel:        'Abbrechen',
   close:         'Schließen',

@@ -11,6 +11,7 @@ import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import { latexExportService } from '../services/LatexExportService'
 import { sanitizeFileName, saveFileAs, isDriveAvailable } from '../services/FileProvider'
+import { useNotifications } from '../composables/useNotifications'
 //import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
 import clsContent from '../../tools/LaTeX/m5figur-magusng.cls?raw'
 
@@ -55,7 +56,8 @@ const router = useRouter()
 const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
-const errorMessage = ref<string | null>(null)
+const loadError = ref(false)
+const { error } = useNotifications()
 
 const isOnline = ref(navigator.onLine)
 window.addEventListener('online', () => { isOnline.value = true })
@@ -255,7 +257,7 @@ async function exportCharacter(): Promise<void> {
   try {
     await characterStorage.exportToFile(char)
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Export failed.'
+    error(e instanceof Error ? e.message : 'Export failed.')
   }
 }
 
@@ -265,11 +267,10 @@ async function exportToDrive(): Promise<void> {
   try {
     await characterStorage.exportToDrive(char)
   } catch (e) {
-    errorMessage.value = e instanceof Error ? (UI.driveErrorPrefix + ' ' + e.message) : 'Export failed.'
+    error(e instanceof Error ? (UI.driveErrorPrefix + ' ' + e.message) : 'Export failed.')
   }
 }
 
-/** Export the character as a .tex file download. */
 async function exportLatex(): Promise<void> {
   const char = character.value; const r = rules.value
   if (!char || !r) return
@@ -278,22 +279,15 @@ async function exportLatex(): Promise<void> {
     const name = sanitizeFileName(char.name) + '.tex'
     await saveFileAs(tex, name, 'text/plain')
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'LaTeX export failed.'
+    error(e instanceof Error ? e.message : 'LaTeX export failed.')
   }
 }
 
-/**
- * Export the character as a compiled PDF via TeXLive.net.
- *
- * Uses a programmatic <form> submit with target="_blank" to bypass CORS:
- * the browser natively sends the multipart POST across origins, and the
- * resulting PDF (or error log) opens in a new tab.
- */
 function exportLatexPdf(): void {
   const char = character.value; const r = rules.value
   if (!char || !r) return
   if (!isOnline.value) {
-    errorMessage.value = 'PDF-Export benötigt eine Internetverbindung.'
+    error('PDF-Export benötigt eine Internetverbindung.')
     return
   }
 
@@ -332,13 +326,15 @@ onMounted(async () => {
       characterStorage.load(id),
     ])
     if (!loadedChar) {
-      errorMessage.value = `Character "${id}" not found.`
+      loadError.value = true
+      error(`Character "${id}" not found.`, null)
       return
     }
     rules.value = loadedRules
     character.value = loadedChar
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load data.'
+    loadError.value = true
+    error(e instanceof Error ? e.message : 'Failed to load data.', null)
   } finally {
     loading.value = false
   }
@@ -349,7 +345,7 @@ onMounted(async () => {
   <main class="sheet">
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
     <template v-else-if="character">
 

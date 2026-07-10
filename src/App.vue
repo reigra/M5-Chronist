@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { UI } from './constants/ui'
 import UpdateBanner from './components/UpdateBanner.vue'
 import DevBanner from './components/DevBanner.vue'
+import NotificationChips from './components/NotificationChips.vue'
 import {
   hasDriveTokens,
   revokeDriveAccess,
@@ -68,6 +69,7 @@ async function revokeDrive(): Promise<void> {
     <router-link to="/help" class="nav-link nav-link--help">{{ UI.helpNav }}</router-link>
   </nav>
   <RouterView />
+  <NotificationChips />
   <UpdateBanner />
 </template>
 
