@@ -1,3 +1,6 @@
+### Fixes
+- Bezeichnung der Spellgruppen Wundertaten und Zauberlieder hat nicht gepasst
+- Eingesetztes Gold wird beim Steigern geprüft
 
 ### UX/UI
 - Abbruch bei Drive File Selector wird behandelt (App hängt nicht mehr)
@@ -5,7 +8,8 @@
 - Rückmeldung beim Export auf Google Drive
 
 ### Sonstiges
-- lokales Build und Deplay angepasst
+- lokales Build und Deploy angepasst
+- Prüfung ob Drive Secrets vorhanden sind beim lokalen deploy
 - Backupname enthält App-Version 
 
 ## [v0.13.0] - 2026-07-09
