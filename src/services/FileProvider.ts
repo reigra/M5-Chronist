@@ -18,49 +18,6 @@ export interface FileProvider {
   isAvailable(): boolean
 }
 
-/**
- * LocalFileProvider — uses the File System Access API (Chromium only).
- */
-// TODO: unused — never instantiated, can be removed
-export class LocalFileProvider implements FileProvider {
-  readonly name = 'Lokales Dateisystem'
-
-  async readFile(): Promise<{ data: unknown; fileName: string }> {
-    if (!('showOpenFilePicker' in window)) {
-      throw new Error(
-        'File System Access API is not supported in this browser. ' +
-        'Please use Chrome, Edge, or Opera.',
-      )
-    }
-    const [handle] = await (window as any).showOpenFilePicker({
-      types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
-      multiple: false,
-    })
-    const file = await handle.getFile()
-    const text = await file.text()
-    return { data: JSON.parse(text), fileName: file.name }
-  }
-
-  async writeFile(data: unknown, suggestedName: string): Promise<void> {
-    if (!('showSaveFilePicker' in window)) {
-      throw new Error(
-        'File System Access API is not supported in this browser. ' +
-        'Please use Chrome, Edge, or Opera.',
-      )
-    }
-    const handle = await (window as any).showSaveFilePicker({
-      suggestedName,
-      types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }],
-    })
-    const writable = await handle.createWritable()
-    await writable.write(JSON.stringify(data, null, 2))
-    await writable.close()
-  }
-
-  isAvailable(): boolean {
-    return 'showOpenFilePicker' in window
-  }
-}
 
 // ── Google API type stubs (no extra packages needed) ─────────────────────────
 
@@ -526,7 +483,7 @@ export class GoogleDriveProvider implements FileProvider {
 
   private async openPicker(token: string): Promise<{ id: string; name: string }> {
     await this.loadPickerApi()
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const view = new google.picker.DocsView()
         .setParent(this.folderId!)
 
@@ -538,6 +495,8 @@ export class GoogleDriveProvider implements FileProvider {
           if (data.action === google.picker.Action.PICKED) {
             const doc = data.docs[0]
             resolve({ id: doc.id, name: doc.name })
+          } else if (data.action === 'cancel') {
+            reject(new DOMException('Picker closed', 'AbortError'))
           }
         })
         .build()
