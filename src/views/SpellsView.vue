@@ -6,6 +6,7 @@ import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
 import { isCaster as checkCaster } from '../services/CharacterService'
 import { UI } from '../constants/ui'
+import { useNotifications } from '../composables/useNotifications'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Spell } from '../types/Spell'
@@ -30,7 +31,8 @@ const router = useRouter()
 const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
-const errorMessage = ref<string | null>(null)
+const loadError = ref(false)
+const { error } = useNotifications()
 
 /** The spell the player wants to learn — awaiting confirmation. */
 interface PendingSpellAction {
@@ -167,14 +169,14 @@ async function confirmLearn(): Promise<void> {
   const epToDeduct = action.epCost - action.epToPayWithGold
 
   if (char.availableEp < epToDeduct) {
-    errorMessage.value = 'Not enough EP.'
+    error('Not enough EP.')
     pendingAction.value = null
     return
   }
 
   const epReplacementGold = action.epToPayWithGold * 10
   if ((char.gold ?? 0) < action.goldCost + epReplacementGold) {
-    errorMessage.value = 'Not enough gold.'
+    error('Not enough gold.')
     pendingAction.value = null
     return
   }
@@ -202,7 +204,7 @@ async function confirmLearn(): Promise<void> {
     character.value = updated
     pendingAction.value = null
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
+    error(e instanceof Error ? e.message : 'Failed to save.')
     pendingAction.value = null
   }
 }
@@ -228,14 +230,16 @@ onMounted(async () => {
     ])
 
     if (!loadedChar) {
-      errorMessage.value = `Character "${id}" not found.`
+      loadError.value = true
+      error(`Character "${id}" not found.`, null)
       return
     }
 
     rules.value = loadedRules
     character.value = loadedChar
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load data.'
+    loadError.value = true
+    error(e instanceof Error ? e.message : 'Failed to load data.', null)
   } finally {
     loading.value = false
   }
@@ -246,7 +250,7 @@ onMounted(async () => {
   <main class="spells-page">
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
     <template v-else-if="character">
 

@@ -6,7 +6,9 @@
 export const UI = {
 
   // ── Allgemein ────────────────────────────────────────────────────────────────
-  loading:       'Wird geladen…',
+  loading:    'Wird geladen…',
+  failedToLoad: 'Laden fehlgeschlagen.',
+
   confirm:       'Bestätigen',
   cancel:        'Abbrechen',
   close:         'Schließen',
@@ -289,6 +291,7 @@ export const UI = {
   driveImportRules:     'Regelwerk aus Google Drive importieren',
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
+  driveExportSuccess:   'In Google Drive gespeichert.',
 
   // ── Backup ────────────────────────────────────────────────────────────────────
   backupTitle:    'Backup',

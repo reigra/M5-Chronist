@@ -5,6 +5,7 @@ import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { UI } from '../constants/ui'
 import { isCaster as checkCaster } from '../services/CharacterService'
+import { useNotifications } from '../composables/useNotifications'
 import type { Character, CharacterSkill, CharacterSpell } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 
@@ -28,7 +29,8 @@ const router = useRouter()
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const saving = ref(false)
-const errorMessage = ref<string | null>(null)
+const loadError = ref(false)
+const { error: notifyError } = useNotifications()
 
 /** True when editing an existing character, false when creating a new one. */
 const isEdit = computed(() => route.name === 'character-edit')
@@ -424,10 +426,9 @@ function validate(): string | null {
 /** Save the character to IndexedDB and navigate to the character sheet. */
 async function saveCharacter(): Promise<void> {
   const validationError = validate()
-  if (validationError) { errorMessage.value = validationError; return }
+  if (validationError) { notifyError(validationError); return }
 
   saving.value = true
-  errorMessage.value = null
 
   try {
     const character = buildCharacter()
@@ -442,7 +443,7 @@ async function saveCharacter(): Promise<void> {
     await characterStorage.save(character)
     await router.push({ name: 'character-sheet', params: { id: character.id } })
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
+    notifyError(e instanceof Error ? e.message : 'Failed to save.')
   } finally {
     saving.value = false
   }
@@ -459,13 +460,15 @@ onMounted(async () => {
       const charId = route.params.id as string
       const existing = await characterStorage.load(charId)
       if (!existing) {
-        errorMessage.value = `Character "${charId}" not found.`
+        loadError.value = true
+        notifyError(`Character "${charId}" not found.`, null)
         return
       }
       fillForm(existing)
     }
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load rules.'
+    loadError.value = true
+    notifyError(e instanceof Error ? e.message : 'Failed to load rules.', null)
   } finally {
     loading.value = false
   }
@@ -477,9 +480,9 @@ onMounted(async () => {
     <h1>{{ isEdit ? UI.formEditTitle : UI.formNewTitle }}</h1>
 
     <div v-if="loading" class="status">{{ UI.formLoadingRules }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
-    <form v-if="!loading" class="char-form" @submit.prevent="saveCharacter">
+    <form v-if="!loading && !loadError" class="char-form" @submit.prevent="saveCharacter">
 
       <!-- ── Identity ── -->
       <section class="card">

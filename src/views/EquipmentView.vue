@@ -5,6 +5,7 @@ import { RulesLoader } from '../services/RulesLoader'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
 import { UI } from '../constants/ui'
+import { useNotifications } from '../composables/useNotifications'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { EquipmentItem } from '../types/Equipment'
@@ -17,7 +18,8 @@ const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const saving = ref(false)
-const errorMessage = ref<string | null>(null)
+const loadError = ref(false)
+const { error } = useNotifications()
 
 const grad = computed(() =>
   character.value ? computeGrad(character.value.totalEs) : 0,
@@ -197,7 +199,6 @@ async function save(): Promise<void> {
   const char = character.value
   if (!char) return
   saving.value = true
-  errorMessage.value = null
   try {
     const updated: Character = {
       ...char,
@@ -208,7 +209,7 @@ async function save(): Promise<void> {
     character.value = updated
     await router.push({ name: 'character-sheet', params: { id: char.id } })
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
+    error(e instanceof Error ? e.message : 'Failed to save.')
   } finally {
     saving.value = false
   }
@@ -222,14 +223,16 @@ onMounted(async () => {
       characterStorage.load(id),
     ])
     if (!loadedChar) {
-      errorMessage.value = `Character "${id}" not found.`
+      loadError.value = true
+      error(`Character "${id}" not found.`, null)
       return
     }
     rules.value = loadedRules
     character.value = loadedChar
     inventory.value = [...(loadedChar.inventory ?? [])]
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load data.'
+    loadError.value = true
+    error(e instanceof Error ? e.message : 'Failed to load data.', null)
   } finally {
     loading.value = false
   }
@@ -239,7 +242,7 @@ onMounted(async () => {
 <template>
   <main class="equipment-page">
     <div v-if="loading" class="status">{{ UI.loading }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
     <template v-else-if="character">
       <header class="equip-header">

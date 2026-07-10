@@ -13,8 +13,10 @@ import {
 } from '../services/BackupService'
 import type { RestoreInfo } from '../services/BackupService'
 import { computeDiff } from '../services/CharacterService'
+import { useNotifications } from '../composables/useNotifications'
 import type { DiffEntry } from '../services/CharacterService'
 import { UI } from '../constants/ui'
+import { isDriveAvailable } from '../services/FileProvider'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { SourceSummary } from '../services/RulesStorage'
@@ -32,10 +34,7 @@ interface PendingImport {
 const router = useRouter()
 const characters = ref<Array<{ id: string; name: string; typeId: string }>>([])
 const loading = ref(true)
-const errorMessage = ref<string | null>(null)
-const backupError = ref<string | null>(null)
-const backupDriveError = ref<string | null>(null)
-const backupSuccess = ref(false)
+const loadError = ref(false)
 const backingUp = ref(false)
 const backingUpDrive = ref(false)
 const pendingImport = ref<PendingImport | null>(null)
@@ -43,13 +42,13 @@ const pendingImport = ref<PendingImport | null>(null)
 // ── Restore state ──
 const restoreInfo = ref<RestoreInfo | null>(null)
 const restorePhase = ref<'idle' | 'busy' | 'conflict' | 'ask'>('idle')
-const restoreError = ref<string | null>(null)
-const restoreSuccess = ref(false)
 const askIndex = ref(0)
 const askResolutions = ref<Map<string, boolean>>(new Map()) // charId → overwrite = true
 const askCurrentDiff = ref<DiffEntry[] | null>(null)
 const activeSources = ref<SourceSummary[]>([])
 const rules = ref<RulesData | null>(null)
+const driveAvailable = isDriveAvailable()
+const { ok, error } = useNotifications()
 
 /**
  * True if a character's type is not fully supported by the loaded rules.
@@ -81,7 +80,8 @@ async function loadList(): Promise<void> {
     activeSources.value = allSources.filter(s => s.enabled).sort((a, b) => a.priority - b.priority)
     rules.value = loadedRules
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load characters.'
+    loadError.value = true
+    error(e instanceof Error ? e.message : 'Failed to load characters.')
   } finally {
     loading.value = false
   }
@@ -111,15 +111,11 @@ async function importCharacter(): Promise<void> {
     pendingImport.value = { incoming, diff }
   } catch (e) {
     if (e instanceof Error && e.name !== 'AbortError') {
-      errorMessage.value = e.message
+      error(e.message)
     }
   }
 }
 
-/**
- * Import a character from Google Drive (with diff/overwrite flow).
- * Same as importCharacter() but reads via GoogleDriveProvider.
- */
 async function importCharacterFromDrive(): Promise<void> {
   try {
     const incoming = await characterStorage.readFromDrive()
@@ -135,8 +131,8 @@ async function importCharacterFromDrive(): Promise<void> {
     const diff = computeDiff(existing, incoming)
     pendingImport.value = { incoming, diff }
   } catch (e) {
-    if (e instanceof Error) {
-      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    if (e instanceof Error && e.name !== 'AbortError') {
+      error(UI.driveErrorPrefix + ' ' + e.message)
     }
   }
 }
@@ -151,41 +147,34 @@ async function confirmImport(): Promise<void> {
     await loadList()
     await router.push({ name: 'character-sheet', params: { id: p.incoming.id } })
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
+    error(e instanceof Error ? e.message : 'Failed to save.')
     pendingImport.value = null
   }
 }
 
-/**
- * Permanently delete a character from IndexedDB.
- */
 async function deleteCharacter(id: string): Promise<void> {
   try {
     await characterStorage.remove(id)
     await loadList()
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to delete character.'
+    error(e instanceof Error ? e.message : 'Failed to delete character.')
   }
 }
 
-/** Cancel the import — discard the parsed character. */
 function cancelImport(): void {
   pendingImport.value = null
 }
 
 /** Start a full backup download (ZIP with all characters, rules and metadata). */
 async function doBackup(): Promise<void> {
-  backupError.value = null
-  backupSuccess.value = false
   backingUp.value = true
   try {
     const saved = await createBackup()
     if (saved) {
-      backupSuccess.value = true
-      setTimeout(() => { backupSuccess.value = false }, 3000)
+      ok(UI.backupSuccess)
     }
   } catch (e) {
-    backupError.value = e instanceof Error ? e.message : 'Unknown error'
+    error(e instanceof Error ? e.message : 'Unknown error')
   } finally {
     backingUp.value = false
   }
@@ -193,14 +182,12 @@ async function doBackup(): Promise<void> {
 
 /** Upload a backup ZIP to Google Drive. */
 async function doBackupDrive(): Promise<void> {
-  backupDriveError.value = null
   backingUpDrive.value = true
   try {
     await uploadBackupToDrive()
-    backupSuccess.value = true
-    setTimeout(() => { backupSuccess.value = false }, 3000)
+    ok(UI.backupSuccess)
   } catch (e) {
-    backupDriveError.value = e instanceof Error ? e.message : 'Unknown error'
+    error(e instanceof Error ? e.message : 'Unknown error')
   } finally {
     backingUpDrive.value = false
   }
@@ -210,8 +197,6 @@ async function doBackupDrive(): Promise<void> {
 
 /** Open a local ZIP file and parse the backup. */
 async function doRestore(): Promise<void> {
-  restoreError.value = null
-  restoreSuccess.value = false
   restoreInfo.value = null
   restorePhase.value = 'busy'
   try {
@@ -219,7 +204,7 @@ async function doRestore(): Promise<void> {
     showRestoreConflicts(info)
   } catch (e) {
     if (e instanceof Error && e.name !== 'AbortError') {
-      restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+      error(e instanceof Error ? e.message : 'Unknown error')
     }
     restorePhase.value = 'idle'
   }
@@ -227,15 +212,15 @@ async function doRestore(): Promise<void> {
 
 /** Open a Drive picker and parse the backup. */
 async function doRestoreDrive(): Promise<void> {
-  restoreError.value = null
-  restoreSuccess.value = false
   restoreInfo.value = null
   restorePhase.value = 'busy'
   try {
     const info = await restoreFromDrive()
     showRestoreConflicts(info)
   } catch (e) {
-    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    if (e instanceof Error && e.name !== 'AbortError') {
+      error(e instanceof Error ? e.message : 'Unknown error')
+    }
     restorePhase.value = 'idle'
   }
 }
@@ -247,13 +232,12 @@ function showRestoreConflicts(info: RestoreInfo): void {
     restorePhase.value = 'busy'
     executeRestore(info, 'all')
       .then(() => {
-        restoreSuccess.value = true
+        ok(UI.restoreSuccess)
         restorePhase.value = 'idle'
-        setTimeout(() => { restoreSuccess.value = false }, 4000)
         loadList()
       })
       .catch(e => {
-        restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+        error(e instanceof Error ? e.message : 'Unknown error')
         restorePhase.value = 'idle'
       })
   } else {
@@ -270,11 +254,10 @@ async function confirmRestoreAll(): Promise<void> {
   restoreInfo.value = null
   try {
     await executeRestore(info, 'all')
-    restoreSuccess.value = true
-    setTimeout(() => { restoreSuccess.value = false }, 4000)
+    ok(UI.restoreSuccess)
     loadList()
   } catch (e) {
-    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    error(e instanceof Error ? e.message : 'Unknown error')
   } finally {
     restorePhase.value = 'idle'
   }
@@ -326,11 +309,10 @@ async function finishAskMode(): Promise<void> {
   restoreInfo.value = null
   try {
     await executeRestore(info, askResolutions.value)
-    restoreSuccess.value = true
-    setTimeout(() => { restoreSuccess.value = false }, 4000)
+    ok(UI.restoreSuccess)
     loadList()
   } catch (e) {
-    restoreError.value = e instanceof Error ? e.message : 'Unknown error'
+    error(e instanceof Error ? e.message : 'Unknown error')
   } finally {
     restorePhase.value = 'idle'
   }
@@ -352,7 +334,7 @@ onMounted(loadList)
     <h1>{{ UI.homeTitle }}</h1>
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
     <template v-else>
 
@@ -470,7 +452,7 @@ onMounted(loadList)
             {{ UI.homeImportBtn }}
           </button>
 
-          <button class="btn-import" @click="importCharacterFromDrive">
+          <button v-if="driveAvailable" class="btn-import" @click="importCharacterFromDrive">
             {{ UI.importGoogleDrive }}
           </button>
         </div>
@@ -502,16 +484,11 @@ onMounted(loadList)
           <p class="backup-hint">{{ UI.backupHint }}</p>
           <div class="backup-buttons">
             <button class="btn-backup" :disabled="backingUp" @click="doBackup">{{ backingUp ? UI.backupRunning : UI.backupBtn }}</button>
-            <button class="btn-backup" :disabled="backingUpDrive" @click="doBackupDrive">{{ backingUpDrive ? UI.backupRunning : UI.backupDriveBtn }}</button>
+            <button v-if="driveAvailable" class="btn-backup" :disabled="backingUpDrive" @click="doBackupDrive">{{ backingUpDrive ? UI.backupRunning : UI.backupDriveBtn }}</button>
           </div>
-          <p v-if="backupSuccess" class="backup-success">{{ UI.backupSuccess }}</p>
-          <p v-if="backupError" class="backup-error">{{ UI.backupError }} {{ backupError }}</p>
-          <p v-if="backupDriveError" class="backup-error">{{ UI.backupError }} {{ backupDriveError }}</p>
-          <p v-if="restoreSuccess" class="restore-success">{{ UI.restoreSuccess }}</p>
-          <p v-if="restoreError" class="restore-error">{{ UI.restoreError }} {{ restoreError }}</p>
           <div class="backup-buttons">
             <button class="btn-backup" :disabled="!browserSupported" :title="!browserSupported ? UI.browserUnsupportedHint : ''" @click="doRestore">{{ UI.restoreBtn }}</button>
-            <button class="btn-backup" @click="doRestoreDrive">{{ UI.restoreDriveBtn }}</button>
+            <button v-if="driveAvailable" class="btn-backup" @click="doRestoreDrive">{{ UI.restoreDriveBtn }}</button>
           </div>
         </div>
       </template>
@@ -738,30 +715,6 @@ onMounted(loadList)
 .btn-backup:disabled:hover {
   background: transparent;
   color: #2a4a7a;
-}
-
-.backup-success {
-  color: #1a6e1a;
-  font-size: 0.85em;
-  margin: 0.5rem 0 0;
-}
-
-.backup-error {
-  color: #c00;
-  font-size: 0.85em;
-  margin: 0.5rem 0 0;
-}
-
-.restore-success {
-  color: #1a6e1a;
-  font-size: 0.85em;
-  margin: 0.5rem 0 0;
-}
-
-.restore-error {
-  color: #c00;
-  font-size: 0.85em;
-  margin: 0.5rem 0 0;
 }
 
 .conflict-list {

@@ -1,9 +1,14 @@
-## [v0.13.2] - 2026-07-09
 
-## [v0.13.1] - 2026-07-09
+### UX/UI
+- Abbruch bei Drive File Selector wird behandelt (App hängt nicht mehr)
+- Rückmeldung bei Aktionen via Chips (Ok, Warnung, Fehler)
+- Rückmeldung beim Export auf Google Drive
+
+### Sonstiges
+- lokales Build und Deplay angepasst
+- Backupname enthält App-Version 
 
 ## [v0.13.0] - 2026-07-09
-
 
 ### Sonstiges
 - Kontakt-E-Mail geändert
