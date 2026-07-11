@@ -229,6 +229,9 @@ export const UI = {
   spellsLearnNew:  'Neuen Zauberspruch lernen',
   spellDetailView:  'Details',
   spellOverviewView: 'Übersicht',
+  houseRulesShortDescription: 'Kurzbeschreibung (Hausregel)',
+  houseRulesSaveBtn:          'Als Hausregel speichern',
+  houseRulesSaved:            'Kurzbeschreibung gesichert.',
 
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',

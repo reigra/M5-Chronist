@@ -162,7 +162,7 @@ const availableSpells = computed(() => {
   const learned = new Set(spells.value.map(s => s.spellId))
   return r.spells
     .filter(s => groups.has(normalizeGroup(s.spellGroup)) && !learned.has(s.id))
-    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 })
 
 const skillFiltered = computed(() => {
@@ -186,7 +186,7 @@ const spellRows = computed(() => {
       const spell = r.spells.find(sp => sp.id === s.spellId)
       return { id: s.spellId, name: spell?.name ?? s.spellId, level: spell?.level ?? 0, spellGroup: normalizeGroup(spell?.spellGroup) ?? '—', pp: s.pp ?? 0 }
     })
-    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 })
 /** Playable types: isMeta filtered out, sorted alphabetically. */
 const playableTypes = computed(() => {

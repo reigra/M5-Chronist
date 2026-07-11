@@ -230,7 +230,7 @@ export class LatexExportService {
           return { spell, pp: s.pp ?? 0 }
         })
         .filter(s => s.spell)
-        .sort((a, b) => (a.spell!.level - b.spell!.level) || a.spell!.name.localeCompare(b.spell!.name))
+        .sort((a, b) => a.spell!.name.localeCompare(b.spell!.name, 'de'))
 
       for (const s of sorted) {
         const sp = s.spell!

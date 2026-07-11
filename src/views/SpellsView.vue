@@ -7,6 +7,7 @@ import { computeGrad } from '../services/GradUtils'
 import { isCaster as checkCaster } from '../services/CharacterService'
 import { UI } from '../constants/ui'
 import { useNotifications } from '../composables/useNotifications'
+import { houseRulesService } from '../services/HouseRulesService'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Spell } from '../types/Spell'
@@ -32,7 +33,7 @@ const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
-const { error } = useNotifications()
+const { error, ok } = useNotifications()
 
 /** The spell the player wants to learn — awaiting confirmation. */
 interface PendingSpellAction {
@@ -48,6 +49,9 @@ const pendingAction = ref<PendingSpellAction | null>(null)
 
 /** Spell whose detail popup is currently open. */
 const infoSpellRow = ref<{ spell: Spell; description: string } | null>(null)
+
+/** Local short description text being edited in the spell info popup. */
+const localShortDesc = ref('')
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -95,7 +99,7 @@ const learnedSpellRows = computed(() => {
       const spell = r.spells.find(sp => sp.id === spellId)
       return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: normalizeGroup(spell?.spellGroup) ?? '—', pp: s.pp ?? 0 }
     })
-    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 })
 
 /**
@@ -131,7 +135,7 @@ const learnableSpellRows = computed(() => {
         ),
       }
     })
-    .sort((a, b) => a.spell.level - b.spell.level || a.spell.name.localeCompare(b.spell.name))
+    .sort((a, b) => a.spell.name.localeCompare(b.spell.name, 'de'))
 })
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -223,6 +227,26 @@ function showSpellInfo(spellId: string): void {
   if (!spell) return
   const desc = r.spellDescriptions?.find(d => d.id === spellId)?.description ?? ''
   infoSpellRow.value = { spell, description: desc }
+  localShortDesc.value = spell.shortDescription
+}
+
+/** Save the current localShortDesc as a house rule for this character. */
+async function saveShortDescription(): Promise<void> {
+  const row = infoSpellRow.value
+  const char = character.value
+  if (!row || !char) return
+  try {
+    await houseRulesService.setSpellShortDescription(
+      char.name,
+      row.spell.id,
+      localShortDesc.value,
+    )
+    // Update local state so the UI reflects the change immediately
+    row.spell.shortDescription = localShortDesc.value
+    ok(UI.houseRulesSaved)
+  } catch (e) {
+    error(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.')
+  }
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -346,6 +370,15 @@ onMounted(async () => {
               <div v-if="infoSpellRow.description" class="spell-info-desc">
                 {{ infoSpellRow.description }}
               </div>
+            </div>
+            <div class="houserule-section">
+              <label class="houserule-label">{{ UI.houseRulesShortDescription }}</label>
+              <textarea
+                v-model="localShortDesc"
+                class="houserule-textarea"
+                rows="3"
+              ></textarea>
+              <button class="btn-save-hr" @click="saveShortDescription">{{ UI.houseRulesSaveBtn }}</button>
             </div>
             <div class="confirmation-buttons">
               <button class="btn-cancel" @click="infoSpellRow = null">{{ UI.close }}</button>
@@ -680,5 +713,47 @@ section h2 {
 
 .btn-info:hover {
   background: #e8e8e8;
+}
+
+.houserule-section {
+  margin: 1rem 0 0.5rem;
+  padding: 0.75rem;
+  background: #f5f0d0;
+  border: 1px solid #d4c890;
+  border-radius: 4px;
+}
+
+.houserule-label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #6b5a00;
+  margin-bottom: 0.4rem;
+}
+
+.houserule-textarea {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  font-size: 0.9rem;
+  font-family: sans-serif;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.btn-save-hr {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: #d4c080;
+  border: 1px solid #b8a460;
+  border-radius: 3px;
+  color: #3d3500;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.btn-save-hr:hover {
+  background: #c8b470;
 }
 </style>

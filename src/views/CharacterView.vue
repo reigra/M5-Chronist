@@ -128,7 +128,7 @@ const spellRows = computed(() => {
       displayDescription: desc,
       pp: typeof s === 'string' ? 0 : (s.pp ?? 0),
     }
-  }).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+  }).sort((a, b) => a.name.localeCompare(b.name, 'de'))
 })
 
 /** Known skills with their display name looked up from the rules. */

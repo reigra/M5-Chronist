@@ -285,6 +285,23 @@ export class RulesStorage {
   }
 
   /**
+   * Save (create or overwrite) a complete StoredSource entry in IndexedDB.
+   * Unlike importFromData, this does NOT adjust priorities or normalize IDs —
+   * the caller is responsible for providing a valid entry.
+   *
+   * @param entry - The complete StoredSource to persist.
+   */
+  async saveSource(entry: StoredSource): Promise<void> {
+    const db = await this.open()
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      tx.objectStore(STORE).put(entry)
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror    = () => { db.close(); reject(tx.error) }
+    })
+  }
+
+  /**
    * Merge CharacterType entries from all enabled sources.
    *
    * Priority: Hausregeln → Core-Quellen → Rest (via priorityOf()).
