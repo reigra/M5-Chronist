@@ -1,3 +1,5 @@
+## [v0.14.0] - 2026-07-11
+
 ### Hausregeln
 - Eigene Kurzbeschreibung von Spells eingeben und als Hausregel speichern. Kurzbeschreibung wird im LaTeX ausgegeben!
 
