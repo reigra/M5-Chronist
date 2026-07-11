@@ -1,3 +1,7 @@
+
+### Fixes
+- Zu lange Zauberbeschreibungen jetzt scrollbar
+
 ## [v0.14.0] - 2026-07-11
 
 ### Hausregeln

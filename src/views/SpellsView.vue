@@ -540,6 +540,9 @@ onMounted(async () => {
   padding: 1.5rem 1.75rem;
   max-width: 480px;
   width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -652,6 +655,9 @@ section h2 {
   display: flex;
   gap: 1.5rem;
   margin-bottom: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .spell-info-props {
@@ -665,6 +671,8 @@ section h2 {
   line-height: 1.5;
   color: #444;
   white-space: pre-wrap;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .spell-info-type {
