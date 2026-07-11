@@ -3,6 +3,7 @@
 
 ### LaTeX / PDF Datenblatt
 - Sprüche werden in zwei Spalten ausgegeben
+- Ausrichtung der Spalten auf Top geändert
 
 
 ### Fixes
