@@ -1,6 +1,9 @@
 
+### Fixes
+- Fehler in EVA Parser beim min/max Attributwerten
+
 ### UX/UI
-- Eingabe von Gold beim Steigern begrenzt
+- Eingabe der EP beim steigern mit Gold begrenzt
 
 ## [v0.13.1] - 2026-07-10
 
