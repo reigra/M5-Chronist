@@ -6,9 +6,23 @@ import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
 import { isCaster as checkCaster } from '../services/CharacterService'
 import { UI } from '../constants/ui'
+import { useNotifications } from '../composables/useNotifications'
+import { houseRulesService } from '../services/HouseRulesService'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Spell } from '../types/Spell'
+
+/** Map singular → plural for spell group names that differ between parsers and type definitions. */
+const SPELL_GROUP_FIX: Record<string, string> = {
+  'Wundertat': 'Wundertaten',
+  'Zauberlied': 'Zauberlieder',
+}
+
+/** Normalize a spell group name: apply SPELL_GROUP_FIX if known, pass through otherwise. */
+function normalizeGroup(g: string | null | undefined): string {
+  if (!g) return '—'
+  return SPELL_GROUP_FIX[g] ?? g
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +32,8 @@ const router = useRouter()
 const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
-const errorMessage = ref<string | null>(null)
+const loadError = ref(false)
+const { error, ok } = useNotifications()
 
 /** The spell the player wants to learn — awaiting confirmation. */
 interface PendingSpellAction {
@@ -34,6 +49,9 @@ const pendingAction = ref<PendingSpellAction | null>(null)
 
 /** Spell whose detail popup is currently open. */
 const infoSpellRow = ref<{ spell: Spell; description: string } | null>(null)
+
+/** Local short description text being edited in the spell info popup. */
+const localShortDesc = ref('')
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
@@ -62,7 +80,7 @@ const groupPp = computed(() => {
     const spell = r.spells.find(sp => sp.id === s.spellId)
     if (!spell) continue
     const pp = s.pp ?? 0
-    if (pp > 0) result[spell.spellGroup] = (result[spell.spellGroup] ?? 0) + pp
+    if (pp > 0) result[normalizeGroup(spell.spellGroup)] = (result[normalizeGroup(spell.spellGroup)] ?? 0) + pp
   }
   return result
 })
@@ -79,9 +97,9 @@ const learnedSpellRows = computed(() => {
     .map(s => {
       const spellId = typeof s === 'string' ? s : s.spellId
       const spell = r.spells.find(sp => sp.id === spellId)
-      return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: spell?.spellGroup ?? '—', pp: s.pp ?? 0 }
+      return { id: spellId, name: spell?.name ?? spellId, level: spell?.level ?? 0, spellGroup: normalizeGroup(spell?.spellGroup) ?? '—', pp: s.pp ?? 0 }
     })
-    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
 })
 
 /**
@@ -98,13 +116,13 @@ const learnableSpellRows = computed(() => {
   const learned = new Set((c.spells ?? []).map(s => typeof s === 'string' ? s : s.spellId))
 
   return r.spells
-    .filter(s => groups.has(s.spellGroup) && !learned.has(s.id))
+    .filter(s => groups.has(normalizeGroup(s.spellGroup)) && !learned.has(s.id))
     .map(s => {
       const lc = s.learnCost ?? 0
-      const ppAvailable = groupPp.value[s.spellGroup] ?? 0
+      const ppAvailable = groupPp.value[normalizeGroup(s.spellGroup)] ?? 0
       const ppUsed = Math.min(lc, ppAvailable)
-      const epCost = lc * (type.spellCosts![s.spellGroup] ?? 0)
-      const ppDiscount = ppUsed * (type.spellCosts![s.spellGroup] ?? 0)
+      const epCost = lc * (type.spellCosts![normalizeGroup(s.spellGroup)] ?? 0)
+      const ppDiscount = ppUsed * (type.spellCosts![normalizeGroup(s.spellGroup)] ?? 0)
       const netCost = epCost - ppDiscount
       return {
         spell: s,
@@ -117,7 +135,7 @@ const learnableSpellRows = computed(() => {
         ),
       }
     })
-    .sort((a, b) => a.spell.level - b.spell.level || a.spell.name.localeCompare(b.spell.name))
+    .sort((a, b) => a.spell.name.localeCompare(b.spell.name, 'de'))
 })
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -126,14 +144,20 @@ const learnableSpellRows = computed(() => {
  * Stage a spell to learn — shows the confirmation modal.
  * @param spell - The spell the player selected.
  */
+function clampEpGold(action: PendingSpellAction): void {
+  if (action.epToPayWithGold > action.maxGoldEp) {
+    action.epToPayWithGold = action.maxGoldEp
+  }
+}
+
 function requestLearn(spell: Spell): void {
   const type = charType.value
   if (!type?.spellCosts) return
   const lc = spell.learnCost ?? 0
-  const ppAvailable = groupPp.value[spell.spellGroup] ?? 0
+  const ppAvailable = groupPp.value[normalizeGroup(spell.spellGroup)] ?? 0
   const ppUsed = Math.min(lc, ppAvailable)
-  const epCost = (lc - ppUsed) * (type.spellCosts[spell.spellGroup] ?? 0)
-  const originalEpCost = lc * (type.spellCosts[spell.spellGroup] ?? 0)
+  const epCost = (lc - ppUsed) * (type.spellCosts[normalizeGroup(spell.spellGroup)] ?? 0)
+  const originalEpCost = lc * (type.spellCosts[normalizeGroup(spell.spellGroup)] ?? 0)
   const goldCost = (lc - ppUsed) * 100
   const maxGoldEp = Math.floor(epCost / 2)
   pendingAction.value = { spell, epCost, originalEpCost, goldCost, epToPayWithGold: 0, maxGoldEp, ppUsed }
@@ -155,14 +179,14 @@ async function confirmLearn(): Promise<void> {
   const epToDeduct = action.epCost - action.epToPayWithGold
 
   if (char.availableEp < epToDeduct) {
-    errorMessage.value = 'Not enough EP.'
+    error('Not enough EP.')
     pendingAction.value = null
     return
   }
 
   const epReplacementGold = action.epToPayWithGold * 10
   if ((char.gold ?? 0) < action.goldCost + epReplacementGold) {
-    errorMessage.value = 'Not enough gold.'
+    error('Not enough gold.')
     pendingAction.value = null
     return
   }
@@ -171,7 +195,7 @@ async function confirmLearn(): Promise<void> {
   const updatedSpells = (char.spells ?? []).map(s => {
     if (remainingPp <= 0) return s
     const spell = rules.value?.spells.find(sp => sp.id === s.spellId)
-    if (!spell || spell.spellGroup !== action.spell.spellGroup) return s
+    if (!spell || normalizeGroup(spell.spellGroup) !== normalizeGroup(action.spell.spellGroup)) return s
     const consume = Math.min(s.pp ?? 0, remainingPp)
     remainingPp -= consume
     return { ...s, pp: (s.pp ?? 0) - consume }
@@ -190,7 +214,7 @@ async function confirmLearn(): Promise<void> {
     character.value = updated
     pendingAction.value = null
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
+    error(e instanceof Error ? e.message : 'Failed to save.')
     pendingAction.value = null
   }
 }
@@ -203,6 +227,26 @@ function showSpellInfo(spellId: string): void {
   if (!spell) return
   const desc = r.spellDescriptions?.find(d => d.id === spellId)?.description ?? ''
   infoSpellRow.value = { spell, description: desc }
+  localShortDesc.value = spell.shortDescription
+}
+
+/** Save the current localShortDesc as a house rule for this character. */
+async function saveShortDescription(): Promise<void> {
+  const row = infoSpellRow.value
+  const char = character.value
+  if (!row || !char) return
+  try {
+    await houseRulesService.setSpellShortDescription(
+      char.name,
+      row.spell.id,
+      localShortDesc.value,
+    )
+    // Update local state so the UI reflects the change immediately
+    row.spell.shortDescription = localShortDesc.value
+    ok(UI.houseRulesSaved)
+  } catch (e) {
+    error(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.')
+  }
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -216,14 +260,16 @@ onMounted(async () => {
     ])
 
     if (!loadedChar) {
-      errorMessage.value = `Character "${id}" not found.`
+      loadError.value = true
+      error(`Character "${id}" not found.`, null)
       return
     }
 
     rules.value = loadedRules
     character.value = loadedChar
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load data.'
+    loadError.value = true
+    error(e instanceof Error ? e.message : 'Failed to load data.', null)
   } finally {
     loading.value = false
   }
@@ -234,7 +280,7 @@ onMounted(async () => {
   <main class="spells-page">
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
     <template v-else-if="character">
 
@@ -270,7 +316,7 @@ onMounted(async () => {
           <div class="modal-box">
             <p>
               {{ UI.confirmLearnPfx }} <strong>{{ pendingAction.spell.name }}</strong>
-              ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ pendingAction.spell.spellGroup }})
+              ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ normalizeGroup(pendingAction.spell.spellGroup) }})
               {{ UI.confirmFor }} <strong>{{ pendingAction.epCost }} {{ UI.unitEp }}</strong>?
             </p>
             <p v-if="pendingAction.ppUsed > 0" class="pp-used-note">
@@ -282,7 +328,7 @@ onMounted(async () => {
             </label>
             <label class="gold-cost-row">
               {{ UI.advGoldEpReplacement }}
-              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+               <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
               <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
             </label>
             <p class="ep-breakdown">
@@ -293,7 +339,7 @@ onMounted(async () => {
             <div class="confirmation-buttons">
               <button
                 class="btn-confirm"
-                :disabled="(character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
+                :disabled="pendingAction.epToPayWithGold > pendingAction.maxGoldEp || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
                 @click="confirmLearn"
               >{{ UI.confirm }}</button>
               <button class="btn-cancel" @click="cancelLearn">{{ UI.cancel }}</button>
@@ -309,7 +355,7 @@ onMounted(async () => {
               <div class="spell-info-props">
                 <p class="spell-info-type">{{ infoSpellRow.spell.spellType }} der Stufe {{ infoSpellRow.spell.level }}</p>
                 <p v-if="infoSpellRow.spell.material" class="spell-info-material">{{ infoSpellRow.spell.material }}</p>
-                <p class="spell-info-group">{{ infoSpellRow.spell.spellGroup }} → {{ infoSpellRow.spell.elements[0] }} → {{ infoSpellRow.spell.elements[1] ?? '' }}</p>
+                <p class="spell-info-group">{{ normalizeGroup(infoSpellRow.spell.spellGroup) }} → {{ infoSpellRow.spell.elements[0] }} → {{ infoSpellRow.spell.elements[1] ?? '' }}</p>
                 <div class="spell-info-details">
                   <p><span class="detail-label">AP:</span> {{ infoSpellRow.spell.apCost }}</p>
                   <p><span class="detail-label">Zauberdauer:</span> {{ infoSpellRow.spell.castingTime }}</p>
@@ -324,6 +370,15 @@ onMounted(async () => {
               <div v-if="infoSpellRow.description" class="spell-info-desc">
                 {{ infoSpellRow.description }}
               </div>
+            </div>
+            <div class="houserule-section">
+              <label class="houserule-label">{{ UI.houseRulesShortDescription }}</label>
+              <textarea
+                v-model="localShortDesc"
+                class="houserule-textarea"
+                rows="3"
+              ></textarea>
+              <button class="btn-save-hr" @click="saveShortDescription">{{ UI.houseRulesSaveBtn }}</button>
             </div>
             <div class="confirmation-buttons">
               <button class="btn-cancel" @click="infoSpellRow = null">{{ UI.close }}</button>
@@ -381,8 +436,8 @@ onMounted(async () => {
                 <td>
                   <button class="btn-info" @click="showSpellInfo(row.spell.id)">{{ UI.spellDetailView }}</button>
                 </td>
-                <td>{{ row.spell.spellGroup }}</td>
-                <td class="pp-cell">{{ groupPp[row.spell.spellGroup] ?? 0 }}</td>
+                <td>{{ normalizeGroup(row.spell.spellGroup) }}</td>
+                <td class="pp-cell">{{ groupPp[normalizeGroup(row.spell.spellGroup)] ?? 0 }}</td>
                 <td>
                   <template v-if="row.ppUsed > 0">
                     <span class="cost-strikethrough">{{ row.originalCost }} {{ UI.unitEp }}</span>
@@ -658,5 +713,47 @@ section h2 {
 
 .btn-info:hover {
   background: #e8e8e8;
+}
+
+.houserule-section {
+  margin: 1rem 0 0.5rem;
+  padding: 0.75rem;
+  background: #f5f0d0;
+  border: 1px solid #d4c890;
+  border-radius: 4px;
+}
+
+.houserule-label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #6b5a00;
+  margin-bottom: 0.4rem;
+}
+
+.houserule-textarea {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  font-size: 0.9rem;
+  font-family: sans-serif;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.btn-save-hr {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: #d4c080;
+  border: 1px solid #b8a460;
+  border-radius: 3px;
+  color: #3d3500;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.btn-save-hr:hover {
+  background: #c8b470;
 }
 </style>

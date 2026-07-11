@@ -43,13 +43,3 @@ export interface EquipmentItem {
   /** Skill ID of the associated Waffenfertigkeit skill (e.g. "Schwerter") */
   skillId?: string
 }
-
-// TODO: unused — can be removed
-export interface CharacterEquipmentItem {
-  name: string
-  group: string
-  description: string
-  location: string
-  price: number
-  weight: number
-}

@@ -1,5 +1,35 @@
-## [v0.13.0] - 2026-07-09
+### Hausregeln
+- Eigene Kurzbeschreibung von Spells eingeben und als Hausregel speichern. Kurzbeschreibung wird im LaTeX ausgegeben!
 
+### LaTeX / PDF Datenblatt
+- Sprüche werden in zwei Spalten ausgegeben
+- Ausrichtung der Spalten auf Top geändert
+
+
+### Fixes
+- Fehler in EVA Parser beim min/max Attributwerten
+
+### UX/UI
+- Eingabe der EP beim steigern mit Gold begrenzt
+- Sprüche werden jetzt alphabetisch sortiert und nicht mehr nach Level
+
+## [v0.13.1] - 2026-07-10
+
+### Fixes
+- Bezeichnung der Spellgruppen Wundertaten und Zauberlieder hat nicht gepasst
+- Eingesetztes Gold wird beim Steigern geprüft
+
+### UX/UI
+- Abbruch bei Drive File Selector wird behandelt (App hängt nicht mehr)
+- Rückmeldung bei Aktionen via Chips (Ok, Warnung, Fehler)
+- Rückmeldung beim Export auf Google Drive
+
+### Sonstiges
+- lokales Build und Deploy angepasst
+- Prüfung ob Drive Secrets vorhanden sind beim lokalen deploy
+- Backupname enthält App-Version 
+
+## [v0.13.0] - 2026-07-09
 
 ### Sonstiges
 - Kontakt-E-Mail geändert

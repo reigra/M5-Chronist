@@ -1222,10 +1222,10 @@ auf LP-\tabularnewline
 
 \newcommand{\mg@outputZauberblatt}[1]{
 	\NewOutput{Zauberblatt#1}{\Output{ZauberblattKopf}%
-	\begin{minipage}{\Halbseitenbreite}%
+	\begin{minipage}[t]{\Halbseitenbreite}%
 	\Output{ZauberA#1}%
 	\end{minipage}%
-	\begin{minipage}{\Halbseitenbreite}%
+	\begin{minipage}[t]{\Halbseitenbreite}%
 	\Output{ZauberB}%
 	\Output{magischeGegenstaende}%
 	\end{minipage}%

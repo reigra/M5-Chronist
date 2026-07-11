@@ -258,7 +258,11 @@ def parse_rasse(el: ET.Element) -> dict:
             val = attr(dp, k)
             if val:
                 try:
-                    restrictions[k] = {'max': abs(int(val))}
+                    v = int(val)
+                    if v > 0:
+                        restrictions[k] = {'min': v + 1}
+                    elif v < 0:
+                        restrictions[k] = {'max': abs(v) - 1}
                 except ValueError:
                     pass
                     

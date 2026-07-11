@@ -230,11 +230,18 @@ export class LatexExportService {
           return { spell, pp: s.pp ?? 0 }
         })
         .filter(s => s.spell)
-        .sort((a, b) => (a.spell!.level - b.spell!.level) || a.spell!.name.localeCompare(b.spell!.name))
+        .sort((a, b) => a.spell!.name.localeCompare(b.spell!.name, 'de'))
 
-      for (const s of sorted) {
+      const mid = Math.ceil(sorted.length / 2)
+
+      for (const s of sorted.slice(0, mid)) {
         const sp = s.spell!
         push(`\\Zauber1{${this.esc(sp.name)}}{${sp.apCost}}{${this.esc(sp.spellType)}}{${this.esc(sp.castingTime)}}{${this.esc(sp.range)}}{${this.esc(sp.targetType)}}{${this.esc(sp.effectArea)}}{${this.esc(sp.duration)}}{${this.escShort(sp.shortDescription)}}{${this.esc(sp.origin)}}`)
+      }
+
+      for (const s of sorted.slice(mid)) {
+        const sp = s.spell!
+        push(`\\Zauber2{${this.esc(sp.name)}}{${sp.apCost}}{${this.esc(sp.spellType)}}{${this.esc(sp.castingTime)}}{${this.esc(sp.range)}}{${this.esc(sp.targetType)}}{${this.esc(sp.effectArea)}}{${this.esc(sp.duration)}}{${this.escShort(sp.shortDescription)}}{${this.esc(sp.origin)}}`)
       }
     }
 

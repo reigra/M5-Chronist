@@ -96,7 +96,7 @@ async function buildBackupZip(): Promise<{ blob: Blob; backupName: string }> {
 
   // ── Generate ──────────────────────────────────────────────────────────────────
   const blob = await zip.generateAsync({ type: 'blob' })
-  const backupName = `MagusNG-Backup_${formatDate()}.zip`
+  const backupName = `MagusNG_V${__APP_VERSION__}_backup_${formatDate()}.zip`
   return { blob, backupName }
 }
 

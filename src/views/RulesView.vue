@@ -2,16 +2,19 @@
 import { ref, onMounted } from 'vue'
 import { rulesStorage } from '../services/RulesStorage'
 import { UI } from '../constants/ui'
+import { isDriveAvailable } from '../services/FileProvider'
+import { useNotifications } from '../composables/useNotifications'
 import type { SourceSummary, AssetLink } from '../services/RulesStorage'
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const sources        = ref<SourceSummary[]>([])
 const loading        = ref(true)
-const errorMessage   = ref<string | null>(null)
 const assetLinks     = ref<AssetLink[]>([])
 const reorderMode    = ref(false)
 const savingPriority = ref(false)
+const driveAvailable = isDriveAvailable()
+const { error, ok }      = useNotifications()
 
 /** True if the current browser supports the File System Access API. */
 const browserSupported = 'showOpenFilePicker' in window
@@ -25,7 +28,7 @@ async function loadList(): Promise<void> {
   try {
     sources.value = (await rulesStorage.list()).sort((a, b) => a.priority - b.priority)
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load rules.'
+    error(e instanceof Error ? e.message : 'Failed to load rules.')
   } finally {
     loading.value = false
   }
@@ -36,13 +39,12 @@ async function loadList(): Promise<void> {
  * Each imported file is stored in IndexedDB and enabled by default.
  */
 async function importFiles(): Promise<void> {
-  errorMessage.value = null
   try {
     await rulesStorage.importFiles()
     await loadList()
   } catch (e) {
     if (e instanceof Error && e.name !== 'AbortError') {
-      errorMessage.value = e.message
+      error(e.message)
     }
   }
 }
@@ -53,12 +55,11 @@ async function importFiles(): Promise<void> {
  * @param source - The source summary to toggle.
  */
 async function toggleEnabled(source: SourceSummary): Promise<void> {
-  errorMessage.value = null
   try {
     await rulesStorage.setEnabled(source.id, !source.enabled)
     source.enabled = !source.enabled
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to update source.'
+    error(e instanceof Error ? e.message : 'Failed to update source.')
   }
 }
 
@@ -67,13 +68,12 @@ async function toggleEnabled(source: SourceSummary): Promise<void> {
  * Import a rules file from Google Drive.
  */
 async function importRuleFromDrive(): Promise<void> {
-  errorMessage.value = null
   try {
     await rulesStorage.importFromDrive()
     await loadList()
   } catch (e) {
-    if (e instanceof Error) {
-      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+    if (e instanceof Error && e.name !== 'AbortError') {
+      error(UI.driveErrorPrefix + ' ' + e.message)
     }
   }
 }
@@ -84,12 +84,12 @@ async function importRuleFromDrive(): Promise<void> {
  * @param sourceId - The source ID to export.
  */
 async function exportRuleToDrive(sourceId: string): Promise<void> {
-  errorMessage.value = null
   try {
     await rulesStorage.exportToDrive(sourceId)
+    ok(UI.driveExportSuccess)
   } catch (e) {
     if (e instanceof Error) {
-      errorMessage.value = UI.driveErrorPrefix + ' ' + e.message
+      error(UI.driveErrorPrefix + ' ' + e.message)
     }
   }
 }
@@ -100,12 +100,11 @@ async function exportRuleToDrive(sourceId: string): Promise<void> {
  * @param id - The source ID to remove.
  */
 async function removeSource(id: string): Promise<void> {
-  errorMessage.value = null
   try {
     await rulesStorage.remove(id)
     sources.value = sources.value.filter(s => s.id !== id)
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to remove source.'
+    error(e instanceof Error ? e.message : 'Failed to remove source.')
   }
 }
 
@@ -115,7 +114,6 @@ async function removeSource(id: string): Promise<void> {
 async function moveUp(index: number): Promise<void> {
   if (index === 0 || savingPriority.value) return
   savingPriority.value = true
-  errorMessage.value = null
   try {
     const current    = sources.value[index]
     const above      = sources.value[index - 1]
@@ -124,7 +122,7 @@ async function moveUp(index: number): Promise<void> {
     await rulesStorage.updatePriority(above.id, tempPrio)
     await loadList()
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to reorder.'
+    error(e instanceof Error ? e.message : 'Failed to reorder.')
   } finally {
     savingPriority.value = false
   }
@@ -136,7 +134,6 @@ async function moveUp(index: number): Promise<void> {
 async function moveDown(index: number): Promise<void> {
   if (index === sources.value.length - 1 || savingPriority.value) return
   savingPriority.value = true
-  errorMessage.value = null
   try {
     const current    = sources.value[index]
     const below      = sources.value[index + 1]
@@ -145,7 +142,7 @@ async function moveDown(index: number): Promise<void> {
     await rulesStorage.updatePriority(below.id, tempPrio)
     await loadList()
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to reorder.'
+    error(e instanceof Error ? e.message : 'Failed to reorder.')
   } finally {
     savingPriority.value = false
   }
@@ -159,8 +156,6 @@ onMounted(loadList)
 <template>
   <main class="rules-view">
     <h1>{{ UI.rulesTitle }}</h1>
-
-    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
 
@@ -196,7 +191,7 @@ onMounted(loadList)
               </td>
               <td class="col-action">
                   <button
-                    v-if="source.enabled"
+                    v-if="driveAvailable && source.enabled"
                   class="btn-icon btn-drive-export"
                   @click="exportRuleToDrive(source.id)"
                   :title="UI.driveExportRules"
@@ -235,6 +230,7 @@ onMounted(loadList)
           {{ UI.rulesImportBtn }}
         </button>
         <button
+          v-if="driveAvailable"
           class="btn-import"
           @click="importRuleFromDrive"
         >

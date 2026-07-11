@@ -6,6 +6,7 @@ import { characterStorage } from '../services/CharacterStorage'
 import { advancementService } from '../services/AdvancementService'
 import { computeGrad } from '../services/GradUtils'
 import { UI } from '../constants/ui'
+import { useNotifications } from '../composables/useNotifications'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
@@ -22,7 +23,8 @@ const router = useRouter()
 const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
-const errorMessage = ref<string | null>(null)
+const loadError = ref(false)
+const { error } = useNotifications()
 
 /**
  * A pending action holds everything needed to show the cost preview and
@@ -262,6 +264,12 @@ function requestLearn(skill: Skill): void {
  * @param currentValue - The character's current FW for this skill.
  * @param instanceId   - Optional: die vollständige Instanz-ID bei Multi-Instanz-Skills.
  */
+function clampEpGold(action: PendingAction): void {
+  if (action.epToPayWithGold > action.maxGoldEp) {
+    action.epToPayWithGold = action.maxGoldEp
+  }
+}
+
 function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
   const type = charType.value
   if (!type) return
@@ -306,7 +314,7 @@ async function addEp(): Promise<void> {
     character.value = updated
     epToAdd.value = 1
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to save.'
+    error(e instanceof Error ? e.message : 'Failed to save.')
   }
 }
 
@@ -346,7 +354,7 @@ async function confirmAction(): Promise<void> {
     pendingAction.value = null
     selectedInstance.value = ''
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'An error occurred.'
+    error(e instanceof Error ? e.message : 'An error occurred.')
     pendingAction.value = null
     selectedInstance.value = ''
   }
@@ -363,7 +371,8 @@ onMounted(async () => {
     ])
 
     if (!loadedChar) {
-      errorMessage.value = `Character "${id}" not found in storage.`
+      loadError.value = true
+      error(`Character "${id}" not found in storage.`, null)
       return
     }
 
@@ -371,12 +380,14 @@ onMounted(async () => {
     character.value = loadedChar
 
     if (!charType.value) {
-      errorMessage.value =
+      error(
         `Type "${loadedChar.typeId}" was not found in the rules. ` +
         `Check that the character's typeId matches a type in the data files.`
+      )
     }
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'Failed to load data.'
+    loadError.value = true
+    error(e instanceof Error ? e.message : 'Failed to load data.', null)
   } finally {
     loading.value = false
   }
@@ -387,7 +398,7 @@ onMounted(async () => {
   <main class="advancement">
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
-    <div v-else-if="errorMessage" class="status error">{{ errorMessage }}</div>
+    <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
     <template v-else-if="character">
 
@@ -477,7 +488,7 @@ onMounted(async () => {
             </label>
             <label class="gold-cost-row">
               {{ UI.advGoldEpReplacement }}
-              <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" />
+               <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
               <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
             </label>
             <p class="ep-breakdown">
@@ -489,7 +500,7 @@ onMounted(async () => {
           <div class="confirmation-buttons">
             <button
               class="btn-confirm"
-              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || pendingAction.epToPayWithGold < 0 || pendingAction.epToPayWithGold > pendingAction.maxGoldEp || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
+              :disabled="(pendingAction.isMultiInstance && !selectedInstance) || pendingAction.epToPayWithGold < 0 || pendingAction.epToPayWithGold > pendingAction.maxGoldEp || (character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10 || character.availableEp < pendingAction.cost - pendingAction.epToPayWithGold"
               @click="confirmAction"
             >{{ UI.confirm }}</button>
             <button class="btn-cancel" @click="cancelAction">{{ UI.cancel }}</button>

@@ -6,7 +6,9 @@
 export const UI = {
 
   // ── Allgemein ────────────────────────────────────────────────────────────────
-  loading:       'Wird geladen…',
+  loading:    'Wird geladen…',
+  failedToLoad: 'Laden fehlgeschlagen.',
+
   confirm:       'Bestätigen',
   cancel:        'Abbrechen',
   close:         'Schließen',
@@ -227,6 +229,9 @@ export const UI = {
   spellsLearnNew:  'Neuen Zauberspruch lernen',
   spellDetailView:  'Details',
   spellOverviewView: 'Übersicht',
+  houseRulesShortDescription: 'Kurzbeschreibung (Hausregel)',
+  houseRulesSaveBtn:          'Als Hausregel speichern',
+  houseRulesSaved:            'Kurzbeschreibung gesichert.',
 
   // ── Regeln (RulesView) ───────────────────────────────────────────────────────
   rulesTitle:          'Regeln',
@@ -266,11 +271,13 @@ export const UI = {
     'Beweg.':    'Bewegen',
     'Erkenn.':   'Erkennen',
     'Erschaff.': 'Erschaffen',
-    'Formen':    'Formen',
-    'Veränd.':   'Verändern',
-    'Zerstören': 'Zerstören',
-    'Wunder':    'Wunder',
-    'Lied':      'Lied',
+    'Formen':       'Formen',
+    'Veränd.':      'Verändern',
+    'Zerstören':    'Zerstören',
+    'Wunder':       'Wunder',
+    'Wundertaten':  'Wundertaten',
+    'Lied':         'Lied',
+    'Zauberlieder': 'Zauberlieder',
     'Dweom.':    'Dweomer',
   } as Record<string, string>,
 
@@ -287,6 +294,7 @@ export const UI = {
   driveImportRules:     'Regelwerk aus Google Drive importieren',
   driveExportRules:     'Regelwerk nach Google Drive exportieren',
   driveErrorPrefix:     'Google Drive Fehler:',
+  driveExportSuccess:   'In Google Drive gespeichert.',
 
   // ── Backup ────────────────────────────────────────────────────────────────────
   backupTitle:    'Backup',

@@ -3,11 +3,13 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { UI } from './constants/ui'
 import UpdateBanner from './components/UpdateBanner.vue'
 import DevBanner from './components/DevBanner.vue'
+import NotificationChips from './components/NotificationChips.vue'
 import {
   hasDriveTokens,
   revokeDriveAccess,
   getDriveUserEmail,
   connectDrive,
+  isDriveAvailable,
 } from './services/FileProvider'
 
 // __APP_VERSION__ wird von Vite zur Build-Zeit aus package.json injiziert
@@ -16,6 +18,7 @@ const isDev = __APP_VERSION__.includes('-dev.')
 
 const driveEmail = ref<string | null>(null)
 const driveHasTokens = ref(false)
+const driveAvailable = isDriveAvailable()
 
 async function updateDriveStatus(): Promise<void> {
   const hasTokens = hasDriveTokens()
@@ -53,7 +56,7 @@ async function revokeDrive(): Promise<void> {
       <template v-if="!isDev">Version {{ appVersion }}</template>
       <DevBanner />
     </span>
-    <span class="nav-drive">
+    <span v-if="driveAvailable" class="nav-drive">
       <template v-if="driveHasTokens">
         <span class="nav-drive-email">{{ driveEmail ? `${UI.driveConnectedAs} ${driveEmail}` : UI.driveStatusConnected }}</span>
         <button class="nav-drive-revoke" @click="revokeDrive">{{ UI.driveRevokeBtn }}</button>
@@ -66,6 +69,7 @@ async function revokeDrive(): Promise<void> {
     <router-link to="/help" class="nav-link nav-link--help">{{ UI.helpNav }}</router-link>
   </nav>
   <RouterView />
+  <NotificationChips />
   <UpdateBanner />
 </template>
 

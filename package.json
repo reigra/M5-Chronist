@@ -1,7 +1,7 @@
 {
   "name": "magus-m5",
   "private": true,
-  "version": "0.13.0",
+  "version": "0.13.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "build:dev": "node scripts/build-dev.cjs",
     "build:prod": "node scripts/build-prod.cjs",
+    "bump:prod": "node scripts/bump-prod.cjs",
     "deploy:dev": "node scripts/deploy-dev.cjs",
     "deploy:prod": "node scripts/deploy-prod.cjs"
   },
