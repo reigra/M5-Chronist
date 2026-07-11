@@ -1,6 +1,10 @@
 ### Hausregeln
 - Eigene Kurzbeschreibung von Spells eingeben und als Hausregel speichern. Kurzbeschreibung wird im LaTeX ausgegeben!
 
+### LaTeX / PDF Datenblatt
+- Sprüche werden in zwei Spalten ausgegeben
+
+
 ### Fixes
 - Fehler in EVA Parser beim min/max Attributwerten
 
