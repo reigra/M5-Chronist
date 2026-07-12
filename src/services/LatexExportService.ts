@@ -190,10 +190,26 @@ export class LatexExportService {
     push('% Fertigkeiten — Abenteuerblatt')
     for (const s of nonWeaponSkills) {
       const skillDef = rules.skills.find(sk => sk.id === s.id)
-      if (!skillDef) continue
       const refName = this.toAsciiRef(s.id)
-      const leit = this.mapLeiteigenschaft(skillDef.linkedProperty)
-      push(`\\Fertig1[${refName}]{${refName}}${leit ? `{${leit}}` : '{}'}`)
+
+      // linkedProperty auflösen — bei Multi-Instanz-Skills (z.B. Sprachen)
+      // über die Basis-Fertigkeit, da die Instanz keinen eigenen Eintrag hat.
+      let leit = ''
+      if (skillDef) {
+        leit = this.mapLeiteigenschaft(skillDef.linkedProperty)
+      } else if (rules.skillRules?.multiInstanceSkills) {
+        const multiRule = rules.skillRules.multiInstanceSkills.find(
+          m => s.id.startsWith(m.idPrefix)
+        )
+        if (multiRule) {
+          const baseSkill = rules.skills.find(sk => sk.id === multiRule.baseSkillId)
+          if (baseSkill) {
+            leit = this.mapLeiteigenschaft(baseSkill.linkedProperty)
+          }
+        }
+      }
+
+      push(`\\Fertig1{${refName}}${leit ? `{${leit}}` : '{}'}`)
     }
 
     // ── Weapons from inventory ──────────────────────────────────────────────────

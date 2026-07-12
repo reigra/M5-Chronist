@@ -1,5 +1,10 @@
-## [v0.14.1] - 2026-07-11
 
+
+### LaTeX / PDF Datenblatt
+- Fehlende Fertigkeiten
+- Fehlende Umlaute
+
+## [v0.14.1] - 2026-07-11
 
 ### Fixes
 - Zu lange Zauberbeschreibungen jetzt scrollbar
