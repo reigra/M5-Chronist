@@ -17,6 +17,7 @@ CharacterValidator
 - `autoFix` ergänzt fehlende Pflicht-Skills und Defaults (non-mutating).
 - `migrate()` wird später entschlackt — keine Innate-Skill-Injektion mehr, nur Legacy-Format-Konvertierung.
 - Die Regeln für die Prüfung kommen aus `RulesData`. Wo nötig, werden zusätzliche Validierungskonfigurationen in den Rulebook-Schema ergänzt (später).
+- Universelle Regeln (Bonus-Formeln, abgeleitete Eigenschaften) sind separat dokumentiert in `docs/universal-rules.md`.
 
 ---
 
@@ -146,6 +147,26 @@ Führt alle unten stehenden Prüfungen durch. Reihenfolge nach Kategorie:
 |-------|------|
 | Boni-Werte auffällig (z.B. alle 0) | `BONUS_VALUE_SUSPICIOUS` |
 
+#### Kategorie G — Gradabhängige Fertigkeiten (warnings)
+
+Diese Prüfung betrifft Skills wie Abwehr, Resistenz und Zaubern, deren FW mit
+steigendem Grad automatisch zunimmt (definiert über `skill.gradValues[]`).
+
+| Check | Code |
+|-------|------|
+| Skill hat `gradValues[]`; FW weicht vom für aktuellen Grad erwarteten Wert ab | `GRAD_SKILL_VALUE_MISMATCH` (warning) |
+
+**Lookup-Logik für den erwarteten FW:**
+
+```
+grad = computeGrad(character.totalEs)              // aus GradUtils
+fwTable = skill.gradValues.sort((a, b) ⇒ a.grad - b.grad)
+expected = fwTable.filter(g ⇒ g.grad ⇐ grad).last()?.fw ?? skill.baseValue
+```
+
+D.h. nimm den letzten Eintrag in `gradValues`, dessen Grad ≤ dem aktuellen
+Grad ist. Liegt der Charakter unter dem ersten Eintrag → `skill.baseValue`.
+
 ### 2.2 `autoFix(character, rules)`
 
 Erzeugt einen neuen Character (via Spread/Map), bei dem folgende Korrekturen
@@ -157,9 +178,9 @@ nur dann angewendet werden, wenn das Ziel **nicht existiert oder undefined** ist
 | Skill `Trinken` hinzufügen | fehlt | FW = `Ko/10` |
 | Skill `Wahrnehmung` hinzufügen | fehlt | FW = 6 |
 | Skills `Hören`, `Nachtsicht`, `Riechen`, `Sechster Sinn`, `Sehen` | fehlen | FW = 0 (gestapelt auf Wahrnehmung) |
-| Skill `Abwehr` hinzufügen | fehlt | FW = 11 |
-| Skill `Resistenz` hinzufügen | fehlt | FW = 11 |
-| Skill `Zaubern` hinzufügen | fehlt + `spells` nicht leer | FW = 11 |
+| Skill `Abwehr` hinzufügen | fehlt | FW = `lookupGradValue(skill, grad)` |
+| Skill `Resistenz` hinzufügen | fehlt | FW = `lookupGradValue(skill, grad)` |
+| Skill `Zaubern` hinzufügen | fehlt + `spells` nicht leer | FW = `lookupGradValue(skill, grad)` |
 | `pp: 0` auf Skills ohne `pp` | `s.pp === undefined` | |
 | `pp: 0` auf Zauber ohne `pp` | `s.pp === undefined` | |
 | String-Zauber in `CharacterSpell` konvertieren | `typeof s === 'string'` | `{ spellId: s, pp: 0 }` |
@@ -183,6 +204,25 @@ interface InnateSkillRule {
 }
 ```
 
+**Helferfunktion `lookupGradValue(skill, grad)`:**
+
+```typescript
+/**
+ * Ermittelt den erwarteten FW für einen Skill mit gradValues-Tabelle.
+ *
+ * Durchläuft gradValues absteigend und nimmt den ersten Eintrag,
+ * dessen Grad ≤ dem aktuellen Charakter-Grad ist.
+ * Fallback: skill.baseValue (meist 11).
+ */
+function lookupGradValue(skill: Skill, grad: number): number {
+  const table = skill.gradValues ?? []
+  // Absteigend sortieren, damit der erste Treffer der höchste passende ist
+  const sorted = [...table].sort((a, b) ⇒ b.grad - a.grad)
+  const match = sorted.find(g ⇒ g.grad ⇐ grad)
+  return match?.fw ?? skill.baseValue
+}
+```
+
 Aktuell hartkodierte Liste:
 
 | Skill-ID | FW | Bedingung |
@@ -195,9 +235,9 @@ Aktuell hartkodierte Liste:
 | `Riechen` | `0` | immer (gestapelt) |
 | `Sechster Sinn` | `0` | immer (gestapelt) |
 | `Sehen` | `0` | immer (gestapelt) |
-| `Abwehr` | `11` | immer |
-| `Resistenz` | `11` | immer |
-| `Zaubern` | `11` | nur wenn `spells.length > 0` |
+| `Abwehr` | `lookupGradValue(skill, grad)` | immer |
+| `Resistenz` | `lookupGradValue(skill, grad)` | immer |
+| `Zaubern` | `lookupGradValue(skill, grad)` | nur wenn `spells.length > 0` |
 
 ---
 
@@ -287,4 +327,5 @@ Für Phase 2 (migrate entschlacken) muss eine Entscheidung her.
 
 1. **Regelwerk-Integration:** `innateSkills[]` und `validationRules[]` in `RulebookData` definieren
 2. **Bonus-Prüfung:** Formeln für Boni (AusB, SchB, AnB, AbB, ZauB, ResBg, ResBk) im Regelwerk definieren und gegen die Ist-Werte prüfen
-3. **Live-Validierung:** Während der Eingabe im Edit-Formular Felder einzeln validieren (on blur / on input)
+3. **UniversalRules-Schema:** Design eines Schemas für universelle Regeln (Bonus-Formeln, abgeleitete Eigenschaften, globale Limits) als `RulebookData.universalRules` — siehe `docs/universal-rules.md`
+4. **Live-Validierung:** Während der Eingabe im Edit-Formular Felder einzeln validieren (on blur / on input)
