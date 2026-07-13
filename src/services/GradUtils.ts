@@ -1,3 +1,5 @@
+import type { GradThreshold } from '../types/Rules'
+
 /**
  * GradUtils — Grad (character level) calculation for Midgard M5.
  *
@@ -12,18 +14,12 @@
  */
 
 /**
- * One entry in the Grad threshold table.
- * minEs: the minimum totalEs required to be at this Grad.
- */
-interface GradThreshold {
-  grad: number
-  minEs: number
-}
-
-/**
  * Grad threshold table for Midgard M5.
  * Each entry defines the minimum ES to reach that Grad.
- * Source: official Midgard M5 rulebook.
+ *
+ * Source: Mogadil Lerntabellen (Grad/ES table on page 1 of the PDF).
+ * Also available at runtime via RulesData.gradThresholds when a Mogadil
+ * rules source is loaded.
  */
 const GRAD_THRESHOLDS: GradThreshold[] = [
   { grad:  1, minEs:      0 },

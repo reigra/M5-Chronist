@@ -39,6 +39,15 @@ export interface RulebookMetadata {
 }
 
 /**
+ * One entry in the Grad threshold table.
+ * Defines the minimum totalEs required to be at a given Grad.
+ */
+export interface GradThreshold {
+  grad: number
+  minEs: number
+}
+
+/**
  * RulebookData — the full content of one combined source JSON file.
  * All sections are optional because not every rulebook contains every type.
  */
@@ -55,6 +64,7 @@ export interface RulebookData {
   spellDescriptions?: SpellDescription[]
   skillRules?: SkillRulesConfig
   equipment?: EquipmentItem[]
+  gradThresholds?: GradThreshold[]
   costColumns?: string[]
   costPatterns?: number[][]
 }
@@ -75,6 +85,7 @@ export interface RulesData {
   spellDescriptions: SpellDescription[]
   skillRules?: SkillRulesConfig
   equipment: EquipmentItem[]
+  gradThresholds?: GradThreshold[]
   costColumns?: string[]
   costPatterns?: number[][]
 }

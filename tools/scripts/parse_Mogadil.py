@@ -184,6 +184,86 @@ def _parse_advancement_row(row: list, col_headers: list) -> dict | None:
     }
 
 
+def extract_grad_table(pdf_path: str) -> tuple[list[dict], list[dict]]:
+    """Parse the ES/Grad/Abw/Res/Zau table from page 1.
+
+    Returns (gradThresholds, gradSkills):
+      gradThresholds — [{grad, minEs}, ...] for ES→Grad mapping
+      gradSkills     — [{name, gradValues: [{grad, fw}]}, ...] for Abwehr, Resistenz, Zaubern
+    """
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[0]
+        tables = page.extract_tables()
+
+    grad_table = None
+    for table in tables:
+        if not table:
+            continue
+        first = _cell(table[0][0]) if table[0] else ''
+        if first == 'ES':
+            grad_table = table
+            break
+
+    if grad_table is None:
+        print('ERROR: ES/Grad table not found on page 1')
+        sys.exit(1)
+
+    grad_thresholds: list[dict] = []
+    abw_values: list[dict] = []
+    res_values: list[dict] = []
+    zau_values: list[dict] = []
+
+    for row in grad_table[1:]:
+        if not row or len(row) < 5:
+            continue
+        es_str = _cell(row[0])
+        grad_str = _cell(row[1])
+        abw_str = _cell(row[2])
+        res_str = _cell(row[3])
+        zau_str = _cell(row[4])
+
+        if not es_str or not grad_str or not abw_str or not res_str or not zau_str:
+            continue
+
+        # Handle German-style number formatting (e.g. "1.000" → 1000)
+        try:
+            es_val = int(es_str.replace('.', ''))
+            grad_val = int(grad_str)
+            abw_val = int(abw_str)
+            res_val = int(res_str)
+            zau_val = int(zau_str)
+        except ValueError:
+            continue
+
+        grad_thresholds.append({'grad': grad_val, 'minEs': es_val})
+        abw_values.append({'grad': grad_val, 'fw': abw_val})
+        res_values.append({'grad': grad_val, 'fw': res_val})
+        zau_values.append({'grad': grad_val, 'fw': zau_val})
+
+    def _keep_transitions(entries: list[dict]) -> list[dict]:
+        """Filter to only entries where the fw value changes (transitions).
+
+        The first entry is always kept; subsequent entries are kept only
+        when their fw differs from the previous kept entry.
+        """
+        result: list[dict] = []
+        last_fw = None
+        for e in entries:
+            if last_fw is None or e['fw'] != last_fw:
+                result.append(e)
+                last_fw = e['fw']
+        return result
+
+    grad_skills: list[dict] = []
+    for name, values in [('Abwehr', abw_values), ('Resistenz', res_values), ('Zaubern', zau_values)]:
+        grad_skills.append({
+            'name': name,
+            'gradValues': _keep_transitions(values),
+        })
+
+    return grad_thresholds, grad_skills
+
+
 def extract_advancement_costs(pdf_path: str) -> dict[str, dict]:
     with pdfplumber.open(pdf_path) as pdf:
         page = pdf.pages[0]
@@ -712,6 +792,12 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     cost_lookup = extract_advancement_costs(pdf_path)
     log(f'  Found {len(cost_lookup)} cost categories: {", ".join(sorted(cost_lookup.keys()))}')
 
+    log('Parsing ES/Grad/Abw/Res/Zau table (page 1)...')
+    grad_thresholds, grad_skills = extract_grad_table(pdf_path)
+    log(f'  Found {len(grad_thresholds)} grad thresholds (Grad 1–{grad_thresholds[-1]["grad"]})')
+    for gs in grad_skills:
+        log(f'  Skill "{gs["name"]}" with {len(gs["gradValues"])} grad entries')
+
     log('Parsing Fertigkeiten tables (pages 3-10)...')
     cost_columns, all_rows = extract_fertigkeiten_tables(pdf_path)
     log(f'  Found {len(all_rows)} skills across {len(cost_columns)} cost columns')
@@ -815,6 +901,23 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     else:
         log('  WARN: no "Waffen" entry found, weapon skills will be skipped')
 
+    # Add grade-dependent skills (Abwehr, Resistenz, Zaubern) from the ES/Grad table
+    bonus_key_map = {'Abwehr': 'AbB', 'Resistenz': None, 'Zaubern': 'ZauB'}
+    for gs in grad_skills:
+        name = gs['name']
+        grad_vals = gs['gradValues']
+        skills.append({
+            'id': name,
+            'name': name,
+            'typ': 'angeboreneFertigkeit',
+            'learnCost': 0,
+            'advancementCosts': [],
+            'baseValue': grad_vals[0]['fw'],
+            'maxValue': grad_vals[-1]['fw'],
+            **({'bonusKey': bonus_key_map[name]} if bonus_key_map.get(name) else {}),
+            'gradValues': grad_vals,
+        })
+
     _umlaut_sort = str.maketrans({'ä': 'a', 'ö': 'o', 'ü': 'u', 'Ä': 'A', 'Ö': 'O', 'Ü': 'U', 'ß': 'ss'})
     skills.sort(key=lambda s: s['name'].translate(_umlaut_sort).casefold())
 
@@ -826,6 +929,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'scriptVersion': get_app_version(),
             'priority': 0,
         },
+        'gradThresholds': grad_thresholds,
         'costColumns': cost_columns,
         'costPatterns': cost_patterns,
         'types': types,

@@ -586,6 +586,13 @@ export class RulesStorage {
       }
     }
 
+    // Merge gradThresholds: first (highest priority) source wins
+    for (const entry of active) {
+      if (entry.data.gradThresholds && !rules.gradThresholds) {
+        rules.gradThresholds = entry.data.gradThresholds
+      }
+    }
+
     return rules
   }
   /**

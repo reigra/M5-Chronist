@@ -1,4 +1,6 @@
 
+### Parser Scripte
+- Gradtabelle aus den Mogadil Lerntabellen ins Regelwerk
 
 ### LaTeX / PDF Datenblatt
 - Fehlende Fertigkeiten
