@@ -33,9 +33,14 @@ const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 const loadError = ref(false)
-const { error: notifyError } = useNotifications()
+const { error: notifyError, ok } = useNotifications()
 const validationResult = ref<ValidationResult | null>(null)
 const validationExpanded = ref(false)
+const autoFixing = ref(false)
+
+const hasAutoFixableIssues = computed(() => {
+  return (validationResult.value?.hasErrors || validationResult.value?.hasWarnings) ?? false
+})
 
 const severityLabel = (severity: 'error' | 'warning' | 'info'): string => {
   if (severity === 'error') return UI.validationSeverityError
@@ -472,6 +477,27 @@ async function saveCharacter(): Promise<void> {
   }
 }
 
+/** Korrigiert formel-basierte Werte im aktuellen Formular. */
+const runCorrection = async (): Promise<void> => {
+  if (!rules.value) return
+  autoFixing.value = true
+  try {
+    const character = buildCharacter()
+    const result = characterValidator.correctIssues(character, rules.value)
+    if (isEdit.value) {
+      await characterStorage.save(result.fixed)
+    }
+    fillForm(result.fixed)
+    const issues = characterValidator.validate(result.fixed, rules.value)
+    validationResult.value = issues
+    ok(UI.validationAutoFixDone)
+  } catch (e) {
+    notifyError(e instanceof Error ? e.message : 'Correction failed')
+  } finally {
+    autoFixing.value = false
+  }
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -488,6 +514,7 @@ onMounted(async () => {
         return
       }
       fillForm(result.character)
+      validationResult.value = result.issues
     }
   } catch (e) {
     loadError.value = true
@@ -527,6 +554,9 @@ onMounted(async () => {
             (erwartet: {{ issue.expected ?? '—' }}, Ist: {{ issue.actual ?? '—' }})
           </span>
         </div>
+        <button v-if="hasAutoFixableIssues" type="button" class="btn-auto-fix" :disabled="autoFixing" @click="runCorrection">
+          {{ autoFixing ? UI.loading : UI.validationAutoFix }}
+        </button>
       </div>
     </div>
 
@@ -1180,6 +1210,24 @@ input, select {
   color: #888;
   font-size: 0.9em;
   width: 100%;
+}
+
+.btn-auto-fix {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #2a7a2a;
+  border-radius: 3px;
+  background: #2a7a2a;
+  color: #fff;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.btn-auto-fix:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .empty-hint { color: #888; font-style: italic; font-size: 0.9em; margin: 0; }

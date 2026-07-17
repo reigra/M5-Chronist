@@ -61,6 +61,19 @@ export class CharacterValidator {
    */
   autoFix(character: Character, rules: RulesData): FixResult {
     const applied: FixDescription[] = []
+
+    // 0. Boni-Defaults sicherstellen (auch bei {} oder partiellen Boni)
+    const DEFAULT_BONI = { AusB: 0, SchB: 0, AnB: 0, AbB: 0, ZauB: 0, ResBg: 0, ResBk: 0 }
+    const rawBoni = character.boni
+    const boni = { ...DEFAULT_BONI, ...(rawBoni ?? {}) }
+    if (!rawBoni || Object.keys(rawBoni).length === 0) {
+      applied.push({
+        action: 'add_boni_defaults',
+        target: 'boni',
+        description: 'Bonus-Werte (boni) waren nicht gesetzt — auf 0 gesetzt',
+      })
+    }
+
     let skills = [...(character.skills ?? [])]
     const knownIds = new Set(skills.map(s => s.skillId))
 
@@ -71,7 +84,7 @@ export class CharacterValidator {
     // Kontext für FormulaEngine: Eigenschaften + Boni
     const ctx = {
       ...character.properties,
-      ...character.boni,
+      ...boni,
     }
 
     // Formel-Lookup
@@ -151,8 +164,142 @@ export class CharacterValidator {
 
     const fixed: Character = {
       ...character,
+      boni,
       skills,
       spells,
+    }
+
+    return { fixed, applied }
+  }
+
+  /**
+   * Korrigiert formel-basierte Werte (Boni, InnateSkills, Grad-Skills, Reichweite).
+   * Überschreibt bestehende Werte mit den berechneten Sollwerten.
+   * Gibt einen neuen Character zurück (immutable).
+   *
+   * Reihenfolge:
+   * 1. Boni aus Formeln (BONUS_FORMULA_MISMATCH)
+   * 2. InnateSkill-FWs aus Formeln (INNATE_FORMULA_MISMATCH)
+   * 3. Grad-basierte Skills (GRAD_SKILL_VALUE_MISMATCH)
+   * 4. Basis-/Maximalwert-Korrektur (SKILL_BELOW_BASE / SKILL_ABOVE_MAX)
+   */
+  correctIssues(character: Character, rules: RulesData): FixResult {
+    const applied: FixDescription[] = []
+
+    let boni: Character['boni'] = { ...(character.boni ?? {}) }
+    let skills = character.skills.map(s => ({ ...s }))
+
+    // ── Kontext für FormulaEngine ──
+    const ctx: Record<string, number> = {
+      ...character.properties,
+      ...boni,
+    }
+
+    // Formel-Lookup-Tabelle
+    const formulaMap = new Map<string, string>()
+    for (const f of (rules.universalRules?.formulas ?? [])) {
+      formulaMap.set(f.id, f.formula)
+    }
+
+    // ── 1. Boni aus Formeln korrigieren ──
+    for (const formula of (rules.universalRules?.formulas ?? [])) {
+      const id = formula.id as keyof Character['boni']
+      if (!(id in boni)) continue
+
+      try {
+        const expected = formulaEngine.evaluate(formula.formula, ctx)
+        if (boni[id] !== expected) {
+          const old = boni[id]
+          boni[id] = expected
+          ctx[id] = expected
+          applied.push({
+            action: 'correct_bonus',
+            target: id,
+            description: `Bonus ${id} von ${old} auf ${expected} korrigiert (${formula.formula})`,
+          })
+        }
+      } catch {
+        // Syntax-Fehler — von validate() gemeldet, hier ignorieren
+      }
+    }
+
+    // ── 2. InnateSkill-FWs aus Formeln korrigieren ──
+    for (const innate of (rules.universalRules?.innateSkills ?? [])) {
+      let formulaStr: string | undefined
+
+      if (innate.formulaId) {
+        formulaStr = formulaMap.get(innate.formulaId)
+      } else if (innate.formula !== undefined) {
+        formulaStr = innate.formula
+      }
+
+      if (!formulaStr) continue
+
+      const idx = skills.findIndex(s => s.skillId === innate.id)
+      if (idx === -1) continue
+
+      try {
+        const expected = Math.max(0, formulaEngine.evaluate(formulaStr, ctx))
+
+        if (skills[idx].value !== expected) {
+          const old = skills[idx].value
+          skills[idx] = { ...skills[idx], value: expected }
+          applied.push({
+            action: 'correct_innate_skill',
+            target: innate.id,
+            description: `FW von "${innate.id}" von ${old} auf ${expected} korrigiert (${formulaStr})`,
+          })
+        }
+      } catch {
+        // Syntax-Fehler ignorieren
+      }
+    }
+
+    // ── 3. Grad-basierte Skills korrigieren ──
+    for (let i = 0; i < skills.length; i++) {
+      const schema = rules.skills.find(s => s.id === skills[i].skillId)
+      if (!schema?.gradValues) continue
+
+      const expectedFw = this.lookupGradValue(schema, character.totalEs)
+      if (skills[i].value !== expectedFw) {
+        const old = skills[i].value
+        skills[i] = { ...skills[i], value: expectedFw }
+        applied.push({
+          action: 'correct_grad_skill',
+          target: skills[i].skillId,
+          description: `FW von "${skills[i].skillId}" von ${old} auf ${expectedFw} korrigiert (Grad ${computeGrad(character.totalEs)})`,
+        })
+      }
+    }
+
+    // ── 4. Basis-/Maximalwert-Korrektur ──
+    for (let i = 0; i < skills.length; i++) {
+      const schema = rules.skills.find(s => s.id === skills[i].skillId)
+      if (!schema) continue
+
+      if (skills[i].value < schema.baseValue) {
+        const old = skills[i].value
+        skills[i] = { ...skills[i], value: schema.baseValue }
+        applied.push({
+          action: 'correct_skill_range',
+          target: skills[i].skillId,
+          description: `FW von "${skills[i].skillId}" von ${old} auf ${schema.baseValue} korrigiert (Basiswert)`,
+        })
+      } else if (skills[i].value > schema.maxValue) {
+        const old = skills[i].value
+        skills[i] = { ...skills[i], value: schema.maxValue }
+        applied.push({
+          action: 'correct_skill_range',
+          target: skills[i].skillId,
+          description: `FW von "${skills[i].skillId}" von ${old} auf ${schema.maxValue} korrigiert (Maximalwert)`,
+        })
+      }
+    }
+
+    const fixed: Character = {
+      ...character,
+      boni,
+      skills,
     }
 
     return { fixed, applied }
@@ -448,6 +595,8 @@ export class CharacterValidator {
   // ── Kategorie F: Boni ──────────────────────────────────────────────────────
 
   private validateCategoryF(character: Character, issues: ValidationIssue[]): void {
+    if (!character.boni || Object.keys(character.boni).length === 0) return
+
     const allZero = Object.values(character.boni).every(v => v === 0)
     if (allZero) {
       issues.push({
@@ -508,6 +657,8 @@ export class CharacterValidator {
   // ── Kategorie I: Formel-basierte Werte ──────────────────────────────────────
 
   private validateCategoryI(character: Character, rules: RulesData, issues: ValidationIssue[]): void {
+    if (!character.boni || Object.keys(character.boni).length === 0) return
+
     const ctx = {
       ...character.properties,
       ...character.boni,

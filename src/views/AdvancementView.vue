@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { characterLoadService } from '../services/CharacterLoadService'
 import { characterStorage } from '../services/CharacterStorage'
+import { characterValidator } from '../services/CharacterValidator'
 import { advancementService } from '../services/AdvancementService'
 import { computeGrad } from '../services/GradUtils'
 import { UI } from '../constants/ui'
@@ -10,6 +11,7 @@ import { useNotifications } from '../composables/useNotifications'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
+import type { ValidationResult } from '../types/CharacterValidation'
 import type { SkillRulesConfig } from '../types/SkillRules'
 // import skillRulesData from '../config/skillRules.json'
 
@@ -24,7 +26,14 @@ const character = ref<Character | null>(null)
 const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
-const { error } = useNotifications()
+const { error, ok } = useNotifications()
+const validationResult = ref<ValidationResult | null>(null)
+const validationExpanded = ref(false)
+const autoFixing = ref(false)
+
+const hasAutoFixableIssues = computed(() => {
+  return (validationResult.value?.hasErrors || validationResult.value?.hasWarnings) ?? false
+})
 
 /**
  * A pending action holds everything needed to show the cost preview and
@@ -360,6 +369,31 @@ async function confirmAction(): Promise<void> {
   }
 }
 
+const severityLabel = (severity: 'error' | 'warning' | 'info'): string => {
+  if (severity === 'error') return UI.validationSeverityError
+  if (severity === 'warning') return UI.validationSeverityWarning
+  return UI.validationSeverityInfo
+}
+
+/** Korrigiert formel-basierte Werte (Boni, Skill-FWs, Grad-Werte). */
+const runCorrection = async (): Promise<void> => {
+  const c = character.value; const r = rules.value
+  if (!c || !r) return
+  autoFixing.value = true
+  try {
+    const result = characterValidator.correctIssues(c, r)
+    await characterStorage.save(result.fixed)
+    character.value = result.fixed
+    const issues = characterValidator.validate(result.fixed, r)
+    validationResult.value = issues
+    ok(UI.validationAutoFixDone)
+  } catch (e) {
+    error(e instanceof Error ? e.message : 'Correction failed')
+  } finally {
+    autoFixing.value = false
+  }
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -375,6 +409,7 @@ onMounted(async () => {
 
     rules.value = result.rules
     character.value = result.character
+    validationResult.value = result.issues
 
     if (!charType.value) {
       error(
@@ -396,6 +431,34 @@ onMounted(async () => {
 
     <div v-if="loading" class="status">{{ UI.loading }}</div>
     <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
+
+    <!-- ── Validation Banner ── -->
+    <div v-if="validationResult && (validationResult.hasErrors || validationResult.hasWarnings)" class="validation-banner" :class="{ 'validation-banner--expanded': validationExpanded }">
+      <button type="button" class="validation-banner-summary" @click="validationExpanded = !validationExpanded" :title="UI.validationClickForDetails">
+        <span v-if="validationResult.hasErrors" class="validation-banner--error">
+          {{ validationResult.issues.filter(i => i.severity === 'error').length }} {{ UI.validationErrors }}
+        </span>
+        <span v-if="validationResult.hasWarnings" class="validation-banner--warning">
+          {{ validationResult.issues.filter(i => i.severity === 'warning').length }} {{ UI.validationWarnings }}
+        </span>
+        <span v-if="validationResult.issues.filter(i => i.severity === 'info').length" class="validation-banner--info">
+          {{ validationResult.issues.filter(i => i.severity === 'info').length }} {{ UI.validationInfos }}
+        </span>
+        <span class="validation-banner-chevron">{{ validationExpanded ? '▲' : '▼' }}</span>
+      </button>
+      <div v-if="validationExpanded" class="validation-issue-list">
+        <div v-for="(issue, idx) in validationResult.issues" :key="idx" class="validation-issue-item" :class="'validation-issue-item--' + issue.severity">
+          <span class="validation-issue-severity">{{ severityLabel(issue.severity) }}:</span>
+          <span class="validation-issue-message">{{ issue.message }}</span>
+          <span v-if="issue.expected !== undefined || issue.actual !== undefined" class="validation-issue-detail">
+            (erwartet: {{ issue.expected ?? '—' }}, Ist: {{ issue.actual ?? '—' }})
+          </span>
+        </div>
+        <button v-if="hasAutoFixableIssues" type="button" class="btn-auto-fix" :disabled="autoFixing" @click="runCorrection">
+          {{ autoFixing ? UI.loading : UI.validationAutoFix }}
+        </button>
+      </div>
+    </div>
 
     <template v-else-if="character">
 
@@ -857,6 +920,108 @@ th {
   font-size: 0.9em;
   color: #444;
   margin-top: 0.25rem;
+}
+
+/* ── Validation Banner ── */
+
+.validation-banner {
+  border: 1px solid #f0c040;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 1rem;
+  background: #fffbe6;
+  font-size: 0.9em;
+}
+
+.validation-banner--expanded {
+  background: #fff8d6;
+}
+
+.validation-banner-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+
+.validation-banner-summary:hover {
+  opacity: 0.85;
+}
+
+.validation-banner-chevron {
+  margin-left: auto;
+  font-size: 0.75em;
+  color: #888;
+}
+
+.validation-banner--error { color: #c00; }
+.validation-banner--warning { color: #b8860b; }
+.validation-banner--info { color: #555; }
+
+.validation-issue-list {
+  border-top: 1px solid #f0c040;
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.validation-issue-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  padding: 0.2rem 0;
+  font-weight: 400;
+  font-size: 0.9em;
+  border-bottom: 1px solid #eee;
+}
+
+.validation-issue-item:last-child {
+  border-bottom: none;
+}
+
+.validation-issue-severity {
+  font-weight: 600;
+  min-width: 4.5em;
+}
+
+.validation-issue-item--error .validation-issue-severity { color: #c00; }
+.validation-issue-item--warning .validation-issue-severity { color: #b8860b; }
+.validation-issue-item--info .validation-issue-severity { color: #555; }
+
+.validation-issue-message {
+  flex: 1 1 auto;
+}
+
+.validation-issue-detail {
+  color: #888;
+  font-size: 0.9em;
+  width: 100%;
+}
+
+.btn-auto-fix {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #2a7a2a;
+  border-radius: 3px;
+  background: #2a7a2a;
+  color: #fff;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.btn-auto-fix:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
 

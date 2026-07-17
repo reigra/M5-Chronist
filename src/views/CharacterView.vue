@@ -69,9 +69,9 @@ const showSpellDetail = ref(false)
 const validationExpanded = ref(false)
 const autoFixing = ref(false)
 
-/** True if there are issues that autoFix() can resolve. */
+/** True if there are issues that correctIssues() can resolve. */
 const hasAutoFixableIssues = computed(() => {
-  return validationResult.value?.issues.some(i => i.code === 'MISSING_INNATE_SKILL') ?? false
+  return (validationResult.value?.hasErrors || validationResult.value?.hasWarnings) ?? false
 })
 
 // ── Computed ──────────────────────────────────────────────────────────────────
@@ -134,20 +134,20 @@ const toggleValidation = (): void => {
   validationExpanded.value = !validationExpanded.value
 }
 
-const runAutoFix = async (): Promise<void> => {
+const runCorrection = async (): Promise<void> => {
   const c = character.value; const r = rules.value
   if (!c || !r) return
   autoFixing.value = true
   try {
-    const result = characterValidator.autoFix(c, r)
+    const result = characterValidator.correctIssues(c, r)
     await characterStorage.save(result.fixed)
     character.value = result.fixed
-    // Re-validate after fix
+    // Re-validate after correction
     const issues = characterValidator.validate(result.fixed, r)
     validationResult.value = issues
     ok(UI.validationAutoFixDone)
   } catch (e) {
-    error(e instanceof Error ? e.message : 'AutoFix failed')
+    error(e instanceof Error ? e.message : 'Correction failed')
   } finally {
     autoFixing.value = false
   }
@@ -436,7 +436,7 @@ onMounted(async () => {
               (erwartet: {{ issue.expected ?? '—' }}, Ist: {{ issue.actual ?? '—' }})
             </span>
           </div>
-          <button v-if="hasAutoFixableIssues" type="button" class="btn-auto-fix" :disabled="autoFixing" @click="runAutoFix">
+          <button v-if="hasAutoFixableIssues" type="button" class="btn-auto-fix" :disabled="autoFixing" @click="runCorrection">
             {{ autoFixing ? UI.loading : UI.validationAutoFix }}
           </button>
         </div>
