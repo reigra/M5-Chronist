@@ -5,6 +5,53 @@ import type { Spell, SpellDescription } from './Spell'
 import type { SkillRulesConfig } from './SkillRules'
 import type { EquipmentItem } from './Equipment'
 
+/**
+ * UniversalFormula — eine Formeldefinition im Regelwerk.
+ * Wird für Boni und Fertigkeiten verwendet.
+ */
+export interface UniversalFormula {
+  /** Eindeutige ID (z.B. "AnB", "raufen", "lp-formel") */
+  id: string
+  /** Formel-String in der definierten Formelsprache */
+  formula: string
+  /** Ob Würfel-Notation (W) in der Formel vorkommen darf */
+  allowsDice: boolean
+  /** Optionale Beschreibung (UI/Debug) */
+  description?: string
+}
+
+/**
+ * InnateSkill — ein obligatorischer Fertigkeits-Eintrag im Regelwerk.
+ * Definiert, welche Skills ein Charakter automatisch erhalten muss.
+ */
+export interface InnateSkill {
+  /** Skill-ID (z.B. "Raufen", "Abwehr") — dient auch als Merge-Key */
+  id: string
+  /** Optionale direkte Formel für den FW (z.B. "Ko/10") */
+  formula?: string
+  /** Referenz auf eine formula.id (z.B. "raufen") */
+  formulaId?: string
+  /** Wenn true: FW kommt aus Skill.gradValues[]-Tabelle */
+  gradValues?: boolean
+  /** Fallback-FW wenn keine Formel/gradValues */
+  defaultFw: number
+  /** Optional: gestapelt auf einen Basis-Skill (z.B. Hören → Wahrnehmung) */
+  stacked?: boolean
+  /** Optional: Basis-Skill-ID für gestapelte Skills */
+  baseSkillId?: string
+  /** Optional: Bedingung für das Anlegen des Skills */
+  condition?: 'hasSpells' | string
+}
+
+/**
+ * UniversalRules — universelle Regeln, die für alle Charaktere gelten.
+ * Enthält Formeln und obligatorische Fertigkeiten.
+ */
+export interface UniversalRules {
+  formulas: UniversalFormula[]
+  innateSkills: InnateSkill[]
+}
+
 /** Eine Sprache aus languages.json. */
 export interface Language {
   /** Eindeutige ID — wird beim Import auf `name` normalisiert, falls nicht vorhanden. */
@@ -67,6 +114,7 @@ export interface RulebookData {
   gradThresholds?: GradThreshold[]
   costColumns?: string[]
   costPatterns?: number[][]
+  universalRules?: UniversalRules
 }
 
 /**
@@ -88,4 +136,5 @@ export interface RulesData {
   gradThresholds?: GradThreshold[]
   costColumns?: string[]
   costPatterns?: number[][]
+  universalRules: UniversalRules
 }

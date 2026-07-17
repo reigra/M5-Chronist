@@ -10,7 +10,7 @@ from helpers import (
 
 def parse_tekosten(el: ET.Element) -> dict:
     if el is None:
-        return {'baseValue': 0, 'maxValue': 0, 'advancementCosts': []}
+        return {'advancementCosts': []}
         
     values = []
     for i in range(20):
@@ -22,7 +22,7 @@ def parse_tekosten(el: ET.Element) -> dict:
             
     first_non_zero = next((i for i, v in enumerate(values) if v > 0), -1)
     if first_non_zero == -1:
-        return {'baseValue': 0, 'maxValue': 0, 'advancementCosts': []}
+        return {'advancementCosts': []}
         
     last_non_zero = 0
     for i in range(19, -1, -1):
@@ -42,7 +42,44 @@ def parse_tekosten(el: ET.Element) -> dict:
 
 SKIP_SKILLS = {'AP verbessern', 'Fechten tevarrischer Stil'}
 
+# M5-Standardformeln für Boni und abgeleitete Fertigkeiten.
+# Werden nicht aus der EVA-XML gelesen, sondern sind Spielkonstanten.
+M5_FORMULAS = [
+    {'id': 'AusB',  'formula': 'Ko/10 + St/20',        'allowsDice': False, 'description': 'Ausdauerbonus'},
+    {'id': 'SchB',  'formula': 'St/20 + Gs/30 -3',     'allowsDice': False, 'description': 'Schadensbonus'},
+    {'id': 'AnB',   'formula': 'bonus(Gs)',            'allowsDice': False, 'description': 'Angriffsbonus'},
+    {'id': 'AbB',   'formula': 'bonus(Gw)',            'allowsDice': False, 'description': 'Abwehrbonus'},
+    {'id': 'ZauB',  'formula': 'bonus(Zt)',            'allowsDice': False, 'description': 'Zauberbonus'},
+    {'id': 'ResBg', 'formula': 'bonus(In)',            'allowsDice': False, 'description': 'Resistenzbonus Geist'},
+    {'id': 'ResBk', 'formula': 'bonus(Ko)',            'allowsDice': False, 'description': 'Resistenzbonus Körper'},
+    {'id': 'raufen','formula': '(St+Gw)/20 + AnB',     'allowsDice': False, 'description': 'Raufen-Formel'},
+    {'id': 'trinken','formula': 'Ko/10',               'allowsDice': False, 'description': 'Trinken-Formel'},
+]
+
+# Skills whose FW is derived from the gradValues[] table of their rulebook entry.
+GRAD_DEPENDENT_SKILLS = {'Abwehr', 'Resistenz', 'Zaubern'}
+
+# Skills with condition='hasSpells' (only added when character has spells).
+CONDITIONAL_SKILLS = {'Zaubern': 'hasSpells'}
+
 STACKED_SKILLS = {'Hören', 'Nachtsicht', 'Riechen', 'Sechster Sinn', 'Sehen'}
+
+# Skills that are mandatory for every character (autoFix adds them if missing).
+# Not all angeboreneFertigkeit entries are mandatory — some are situational.
+MANDATORY_SKILLS = {'Raufen', 'Trinken', 'Wahrnehmung', 'Hören', 'Nachtsicht',
+                    'Riechen', 'Sechster Sinn', 'Sehen', 'Abwehr', 'Resistenz', 'Zaubern'}
+
+# Additional skillBonuses per race that the EVA XML doesn't encode.
+# Key: race_id -> {skillId: value}
+EXTRA_RACE_BONUSES = {
+    'zwerg': {'Raufen': 1},
+}
+
+# Override baseValue for skills where the EVA XML has incorrect Anfangswert.
+BASE_VALUE_OVERRIDE = {
+    'Nachtsicht': 0,
+    'Sechster Sinn': 0,
+}
 
 SKILL_NAME_CORRECTIONS = {
     'Alchimie': 'Alchemie',
@@ -50,10 +87,10 @@ SKILL_NAME_CORRECTIONS = {
     'Sprache': 'Sprechen',
 }
 
-def parse_name_value_list(raw: str) -> list:
+def parse_name_value_list(raw: str) -> dict:
     if not raw:
-        return []
-    result = []
+        return {}
+    result = {}
     for s in raw.split(','):
         s = s.strip()
         idx = s.rfind('+')
@@ -62,7 +99,7 @@ def parse_name_value_list(raw: str) -> list:
         try:
             value = int(s[idx+1:])
             skill_id = s[:idx].strip()
-            result.append({'skillId': skill_id, 'value': value})
+            result[skill_id] = value
         except ValueError:
             continue
     return result
@@ -91,10 +128,12 @@ def parse_fertigkeit(el: ET.Element):
         'groups': [normalize_group_name(attr(a, 'sWert')) for a in assocs],
         'learnCost': learn_cost,
         'advancementCosts': tek['advancementCosts'],
-        'baseValue': tek['baseValue'],
-        'maxValue': tek['maxValue'],
         'linkedProperty': attr(dp, 'Attribut'),
     }
+    if 'baseValue' in tek:
+        skill['baseValue'] = tek['baseValue']
+    if 'maxValue' in tek:
+        skill['maxValue'] = tek['maxValue']
 
     if attr(el, 'Typ') == 'Waffengruppe':
         if name not in ('Parierwaffen', 'Schilde'):
@@ -149,8 +188,6 @@ def parse_angeborene_fertigkeit(el: ET.Element):
         'groups': [],
         'learnCost': 0,
         'advancementCosts': [],
-        'baseValue': 0,
-        'maxValue': 0,
     }
 
     if name in BONUS_KEY_OVERRIDE:
@@ -171,6 +208,10 @@ def parse_angeborene_fertigkeit(el: ET.Element):
             skill['unlearnedValue'] = int(ung)
         except ValueError:
             pass
+
+    # Override baseValue for skills where EVA XML data is wrong
+    if name in BASE_VALUE_OVERRIDE:
+        skill['baseValue'] = BASE_VALUE_OVERRIDE[name]
 
     return skill
 
@@ -275,13 +316,21 @@ def parse_rasse(el: ET.Element) -> dict:
         if innate_str:
             parsed = parse_name_value_list(innate_str)
             if parsed:
-                race['skills'] = parsed
+                # race.skills is Array<{skillId, value}>
+                race['skills'] = [{'skillId': k, 'value': v} for k, v in parsed.items()]
                 
     ungelernt = attr(dp, 'ungelernt')
+    extra_bonuses = EXTRA_RACE_BONUSES.get(race_id, {})
     if ungelernt:
         parsed = parse_name_value_list(ungelernt)
         if parsed:
+            # Merge — extra bonuses override XML values if same skill
+            parsed.update(extra_bonuses)
             race['skillBonuses'] = parsed
+        elif extra_bonuses:
+            race['skillBonuses'] = extra_bonuses
+    elif extra_bonuses:
+        race['skillBonuses'] = extra_bonuses
             
     return race
 
@@ -331,6 +380,58 @@ def parse_stand(el: ET.Element) -> dict:
             
     return stand
 
+def strip_none(obj):
+    """Remove all keys with None values recursively from dicts."""
+    if isinstance(obj, dict):
+        return {k: strip_none(v) for k, v in obj.items() if v is not None}
+    if isinstance(obj, list):
+        return [strip_none(item) for item in obj]
+    return obj
+
+def build_universal_rules(skills: list) -> dict:
+    """Generate universalRules from parsed skill list.
+    
+    Only includes mandatory skills (MANDATORY_SKILLS).
+    Adds hardcoded M5 formulas.
+    """
+    # Build a lookup by id for quick access
+    skills_by_id = {s['id']: s for s in skills}
+
+    innate_skills = []
+
+    for name in sorted(MANDATORY_SKILLS):
+        skill = skills_by_id.get(name, {})
+        innate = {
+            'id': name,
+            'defaultFw': skill.get('baseValue', 0),
+        }
+
+        # Formel/Formel-ID
+        if name == 'Raufen':
+            innate['formulaId'] = 'raufen'
+        elif name == 'Trinken':
+            innate['formulaId'] = 'trinken'
+        elif name == 'Wahrnehmung':
+            innate['defaultFw'] = 6
+        elif name in GRAD_DEPENDENT_SKILLS:
+            innate['gradValues'] = True
+
+        # Gestapelte Skills (Wahrnehmung-Basis)
+        if name in STACKED_SKILLS:
+            innate['stacked'] = True
+            innate['baseSkillId'] = 'Wahrnehmung'
+
+        # Bedingte Skills
+        if name in CONDITIONAL_SKILLS:
+            innate['condition'] = CONDITIONAL_SKILLS[name]
+
+        innate_skills.append(innate)
+
+    return {
+        'formulas': M5_FORMULAS,
+        'innateSkills': innate_skills,
+    }
+
 def parse_kodex_document(xml_path: str) -> dict:
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -373,6 +474,27 @@ def parse_kodex_document(xml_path: str) -> dict:
         'notes': 'Automatisch konvertiert aus m5kodex.xml (EVA-Charaktersoftware) via Python'
     }
     
+    # Ensure all mandatory skills exist in the skills list.
+    # Skills like "Hören" may not be present in EVA XML but are
+    # required by CharacterValidator / universalRules.
+    existing_skill_ids = {s['id'] for s in skills}
+    for mandatory_id in sorted(MANDATORY_SKILLS):
+        if mandatory_id not in existing_skill_ids:
+            syn = {
+                'id': mandatory_id,
+                'name': mandatory_id,
+                'typ': 'angeboreneFertigkeit',
+                'groups': [],
+                'learnCost': 0,
+                'advancementCosts': [],
+                'baseValue': 0,
+            }
+            if mandatory_id in STACKED_SKILLS:
+                syn['baseSkillId'] = 'Wahrnehmung'
+            if mandatory_id in GRAD_DEPENDENT_SKILLS:
+                syn['unlearnedValue'] = 0
+            skills.append(syn)
+
     result = {
         'metadata': metadata,
         'skills': skills,
@@ -393,11 +515,13 @@ def parse_kodex_document(xml_path: str) -> dict:
                 }
             ],
             'multiInstanceSkills': multi_instance_skills
-        }
+        },
+        'universalRules': build_universal_rules(skills),
     }
     
-    # Remove empty root level keys (e.g. empty lists or dicts)
-    return {k: v for k, v in result.items() if v or isinstance(v, (bool, int, float))}
+    # Remove empty/null values and empty collections
+    result = strip_none(result)
+    return {k: v for k, v in result.items() if v != [] and v != {} or isinstance(v, (bool, int, float))}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Parse m5kodex.xml und wandle es in MagusNG RulebookData-JSON um")

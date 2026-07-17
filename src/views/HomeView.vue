@@ -12,6 +12,7 @@ import {
   executeRestore,
 } from '../services/BackupService'
 import type { RestoreInfo } from '../services/BackupService'
+import { characterValidator } from '../services/CharacterValidator'
 import { computeDiff } from '../services/CharacterService'
 import { useNotifications } from '../composables/useNotifications'
 import type { DiffEntry } from '../services/CharacterService'
@@ -19,6 +20,7 @@ import { UI } from '../constants/ui'
 import { isDriveAvailable } from '../services/FileProvider'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
+import type { ValidationResult } from '../types/CharacterValidation'
 import type { SourceSummary } from '../services/RulesStorage'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,6 +29,7 @@ import type { SourceSummary } from '../services/RulesStorage'
 interface PendingImport {
   incoming: Character
   diff: DiffEntry[]
+  validation: ValidationResult | null
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -38,6 +41,13 @@ const loadError = ref(false)
 const backingUp = ref(false)
 const backingUpDrive = ref(false)
 const pendingImport = ref<PendingImport | null>(null)
+const importValidationExpanded = ref(false)
+
+const severityLabel = (severity: 'error' | 'warning' | 'info'): string => {
+  if (severity === 'error') return UI.validationSeverityError
+  if (severity === 'warning') return UI.validationSeverityWarning
+  return UI.validationSeverityInfo
+}
 
 // ── Restore state ──
 const restoreInfo = ref<RestoreInfo | null>(null)
@@ -108,7 +118,8 @@ async function importCharacter(): Promise<void> {
 
     // Existing character — compute diff and ask for confirmation.
     const diff = computeDiff(existing, incoming)
-    pendingImport.value = { incoming, diff }
+    const validation = rules.value ? characterValidator.validate(incoming, rules.value) : null
+    pendingImport.value = { incoming, diff, validation }
   } catch (e) {
     if (e instanceof Error && e.name !== 'AbortError') {
       error(e.message)
@@ -129,7 +140,8 @@ async function importCharacterFromDrive(): Promise<void> {
     }
 
     const diff = computeDiff(existing, incoming)
-    pendingImport.value = { incoming, diff }
+    const validation = rules.value ? characterValidator.validate(incoming, rules.value) : null
+    pendingImport.value = { incoming, diff, validation }
   } catch (e) {
     if (e instanceof Error && e.name !== 'AbortError') {
       error(UI.driveErrorPrefix + ' ' + e.message)
@@ -365,6 +377,31 @@ onMounted(loadList)
           </table>
         </template>
         <p v-else class="no-diff">{{ UI.homeNoDiff }}</p>
+
+        <!-- ── Validation result for imported character ── -->
+        <div v-if="pendingImport.validation && (pendingImport.validation.hasErrors || pendingImport.validation.hasWarnings)" class="validation-banner" :class="{ 'validation-banner--expanded': importValidationExpanded }">
+          <button type="button" class="validation-banner-summary" @click="importValidationExpanded = !importValidationExpanded" :title="UI.validationClickForDetails">
+            <span v-if="pendingImport.validation.hasErrors" class="validation-banner--error">
+              {{ pendingImport.validation.issues.filter(i => i.severity === 'error').length }} {{ UI.validationErrors }}
+            </span>
+            <span v-if="pendingImport.validation.hasWarnings" class="validation-banner--warning">
+              {{ pendingImport.validation.issues.filter(i => i.severity === 'warning').length }} {{ UI.validationWarnings }}
+            </span>
+            <span v-if="pendingImport.validation.issues.filter(i => i.severity === 'info').length" class="validation-banner--info">
+              {{ pendingImport.validation.issues.filter(i => i.severity === 'info').length }} {{ UI.validationInfos }}
+            </span>
+            <span class="validation-banner-chevron">{{ importValidationExpanded ? '▲' : '▼' }}</span>
+          </button>
+          <div v-if="importValidationExpanded" class="validation-issue-list">
+            <div v-for="(issue, idx) in pendingImport.validation.issues" :key="idx" class="validation-issue-item" :class="'validation-issue-item--' + issue.severity">
+              <span class="validation-issue-severity">{{ severityLabel(issue.severity) }}:</span>
+              <span class="validation-issue-message">{{ issue.message }}</span>
+              <span v-if="issue.expected !== undefined || issue.actual !== undefined" class="validation-issue-detail">
+                (erwartet: {{ issue.expected ?? '—' }}, Ist: {{ issue.actual ?? '—' }})
+              </span>
+            </div>
+          </div>
+        </div>
 
         <div class="diff-buttons">
           <button class="btn-confirm" @click="confirmImport">{{ UI.homeOverwriteBtn }}</button>
@@ -734,6 +771,90 @@ onMounted(loadList)
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.validation-banner {
+  background: #fff8e1;
+  border: 1px solid #f0c040;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.validation-banner--expanded {
+  padding-bottom: 0.5rem;
+}
+
+.validation-banner-summary {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.validation-banner-summary:hover {
+  opacity: 0.8;
+}
+
+.validation-banner-chevron {
+  margin-left: auto;
+  font-size: 0.75em;
+  color: #888;
+}
+
+.validation-banner--error { color: #c00; }
+.validation-banner--warning { color: #b8860b; }
+.validation-banner--info { color: #555; }
+
+.validation-issue-list {
+  border-top: 1px solid #f0c040;
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.validation-issue-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  padding: 0.2rem 0;
+  font-weight: 400;
+  font-size: 0.9em;
+  border-bottom: 1px solid #eee;
+}
+
+.validation-issue-item:last-child {
+  border-bottom: none;
+}
+
+.validation-issue-severity {
+  font-weight: 600;
+  min-width: 4.5em;
+}
+
+.validation-issue-item--error .validation-issue-severity { color: #c00; }
+.validation-issue-item--warning .validation-issue-severity { color: #b8860b; }
+.validation-issue-item--info .validation-issue-severity { color: #555; }
+
+.validation-issue-message {
+  flex: 1 1 auto;
+}
+
+.validation-issue-detail {
+  color: #888;
+  font-size: 0.9em;
+  width: 100%;
 }
 
 .btn-ask:hover {

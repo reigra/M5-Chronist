@@ -321,6 +321,19 @@ export const UI = {
   restoreSuccess:       'Backup erfolgreich wiederhergestellt.',
   restoreError:         'Restore fehlgeschlagen:',
 
+  // ── Validierung ────────────────────────────────────────────────────────────────
+  validationErrors:    'Fehler',
+  validationWarnings:  'Warnungen',
+  validationInfos:     'Hinweise',
+  validationClickForDetails: 'Anklicken für Details',
+  validationNoErrors:  'Keine Validierungsfehler.',
+  validationAutoFix:   'Automatisch reparieren',
+  validationAutoFixApplied: 'Automatische Reparatur durchgeführt.',
+  validationAutoFixDone: 'Reparatur abgeschlossen.',
+  validationSeverityError: 'Fehler',
+  validationSeverityWarning: 'Warnung',
+  validationSeverityInfo: 'Hinweis',
+
   // ── Google Drive (Status im Nav-Bar) ─────────────────────────────────────────
   driveConnectBtn:    'Verbinden',
   driveConnectedAs:    'Verbunden als',

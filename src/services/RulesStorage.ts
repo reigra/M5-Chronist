@@ -554,6 +554,7 @@ export class RulesStorage {
       spells:            [],
       spellDescriptions: [],
       equipment:         [],
+      universalRules:    { formulas: [], innateSkills: [] },
     }
 
     for (const entry of active) {
@@ -567,6 +568,10 @@ export class RulesStorage {
       if (src.spells)            this.mergeById(rules.spells,            src.spells)
       if (src.spellDescriptions) this.mergeById(rules.spellDescriptions, src.spellDescriptions)
       if (src.equipment)         this.mergeById(rules.equipment,         src.equipment)
+      if (src.universalRules?.formulas)
+        this.mergeById(rules.universalRules.formulas, src.universalRules.formulas)
+      if (src.universalRules?.innateSkills)
+        this.mergeById(rules.universalRules.innateSkills, src.universalRules.innateSkills)
     }
 
     // Merge skillRules: take the first (highest priority) skillRules found

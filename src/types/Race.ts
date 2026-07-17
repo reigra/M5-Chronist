@@ -26,8 +26,8 @@ export interface Race {
   propertyBonuses?: Array<{ id: string; value: number }>
   /** Verbotene Fertigkeiten (IDs aus skills.json) — fehlt wenn keine */
   forbiddenSkills?: string[]
-  /** Flache Boni auf Fertigkeitswürfe */
-  skillBonuses?: Array<{ skillId: string; value: number }>
+  /** Rassenspezifische Skill-Modifier, z.B. { "Raufen": 1 } für Zwerg */
+  skillBonuses?: Record<string, number>
   /** Fertigkeiten mit Startwert (angeboren) */
   skills?: Array<{ skillId: string; value: number }>
   /** Erzwungene Größe — fehlt wenn freie Wahl */

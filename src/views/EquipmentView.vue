@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { RulesLoader } from '../services/RulesLoader'
+import { characterLoadService } from '../services/CharacterLoadService'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
 import { UI } from '../constants/ui'
@@ -218,18 +218,15 @@ async function save(): Promise<void> {
 onMounted(async () => {
   try {
     const id = route.params.id as string
-    const [loadedRules, loadedChar] = await Promise.all([
-      new RulesLoader().load(),
-      characterStorage.load(id),
-    ])
-    if (!loadedChar) {
+    const result = await characterLoadService.load(id)
+    if (!result.character) {
       loadError.value = true
       error(`Character "${id}" not found.`, null)
       return
     }
-    rules.value = loadedRules
-    character.value = loadedChar
-    inventory.value = [...(loadedChar.inventory ?? [])]
+    rules.value = result.rules
+    character.value = result.character
+    inventory.value = [...(result.character.inventory ?? [])]
   } catch (e) {
     loadError.value = true
     error(e instanceof Error ? e.message : 'Failed to load data.', null)

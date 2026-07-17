@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { RulesLoader } from '../services/RulesLoader'
+import { characterLoadService } from '../services/CharacterLoadService'
 import { characterStorage } from '../services/CharacterStorage'
 import { advancementService } from '../services/AdvancementService'
 import { computeGrad } from '../services/GradUtils'
@@ -365,23 +365,20 @@ async function confirmAction(): Promise<void> {
 onMounted(async () => {
   try {
     const id = route.params.id as string
-    const [loadedRules, loadedChar] = await Promise.all([
-      new RulesLoader().load(),
-      characterStorage.load(id),
-    ])
+    const result = await characterLoadService.load(id)
 
-    if (!loadedChar) {
+    if (!result.character) {
       loadError.value = true
       error(`Character "${id}" not found in storage.`, null)
       return
     }
 
-    rules.value = loadedRules
-    character.value = loadedChar
+    rules.value = result.rules
+    character.value = result.character
 
     if (!charType.value) {
       error(
-        `Type "${loadedChar.typeId}" was not found in the rules. ` +
+        `Type "${result.character.typeId}" was not found in the rules. ` +
         `Check that the character's typeId matches a type in the data files.`
       )
     }
