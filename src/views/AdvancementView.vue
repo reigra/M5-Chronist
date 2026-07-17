@@ -432,35 +432,35 @@ onMounted(async () => {
     <div v-if="loading" class="status">{{ UI.loading }}</div>
     <div v-else-if="loadError" class="status error">{{ UI.failedToLoad }}</div>
 
-    <!-- ── Validation Banner ── -->
-    <div v-if="validationResult && (validationResult.hasErrors || validationResult.hasWarnings)" class="validation-banner" :class="{ 'validation-banner--expanded': validationExpanded }">
-      <button type="button" class="validation-banner-summary" @click="validationExpanded = !validationExpanded" :title="UI.validationClickForDetails">
-        <span v-if="validationResult.hasErrors" class="validation-banner--error">
-          {{ validationResult.issues.filter(i => i.severity === 'error').length }} {{ UI.validationErrors }}
-        </span>
-        <span v-if="validationResult.hasWarnings" class="validation-banner--warning">
-          {{ validationResult.issues.filter(i => i.severity === 'warning').length }} {{ UI.validationWarnings }}
-        </span>
-        <span v-if="validationResult.issues.filter(i => i.severity === 'info').length" class="validation-banner--info">
-          {{ validationResult.issues.filter(i => i.severity === 'info').length }} {{ UI.validationInfos }}
-        </span>
-        <span class="validation-banner-chevron">{{ validationExpanded ? '▲' : '▼' }}</span>
-      </button>
-      <div v-if="validationExpanded" class="validation-issue-list">
-        <div v-for="(issue, idx) in validationResult.issues" :key="idx" class="validation-issue-item" :class="'validation-issue-item--' + issue.severity">
-          <span class="validation-issue-severity">{{ severityLabel(issue.severity) }}:</span>
-          <span class="validation-issue-message">{{ issue.message }}</span>
-          <span v-if="issue.expected !== undefined || issue.actual !== undefined" class="validation-issue-detail">
-            (erwartet: {{ issue.expected ?? '—' }}, Ist: {{ issue.actual ?? '—' }})
-          </span>
-        </div>
-        <button v-if="hasAutoFixableIssues" type="button" class="btn-auto-fix" :disabled="autoFixing" @click="runCorrection">
-          {{ autoFixing ? UI.loading : UI.validationAutoFix }}
-        </button>
-      </div>
-    </div>
-
     <template v-else-if="character">
+
+      <!-- ── Validation Banner ── -->
+      <div v-if="validationResult && (validationResult.hasErrors || validationResult.hasWarnings)" class="validation-banner" :class="{ 'validation-banner--expanded': validationExpanded }">
+        <button type="button" class="validation-banner-summary" @click="validationExpanded = !validationExpanded" :title="UI.validationClickForDetails">
+          <span v-if="validationResult.hasErrors" class="validation-banner--error">
+            {{ validationResult.issues.filter(i => i.severity === 'error').length }} {{ UI.validationErrors }}
+          </span>
+          <span v-if="validationResult.hasWarnings" class="validation-banner--warning">
+            {{ validationResult.issues.filter(i => i.severity === 'warning').length }} {{ UI.validationWarnings }}
+          </span>
+          <span v-if="validationResult.issues.filter(i => i.severity === 'info').length" class="validation-banner--info">
+            {{ validationResult.issues.filter(i => i.severity === 'info').length }} {{ UI.validationInfos }}
+          </span>
+          <span class="validation-banner-chevron">{{ validationExpanded ? '▲' : '▼' }}</span>
+        </button>
+        <div v-if="validationExpanded" class="validation-issue-list">
+          <div v-for="(issue, idx) in validationResult.issues" :key="idx" class="validation-issue-item" :class="'validation-issue-item--' + issue.severity">
+            <span class="validation-issue-severity">{{ severityLabel(issue.severity) }}:</span>
+            <span class="validation-issue-message">{{ issue.message }}</span>
+            <span v-if="issue.expected !== undefined || issue.actual !== undefined" class="validation-issue-detail">
+              (erwartet: {{ issue.expected ?? '—' }}, Ist: {{ issue.actual ?? '—' }})
+            </span>
+          </div>
+          <button v-if="hasAutoFixableIssues" type="button" class="btn-auto-fix" :disabled="autoFixing" @click="runCorrection">
+            {{ autoFixing ? UI.loading : UI.validationAutoFix }}
+          </button>
+        </div>
+      </div>
 
       <!-- ── Header ── -->
       <header class="char-header">
