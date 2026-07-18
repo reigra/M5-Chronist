@@ -61,6 +61,23 @@ SOURCE_MAP: dict[str, str] = {
     'ZwQ': 'Die Meister von Feuer und Stein',
 }
 
+# Category → ResBk/ResBg propertyBonuses mapping.
+# Mirrors the ZAU/KAE derivation in parse_EVA_kodex.py:
+#   KAE=true           → ResBk +1        (Kämpfer + KampfZauberer)
+#   ZAU=true, !KAE     → ResBk +2, ResBg +2  (Zauberer)
+CATEGORY_BONUSES: dict[str, list[dict]] = {
+    'Kämpfer':        [{'id': 'ResBk', 'value': 1, 'mode': 'add'}],
+    'KampfZauberer':  [{'id': 'ResBk', 'value': 1, 'mode': 'add'}],
+    'Zauberer':       [{'id': 'ResBk', 'value': 2, 'mode': 'add'},
+                        {'id': 'ResBg', 'value': 2, 'mode': 'add'}],
+}
+
+# Hardcoded overrides for types misclassified by the heuristic below.
+# PS (Priester Streiter) has Waffen cost 30 but is a pure Zauberer.
+CATEGORY_OVERRIDES: dict[str, str] = {
+    'PS': 'Zauberer',
+}
+
 PDF_DIR = os.path.join(os.path.dirname(__file__), '..', 'Mogadil')
 _MOGADIL_FILES = [f for f in os.listdir(PDF_DIR) if f.startswith('Lerntabellen_') and f.endswith('.pdf')]
 if not _MOGADIL_FILES:
@@ -130,6 +147,30 @@ def _resolve_source(source_raw: str) -> str:
     for abbr, full in sorted(SOURCE_MAP.items(), key=lambda x: -len(x[0])):
         result = re.sub(rf'\b{re.escape(abbr)}\b', full, result)
     return result
+
+
+def _derive_category(type_id: str, spell_costs: dict | None, waffen_cost: int | None) -> str:
+    """Determine the character type category (Kämpfer/KampfZauberer/Zauberer).
+
+    Derivation rules:
+      1. Hardcoded override in CATEGORY_OVERRIDES wins first.
+      2. No spellCosts → Kämpfer.
+      3. spellCosts present + Waffen cost >= 40 → Zauberer.
+      4. Otherwise → KampfZauberer.
+
+    Returns the category string.
+    """
+    if type_id in CATEGORY_OVERRIDES:
+        return CATEGORY_OVERRIDES[type_id]
+
+    if not spell_costs:
+        return 'Kämpfer'
+
+    effective_waffen = waffen_cost if waffen_cost is not None else 0
+    if effective_waffen >= 40:
+        return 'Zauberer'
+
+    return 'KampfZauberer'
 
 
 def _int_cell(text):
@@ -830,6 +871,30 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
                 types_by_id[type_id] = {'id': type_id, 'fightCosts': dict(sorted(costs.items()))}
     types = [types_by_id[col] for col in cost_columns if col in types_by_id]
 
+    # Extract per-type Waffen costs from the "Waffen" entry in all_rows
+    # (available before the skills loop below).
+    waffen_costs_by_type: dict[str, int] = {}
+    for r in all_rows:
+        if r['name'] == 'Waffen':
+            for idx, cost_str in enumerate(r['costs']):
+                if idx < len(cost_columns):
+                    try:
+                        waffen_costs_by_type[cost_columns[idx]] = int(cost_str) if cost_str.strip().isdigit() else 0
+                    except (ValueError, IndexError):
+                        pass
+            break
+
+    # Derive category and propertyBonuses (ResBk/ResBg) for each type
+    for t in types:
+        cat = _derive_category(t['id'], t.get('spellCosts'), waffen_costs_by_type.get(t['id']))
+        t['category'] = cat
+        t['propertyBonuses'] = CATEGORY_BONUSES[cat]
+
+    log('  Category distribution: '
+        f'{sum(1 for t in types if t["category"] == "Kämpfer")} Kämpfer, '
+        f'{sum(1 for t in types if t["category"] == "KampfZauberer")} KampfZauberer, '
+        f'{sum(1 for t in types if t["category"] == "Zauberer")} Zauberer')
+
     log('Finding unique cost patterns...')
     cost_patterns, pattern_map = build_cost_patterns(all_rows, cost_columns)
     log(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} x {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
@@ -839,7 +904,6 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     skipped = 0
     waffen_pattern_id = None
     waffen_property = None  # default, overridden if "Waffen" entry exists
-
     for r in all_rows:
         if r['name'] == 'Waffen':
             key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
