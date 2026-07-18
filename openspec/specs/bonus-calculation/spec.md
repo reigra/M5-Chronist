@@ -28,10 +28,11 @@ Die Evaluationsreihenfolge MUSS sein: Formel → Rasse → Typ. Der Typ-Bonus ge
 - **THEN** wird ResBk = 5 + 1 = 6 gesetzt
 - **AND** die Reihenfolge ist: Formel → Rasse (set 5) → Typ (add 1)
 
-#### Scenario: autoFix setzt Default-Boni inkl. Modifikatoren
+#### Scenario: autoFix ergänzt nur fehlende Default-Boni (ohne Modifikatoren)
 
 - **WHEN** `characterValidator.autoFix()` aufgerufen wird und der Charakter hat Rasse/Typ mit `propertyBonuses`
-- **THEN** werden die Default-Boni (0) um die Rasse/Typ-Modifikatoren ergänzt
+- **THEN** werden die Default-Boni (0) gesetzt
+- **AND** Rasse/Typ-Modifikatoren werden NICHT angewandt (autoFix ändert keine vorhandenen Werte)
 
 #### Scenario: correctIssues überschreibt Boni inkl. Modifikatoren
 
@@ -72,6 +73,10 @@ Die Evaluationsreihenfolge MUSS sein: Formel → Rasse → Typ. Der Typ-Bonus ge
 
 Das XML-Attribut `LPbonus="N"` wird bereits als `race.lpModifier` gespeichert (keine Änderung nötig).
 
+Zusätzlich MUSS `parse_klasse()` aus den XML-Attributen `ZAU` und `KAE` in den Dynprops `propertyBonuses` mit `mode: "add"` ableiten:
+- Wenn `ZAU="true"` und `KAE` NICHT `"true"`: `{ id: "ResBk", value: 2, mode: "add" }` und `{ id: "ResBg", value: 2, mode: "add" }`
+- Wenn `KAE="true"`: `{ id: "ResBk", value: 1, mode: "add" }`
+
 #### Scenario: Resistenz im XML vorhanden
 
 - **WHEN** eine Rasse in der EVA-XML das Attribut `Resistenz="4"` in `Dynprops` hat
@@ -81,3 +86,24 @@ Das XML-Attribut `LPbonus="N"` wird bereits als `race.lpModifier` gespeichert (k
 
 - **WHEN** eine Rasse in der EVA-XML kein `Resistenz`-Attribut in `Dynprops` hat
 - **THEN** enthält der generierte Rasse-Eintrag kein `propertyBonuses`
+
+#### Scenario: Zauberer erhält +2 ResBk/+2 ResBg
+
+- **WHEN** eine Klasse in der EVA-XML `ZAU="true"` und kein `KAE="true"` in `Dynprops` hat
+- **THEN** enthält der generierte Typ-Eintrag `propertyBonuses` mit `{ id: "ResBk", value: 2, mode: "add" }` und `{ id: "ResBg", value: 2, mode: "add" }`
+
+#### Scenario: Kämpfer erhält +1 ResBk
+
+- **WHEN** eine Klasse in der EVA-XML `KAE="true"` in `Dynprops` hat
+- **THEN** enthält der generierte Typ-Eintrag `propertyBonuses` mit `{ id: "ResBk", value: 1, mode: "add" }`
+
+#### Scenario: KampfZauberer erhält nur +1 ResBk (kein ResBg)
+
+- **WHEN** eine Klasse in der EVA-XML sowohl `ZAU="true"` als auch `KAE="true"` hat
+- **THEN** enthält der generierte Typ-Eintrag `propertyBonuses` mit nur `{ id: "ResBk", value: 1, mode: "add" }`
+- **AND** kein ResBg-Bonus (KAE hat Vorrang für die Beschränkung)
+
+#### Scenario: Freie Klasse ohne Boni
+
+- **WHEN** eine Klasse weder `ZAU="true"` noch `KAE="true"` hat
+- **THEN** enthält der generierte Typ-Eintrag kein `propertyBonuses`

@@ -249,12 +249,22 @@ def parse_klasse(el: ET.Element) -> dict:
                 if v > 0:
                     group_costs[normalize_group_name(k)] = v
                 
+    # propertyBonuses aus ZAU/KAE ableiten
+    property_bonuses = []
+    if has_zau and not has_kae:
+        property_bonuses.append({'id': 'ResBk', 'value': 2, 'mode': 'add'})
+        property_bonuses.append({'id': 'ResBg', 'value': 2, 'mode': 'add'})
+    if has_kae:
+        property_bonuses.append({'id': 'ResBk', 'value': 1, 'mode': 'add'})
+    
     ctype = {
         'id': name,
         'name': attr(dp, 'Name-m', name), # fallback to id
         'category': category,
         'groupCosts': group_costs
     }
+    if property_bonuses:
+        ctype['propertyBonuses'] = property_bonuses
     if spell_costs:
         ctype['spellCosts'] = spell_costs
         

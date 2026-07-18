@@ -79,23 +79,10 @@ export class CharacterValidator {
 
     // Rasse und Typ ermitteln
     const race = rules.races.find(r => r.id === character.raceId)
-    const type = rules.types.find(t => t.id === character.typeId)
     const skillBonuses = race?.skillBonuses ?? {}
 
-    // Rassen- und Typ-Boni auf Default-Boni anwenden (Formel → Rasse → Typ)
-    for (const pb of race?.propertyBonuses ?? []) {
-      const key = pb.id as keyof Character['boni']
-      if (key in boni) {
-        boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
-      }
-    }
-    for (const pb of type?.propertyBonuses ?? []) {
-      const key = pb.id as keyof Character['boni']
-      if (key in boni) {
-        boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
-      }
-    }
-
+    // KEINE Rassen-/Typ-Boni anwenden — autoFix ergänzt nur fehlende Daten,
+    // überschreibt niemals vorhandene Werte. correctIssues() übernimmt das.
     // Kontext für FormulaEngine: Eigenschaften + Boni
     const ctx = {
       ...character.properties,
