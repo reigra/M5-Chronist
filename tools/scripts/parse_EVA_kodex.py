@@ -292,7 +292,18 @@ def parse_rasse(el: ET.Element) -> dict:
             race['lpModifier'] = int(lp_bonus)
         except ValueError:
             pass
-            
+
+    resistenz = attr(dp, 'Resistenz')
+    if resistenz:
+        try:
+            rv = int(resistenz)
+            race['propertyBonuses'] = [
+                {'id': 'ResBk', 'value': rv, 'mode': 'set'},
+                {'id': 'ResBg', 'value': rv, 'mode': 'set'},
+            ]
+        except ValueError:
+            pass
+
     restrictions = {}
     if dp is not None:
         for k in RACE_PROPERTY_KEYS:

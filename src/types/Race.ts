@@ -22,8 +22,11 @@ export interface Race {
   lpModifier?: number
   /** Erlaubte Typ-IDs — leer bedeutet alle Typen erlaubt */
   availableTypes: string[]
-  /** Flache Boni auf Eigenschaften/Resistenzen (z.B. ResBg, ResBk) */
-  propertyBonuses?: Array<{ id: string; value: number }>
+  /**
+   * Flache Boni auf Resistenzen (z.B. ResBg, ResBk).
+   * `mode: 'add'` addiert auf Formel-Ergebnis, `mode: 'set'` ersetzt es.
+   */
+  propertyBonuses?: Array<{ id: string; value: number; mode: 'add' | 'set' }>
   /** Verbotene Fertigkeiten (IDs aus skills.json) — fehlt wenn keine */
   forbiddenSkills?: string[]
   /** Rassenspezifische Skill-Modifier, z.B. { "Raufen": 1 } für Zwerg */

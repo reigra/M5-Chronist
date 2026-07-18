@@ -18,8 +18,11 @@ export interface CharacterType {
   spellCosts?: Record<string, number>
   /** EP cost per TE for each fight skill group (Ars Armorum) */
   fightCosts?: Record<string, number>
-  /** Flache Boni auf Eigenschaften/Resistenzen (z.B. ResBg, ResBk) */
-  propertyBonuses?: Array<{ id: string; value: number }>
+  /**
+   * Flache Boni auf Resistenzen (z.B. ResBg, ResBk).
+   * `mode: 'add'` addiert auf Formel-Ergebnis, `mode: 'set'` ersetzt es.
+   */
+  propertyBonuses?: Array<{ id: string; value: number; mode: 'add' | 'set' }>
   /**
    * Wenn true: Kein spielbarer Typ, sondern ein Meta-Typ der Felder
    * an alle Typen einer Kategorie vererbt (z.B. ZAU → alle Zauberer).

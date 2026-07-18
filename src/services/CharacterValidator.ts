@@ -77,9 +77,24 @@ export class CharacterValidator {
     let skills = [...(character.skills ?? [])]
     const knownIds = new Set(skills.map(s => s.skillId))
 
-    // Rasse ermitteln
+    // Rasse und Typ ermitteln
     const race = rules.races.find(r => r.id === character.raceId)
+    const type = rules.types.find(t => t.id === character.typeId)
     const skillBonuses = race?.skillBonuses ?? {}
+
+    // Rassen- und Typ-Boni auf Default-Boni anwenden (Formel → Rasse → Typ)
+    for (const pb of race?.propertyBonuses ?? []) {
+      const key = pb.id as keyof Character['boni']
+      if (key in boni) {
+        boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
+      }
+    }
+    for (const pb of type?.propertyBonuses ?? []) {
+      const key = pb.id as keyof Character['boni']
+      if (key in boni) {
+        boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
+      }
+    }
 
     // Kontext für FormulaEngine: Eigenschaften + Boni
     const ctx = {
@@ -220,6 +235,38 @@ export class CharacterValidator {
         }
       } catch {
         // Syntax-Fehler — von validate() gemeldet, hier ignorieren
+      }
+    }
+
+    // ── 1b. Rassen- und Typ-Boni auf Boni anwenden (Formel → Rasse → Typ) ──
+    const corrRace = rules.races.find(r => r.id === character.raceId)
+    const corrType = rules.types.find(t => t.id === character.typeId)
+    for (const pb of corrRace?.propertyBonuses ?? []) {
+      const key = pb.id as keyof Character['boni']
+      if (!(key in boni)) continue
+      const old = boni[key]
+      boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
+      ctx[key] = boni[key]
+      if (old !== boni[key]) {
+        applied.push({
+          action: 'correct_bonus',
+          target: key,
+          description: `Bonus ${key} von ${old} auf ${boni[key]} korrigiert (Rasse, mode:${pb.mode})`,
+        })
+      }
+    }
+    for (const pb of corrType?.propertyBonuses ?? []) {
+      const key = pb.id as keyof Character['boni']
+      if (!(key in boni)) continue
+      const old = boni[key]
+      boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
+      ctx[key] = boni[key]
+      if (old !== boni[key]) {
+        applied.push({
+          action: 'correct_bonus',
+          target: key,
+          description: `Bonus ${key} von ${old} auf ${boni[key]} korrigiert (Typ, mode:${pb.mode})`,
+        })
       }
     }
 
@@ -675,18 +722,31 @@ export class CharacterValidator {
       formulaMap.set(f.id, f.formula)
     }
 
-    // 1. Bonus-Formeln prüfen (character.boni[key] vs. Formel)
+    // Rasse und Typ für propertyBonuses
+    const valRace = rules.races.find(r => r.id === character.raceId)
+    const valType = rules.types.find(t => t.id === character.typeId)
+
+    // 1. Bonus-Formeln prüfen (character.boni[key] vs. Formel + Rasse/Typ)
     for (const formula of (rules.universalRules?.formulas ?? [])) {
       const id = formula.id
-      let expected: number
+      if (!(id in character.boni)) continue
 
+      let expected: number
       try {
         expected = formulaEngine.evaluate(formula.formula, ctx)
       } catch {
         continue  // Syntax-Fehler wird von Kategorie H gemeldet
       }
 
-      if (!(id in character.boni)) continue
+      // Rassen- und Typ-Boni auf den Sollwert anrechnen
+      const raceBonus = valRace?.propertyBonuses?.find(pb => pb.id === id)
+      if (raceBonus) {
+        expected = raceBonus.mode === 'set' ? raceBonus.value : expected + raceBonus.value
+      }
+      const typeBonus = valType?.propertyBonuses?.find(pb => pb.id === id)
+      if (typeBonus) {
+        expected = typeBonus.mode === 'set' ? typeBonus.value : expected + typeBonus.value
+      }
 
       const actual = (character.boni as unknown as Record<string, number>)[id]
       if (actual !== expected) {
@@ -694,7 +754,7 @@ export class CharacterValidator {
           path: `boni.${id}`,
           severity: 'warning',
           code: 'BONUS_FORMULA_MISMATCH',
-          message: `Bonus ${id} ist ${actual}, Formel ${formula.formula} ergibt ${expected}`,
+          message: `Bonus ${id} ist ${actual}, erwartet ${expected} (Formel + Rasse/Typ-Boni)`,
           actual,
           expected,
         })
