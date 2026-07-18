@@ -1,5 +1,5 @@
 import type { Character } from '../types/Character'
-import type { RulesData } from '../types/Rules'
+import type { RulesData, InnateSkill } from '../types/Rules'
 import type { Skill } from '../types/Skill'
 import type { ValidationIssue, ValidationResult, FixDescription, FixResult } from '../types/CharacterValidation'
 import { formulaEngine } from './FormulaEngine'
@@ -55,6 +55,48 @@ export class CharacterValidator {
   }
 
   /**
+   * Berechnet den FW für einen InnateSkill (Formel/FormulaId/gradValues/defaultFw)
+   * inkl. Rassen-Bonus aus race.skillBonuses.
+   * Verwendet von autoFix() und correctIssues().
+   */
+  private computeInnateFw(
+    innate: InnateSkill,
+    ctx: Record<string, number>,
+    formulaMap: Map<string, string>,
+    rules: RulesData,
+    skillBonuses: Record<string, number>,
+    character: Character
+  ): number {
+    let fw = innate.defaultFw
+
+    if (innate.formula !== undefined) {
+      try {
+        fw = Math.max(0, formulaEngine.evaluate(innate.formula, ctx))
+      } catch {
+        fw = innate.defaultFw
+      }
+    } else if (innate.formulaId !== undefined) {
+      const formulaStr = formulaMap.get(innate.formulaId)
+      if (formulaStr !== undefined) {
+        try {
+          fw = Math.max(0, formulaEngine.evaluate(formulaStr, ctx))
+        } catch {
+          fw = innate.defaultFw
+        }
+      }
+    } else if (innate.gradValues) {
+      const skillSchema = rules.skills.find(s => s.id === innate.id)
+      if (skillSchema?.gradValues) {
+        fw = this.lookupGradValue(skillSchema, character.totalEs)
+      }
+    }
+
+    const bonus = skillBonuses[innate.id] ?? 0
+    fw += bonus
+    return fw
+  }
+
+  /**
    * Ergänzt fehlende Pflicht-Skills (innateSkills) und Defaults.
    * Überschreibt niemals bestehende Werte.
    * Gibt einen neuen Character zurück (immutable).
@@ -104,38 +146,8 @@ export class CharacterValidator {
 
       if (knownIds.has(innate.id)) continue
 
-      // FW berechnen
-      let fw = innate.defaultFw
-
-      if (innate.formula !== undefined) {
-        // Direkte Formel
-        try {
-          fw = Math.max(0, formulaEngine.evaluate(innate.formula, ctx))
-        } catch (e) {
-          // Formelfehler — Fallback auf defaultFw
-          fw = innate.defaultFw
-        }
-      } else if (innate.formulaId !== undefined) {
-        // Formel per ID referenzieren
-        const formulaStr = formulaMap.get(innate.formulaId)
-        if (formulaStr !== undefined) {
-          try {
-            fw = Math.max(0, formulaEngine.evaluate(formulaStr, ctx))
-          } catch (e) {
-            fw = innate.defaultFw
-          }
-        }
-      } else if (innate.gradValues) {
-        // gradValues: Skill-Schema nachschlagen
-        const skillSchema = rules.skills.find(s => s.id === innate.id)
-        if (skillSchema?.gradValues) {
-          fw = this.lookupGradValue(skillSchema, character.totalEs)
-        }
-      }
-
-      // Rassen-Bonus addieren
-      const bonus = skillBonuses[innate.id] ?? 0
-      fw += bonus
+      // FW berechnen (extrahierte Methode)
+      let fw = this.computeInnateFw(innate, ctx, formulaMap, rules, skillBonuses, character)
 
       skills.push({ skillId: innate.id, value: fw, pp: 0 })
       knownIds.add(innate.id)
@@ -144,6 +156,24 @@ export class CharacterValidator {
         action: 'add_innate_skill',
         target: innate.id,
         description: `Skill "${innate.id}" mit FW ${fw} ergänzt`,
+      })
+    }
+
+    // 1b. Rassen-Skills aus race.skills[] ergänzen
+    for (const rs of (race?.skills ?? [])) {
+      if (knownIds.has(rs.skillId)) continue
+
+      let fw = rs.value
+      const bonus = skillBonuses[rs.skillId] ?? 0
+      fw += bonus
+
+      skills.push({ skillId: rs.skillId, value: fw, pp: 0 })
+      knownIds.add(rs.skillId)
+
+      applied.push({
+        action: 'add_racial_skill',
+        target: rs.skillId,
+        description: `Skill "${rs.skillId}" mit FW ${fw} ergänzt (Rasse)`,
       })
     }
 
@@ -287,6 +317,27 @@ export class CharacterValidator {
       } catch {
         // Syntax-Fehler ignorieren
       }
+    }
+
+    // ── 2b. Fehlende InnateSkills ergänzen ──
+    const knownIds = new Set(skills.map(s => s.skillId))
+    const addRace = rules.races.find(r => r.id === character.raceId)
+    const addSkillBonuses = addRace?.skillBonuses ?? {}
+    for (const innate of (rules.universalRules?.innateSkills ?? [])) {
+      if (innate.condition === 'hasSpells' && (!character.spells || character.spells.length === 0)) {
+        continue
+      }
+      if (knownIds.has(innate.id)) continue
+
+      const fw = this.computeInnateFw(innate, ctx, formulaMap, rules, addSkillBonuses, character)
+
+      skills.push({ skillId: innate.id, value: fw, pp: 0 })
+      knownIds.add(innate.id)
+      applied.push({
+        action: 'add_innate_skill',
+        target: innate.id,
+        description: `Skill "${innate.id}" mit FW ${fw} ergänzt`,
+      })
     }
 
     // ── 3. Grad-basierte Skills korrigieren ──

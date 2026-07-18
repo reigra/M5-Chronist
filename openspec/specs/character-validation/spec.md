@@ -244,9 +244,10 @@ Die Lookup-Logik: `grad = computeGrad(character.totalEs)`, dann `gradValues` abs
 2. Wenn nicht (und condition erfüllt): Skill wird mit berechnetem FW hinzugefügt
 3. FW-Berechnung: `formula` → FormulaEngine, oder `formulaId` → Lookup in `formulas[]` → FormulaEngine, oder `gradValues: true` → `lookupGradValue()`, oder `defaultFw`
 4. Rassen-Bonus aus `rules.races[raceId].skillBonuses[skillId]` wird addiert
-5. `pp: 0` auf Skills ohne pp-Feld
-6. `pp: 0` auf Zauber ohne pp-Feld
-7. String-Zauber werden in `{ spellId, pp: 0 }` konvertiert
+5. Nach innateSkills: fehlende Einträge aus `rules.races[raceId].skills[]` ergänzen (Startwert + `skillBonuses`)
+6. `pp: 0` auf Skills ohne pp-Feld
+7. `pp: 0` auf Zauber ohne pp-Feld
+8. String-Zauber werden in `{ spellId, pp: 0 }` konvertiert
 
 autoFix SHALL niemals bestehende Werte überschreiben — nur ergänzen.
 
@@ -269,6 +270,26 @@ autoFix SHALL niemals bestehende Werte überschreiben — nur ergänzen.
 
 - **WHEN** ein Zwerg-Character autoFix() durchläuft und `race.skillBonuses` `{ "Raufen": 1 }` definiert
 - **THEN** der berechnete FW für Raufen wird um 1 erhöht
+
+#### Scenario: Zwerg erhält Bergbau aus race.skills
+
+- **WHEN** `autoFix()` für einen Zwerg-Charakter aufgerufen wird und `race.skills` den Eintrag `{ skillId: "Bergbau", value: 12 }` enthält, der Character aber keinen Skill "Bergbau" hat
+- **THEN** wird `{ skillId: "Bergbau", value: 12, pp: 0 }` zu `skills` hinzugefügt
+
+#### Scenario: Vorhandener Bergbau wird nicht überschrieben
+
+- **WHEN** `autoFix()` für einen Zwerg-Charakter aufgerufen wird und "Bergbau" bereits mit FW 14 existiert
+- **THEN** bleibt der Wert 14 unverändert
+
+#### Scenario: race.skillBonuses wird auf race.skill addiert
+
+- **WHEN** ein Zwerg-Character `autoFix()` durchläuft, "Bergbau" fehlt, `race.skills` hat `{ skillId: "Bergbau", value: 12 }` und `race.skillBonuses` hat `{ "Bergbau": 2 }`
+- **THEN** wird "Bergbau" mit FW 14 (= 12 + 2) ergänzt
+
+#### Scenario: Rasse ohne skills
+
+- **WHEN** eine Rasse kein `skills[]`-Feld hat (z.B. Mensch)
+- **THEN** `autoFix()` überspringt die race.skills-Schleife ohne Fehler
 
 #### Scenario: String-Zauber konvertieren
 
@@ -367,3 +388,31 @@ Der Service SHALL als Singleton exportiert werden.
 
 - **WHEN** `CharacterLoadService.load("nicht-vorhanden")` aufgerufen wird
 - **THEN** der Service gibt `{ character: null, ... }` zurück oder wirft einen Fehler (analog zu `CharacterStorage.load()`)
+
+---
+
+### Requirement: correctIssues() — Fehlende InnateSkills ergänzen
+
+`correctIssues(character, rules)` SHALL zusätzlich zu den bestehenden Korrekturen auch fehlende InnateSkills aus `rules.universalRules.innateSkills[]` ergänzen. Die Ergänzungslogik ist analog zu `autoFix()`:
+
+1. Für jeden Eintrag in `rules.universalRules.innateSkills[]` prüfen, ob `character.skills` den Skill bereits enthält
+2. Wenn nicht (und condition erfüllt): Skill mit berechnetem FW hinzufügen
+3. FW-Berechnung via `computeInnateFw()`: Formel/FormulaId/gradValues/defaultFw + Rassen-Bonus
+4. `pp: 0` für den neuen Skill
+
+correctIssues() SHALL vorhandene Skills weder überschreiben noch deren FW ändern.
+
+#### Scenario: Fehlenden Raufen-Skill ergänzen
+
+- **WHEN** `correctIssues()` aufgerufen wird und der Character keinen Skill "Raufen" hat, aber `innateSkills` einen Eintrag für "Raufen" enthält
+- **THEN** wird `{ skillId: "Raufen", value: <berechneter FW>, pp: 0 }` zu `skills` hinzugefügt
+
+#### Scenario: Vorhandenen Skill nicht überschreiben
+
+- **WHEN** `correctIssues()` aufgerufen wird und der Character "Raufen" bereits mit FW 8 hat
+- **THEN** bleibt der Wert unverändert
+
+#### Scenario: correctIssues nach autoFix ist idempotent
+
+- **WHEN** `autoFix()` bereits alle fehlenden InnateSkills ergänzt hat und danach `correctIssues()` aufgerufen wird
+- **THEN** `correctIssues()` ergänzt keine weiteren Skills (alle sind bereits vorhanden)
