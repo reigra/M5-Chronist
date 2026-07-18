@@ -344,6 +344,11 @@ export class CharacterValidator {
 
     // UNKNOWN_SKILL
     for (const skill of character.skills) {
+      // Multi-Instanz-Skills wie "Sprache:Albisch" haben keine direkte rules.skills-ID
+      if (rules.skillRules?.multiInstanceSkills?.some(m => skill.skillId.startsWith(m.idPrefix))) {
+        continue
+      }
+
       if (!rules.skills.some(s => s.id === skill.skillId)) {
         issues.push({
           path: `skills.${skill.skillId}`,
