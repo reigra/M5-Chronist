@@ -1,3 +1,5 @@
+## [v0.15.0] - 2026-07-19
+
 
 ### Gradaufstieg (Grad-Up)
 - Neues Popup beim Gradaufstieg: Wizard mit N Durchläufen (ein Schritt pro Grad)
