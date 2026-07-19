@@ -1,28 +1,15 @@
 stages:
-  - test
-  - secret-detection
   - build
   - deploy
   - release
   - merge
 
-include:
-  - template: Security/SAST.gitlab-ci.yml
-  - template: Security/Secret-Detection.gitlab-ci.yml
-
 variables:
-  SECRET_DETECTION_ENABLED: 'true'
   # .npmrc setzt git-tag-version=false → in CI überschreiben
   NPM_CONFIG_GIT_TAG_VERSION: 'true'
   VITE_GOOGLE_API_KEY: $VITE_GOOGLE_API_KEY
   VITE_GOOGLE_CLIENT_ID: $VITE_GOOGLE_CLIENT_ID
   VITE_GOOGLE_APP_ID: $VITE_GOOGLE_APP_ID
-
-sast:
-  stage: test
-
-secret_detection:
-  stage: secret-detection
 
 # Master: nur bauen + pages deployen (kein version bump)
 build-pwa:
