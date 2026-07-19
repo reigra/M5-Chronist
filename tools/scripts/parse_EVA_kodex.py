@@ -57,7 +57,7 @@ M5_FORMULAS = [
     {'id': 'pA',     'formula': 'W% + 4*In/10 -20',     'allowsDice': True,  'description': 'persönliche Ausstrahlung'},
     {'id': 'Wk',     'formula': 'W% + 2*(Ko/10 + In/10) -20','allowsDice': True,  'description': 'Willenskraft'},
     {'id': 'Au',     'formula': 'W%','allowsDice': True,  'description': 'Aussehen'},
-#    {'id': 'LP',     'formula': '1W3 +7 +Ko/10',        'allowsDice': True,  'description': 'Lebenspunkte'},
+    {'id': 'LP',     'formula': '1W3 +7 +Ko/10',        'allowsDice': True,  'description': 'Lebenspunkte'},
 #    {'id': 'AP',     'formula': '1W3 + AusB',           'allowsDice': True,  'description': 'Ausdauerpunkte'},
 #    {'id': 'B',      'formula': '4W3 + 16',             'allowsDice': True,  'description': 'Bewegungsweite'},
 ]
