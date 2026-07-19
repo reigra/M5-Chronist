@@ -1,10 +1,36 @@
 
-### Parser Scripte
+### Gradaufstieg (Grad-Up)
+- Neues Popup beim Gradaufstieg: Wizard mit N Durchläufen (ein Schritt pro Grad)
+- AP-Erhöhung: 1W3 + Klassenbonus + ΔAusB (Grad 1–5) bzw. 1W3 + ΔAusB (Grad ≥ 6)
+- Eigenschaftssteigerung: W%-Wurf pro Gradschritt (1W3 auf eine freie Eigenschaft)
+- FW-Updates: Abwehr, Resistenz und Zaubern werden auf den neuen Grad-Wert gesetzt
+- GradUpService als immutable Service (folgt bestehender Architektur)
+- Neue Regel-Daten: apGain pro Charaktertyp, gradUpRules mit W%-Tabelle
+
+### Charaktervalidierung
+- CharacterValidator: validate() mit 7 Prüfkategorien, autoFix() und correctIssues()
+- FormulaEngine: sicherer Recursive-Descent-Parser für Formeln aus dem Regelwerk
+- UniversalRules: formulas[] und innateSkills[] im Regelwerk (nicht mehr hartkodiert)
+- Rassen- und Klassen-Boni auf Eigenschaften (ResBk, ResBg) mit mode (add/set)
+- Dice-Formeln: W% als W100-Würfel korrekt erkannt; Range-Validierung statt exaktem Vergleich
+- Fehlende Rassen-Skills werden in autoFix() und correctIssues() ergänzt
+- MISSING_RACIAL_SKILL von warning auf error geändert (blockiert Speichern)
+- CharacterLoadService persistiert autoFix()-Korrekturen in IndexedDB
+- CharacterEditView validiert bei Rasse/Klassen-Wechsel (lesend)
 - Gradtabelle aus den Mogadil Lerntabellen ins Regelwerk
 
-### LaTeX / PDF Datenblatt
-- Fehlende Fertigkeiten
-- Fehlende Umlaute
+### Rule Parse Scripte
+- EVA: propertyBonuses aus ZAU/KAE für Klassen (Resistenz-Boni)
+- EVA: apbonus aus Dynprops für Gradaufstieg
+- Mogadil: Kategorie-Ableitung (Kämpfer/KampfZauberer/Zauberer) aus Spell- und Waffen-Kosten
+- Mogadil: AP-Gain pro Typ basierend auf Kategorie
+
+### Fixes
+- W% in FormulaEngine korrigiert (wurde nicht als Dice-Token erkannt)
+- Formeln mit Würfeln werden per Range validiert (verhindert false positives)
+- Validierungs-Reihenfolge: Rassen-Skills vor InnateSkills (rassenspezifische Werte haben Vorrang)
+- Rassen-Spezifische Skills fehlten beim automatischen Fix nach dem Laden
+- Fehlende Umlaute und Fertigkeiten im LaTeX/PDF-Datenblatt
 
 ## [v0.14.1] - 2026-07-11
 
