@@ -6,7 +6,7 @@ Dieser Change führt ein Popup ein, das nach einem Gradaufstieg erscheint und de
 
 ## What Changes
 
-- **Neuer GradUp-Service**: Berechnet AP-Zuwachs (1W3 + AusB + Klassenbonus) und Eigenschaftssteigerung (W%-Tabelle → 1W3) auf Basis der Rules-Daten
+- **Neuer GradUp-Service**: Berechnet AP-Zuwachs (1W3 + Klassenbonus + ΔAusB) und Eigenschaftssteigerung (W%-Tabelle → 1W3) auf Basis der Rules-Daten
 - **Neue Rules-Daten**: `apGain` pro Typ, `gradUpRules` (W%-Tabelle) in `universalRules`
 - **Neues Popup**: Wizard-artiger Stepper, der N Durchläufe zeigt (ein Durchlauf pro Grad)
 - **Integration in AdvancementView**: `addEp()` erkennt Grad-Sprung (vorher/nachher `computeGrad`), triggert Popup

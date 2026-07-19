@@ -8,7 +8,7 @@ Der Charakter hat bereits ein Feld `properties.AP` (Ausdauerpunkte). Die Formula
 
 **Goals:**
 - Popup nach Gradaufstieg mit N Durchläufen (N = Anzahl gestiegener Grade)
-- Pro Durchlauf: AP-Zuwachs (1W3 + AusB + Klassenbonus) und Eigenschaftssteigerung (W% → 1W3)
+- Pro Durchlauf: AP-Zuwachs (1W3 + Klassenbonus + ΔAusB, Grad 1–5) oder (1W3 + ΔAusB, Grad ≥ 6) und Eigenschaftssteigerung (W% → 1W3)
 - Wizard-Charakter: jeder Durchlauf baut auf dem vorherigen auf (z.B. neuer AusB bei Ko-Änderung)
 - Rules-Daten: `apGain` pro Typ, `gradUpRules` (W%-Tabelle) in `universalRules`
 - FW-Updates für Abwehr/Resistenz/Zaubern auf den neuen Grad-Wert
@@ -187,7 +187,7 @@ for (const skill of character.skills) {
 | Risiko | Mitigation |
 |--------|------------|
 | Spieler gibt falsche Würfelergebnisse ein (Schummeln) | Explizites Non-Goal — das ist ein P&P-Tool, keine Anti-Cheat-Software |
-| AP-Berechnung hängt von Reihenfolge ab (Ko-Änderung → AusB) | Service zwingt Reihenfolge: erst Eigenschaft, dann AP |
+| ΔAusB hängt von Ko-Änderung ab (Reihenfolge) | Service erzwingt Reihenfolge: erst Eigenschaftssteigerung, dann AP — ΔAusB wird mit dem neuen Ko berechnet |
 | `gradUpRules`-Daten in Rulebooks vergessen/nicht vorhanden | Fallback: Popup zeigt trotzdem die Eingabefelder, verwendet 0 als Default-Bonus |
 | Viele Grade auf einmal (z.B. Grad 2→7 = 5 Durchläufe) | Stepper-UI skaliert natürlich — einfach 5 Seiten nacheinander |
 

@@ -72,6 +72,32 @@ CATEGORY_BONUSES: dict[str, list[dict]] = {
                         {'id': 'ResBg', 'value': 2, 'mode': 'add'}],
 }
 
+# AP-Gain-Bonus pro Kategorie (für Gradaufstiegs-Popup).
+# Wird nach _derive_category() auf type['apGain'] gesetzt.
+CATEGORY_AP_GAIN: dict[str, int] = { 'Kämpfer': 2, 'KampfZauberer': 2, 'Zauberer': 1 }
+AP_GAIN_OVERRIDES: dict[str, int]  = { 'Kr': 3, 'Ba': 3, 'Wä': 3 }
+
+# M5-Gradaufstiegs-Regeln (hartcodierte Spielkonstante, identisch zu parse_EVA_kodex.py).
+# Wird in den universalRules-Output geschrieben.
+M5_GRADUP_RULES = {
+    'apDice': '1W3',
+    'propertyGainDice': '1W3',
+    'propertyMaxValue': 100,
+    'propertyGainTable': [
+        { 'range': [1, 50],   'property': None },
+        { 'range': [51, 55],  'property': 'Wk' },
+        { 'range': [56, 60],  'property': 'pA' },
+        { 'range': [61, 65],  'property': 'Au' },
+        { 'range': [66, 70],  'property': 'St' },
+        { 'range': [71, 75],  'property': 'Gs' },
+        { 'range': [76, 80],  'property': 'Gw' },
+        { 'range': [81, 85],  'property': 'Ko' },
+        { 'range': [86, 90],  'property': 'In' },
+        { 'range': [91, 95],  'property': 'Zt' },
+        { 'range': [96, 100], 'property': 'free' },
+    ]
+}
+
 # Hardcoded overrides for types misclassified by the heuristic below.
 # PS (Priester Streiter) has Waffen cost 30 but is a pure Zauberer.
 CATEGORY_OVERRIDES: dict[str, str] = {
@@ -890,6 +916,14 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
         t['category'] = cat
         t['propertyBonuses'] = CATEGORY_BONUSES[cat]
 
+        # apGain: Override → Kategorie → 0
+        type_id = t['id']
+        if type_id in AP_GAIN_OVERRIDES:
+            bonus = AP_GAIN_OVERRIDES[type_id]
+        else:
+            bonus = CATEGORY_AP_GAIN.get(cat, 0)
+        t['apGain'] = { 'lowGradBonus': bonus }
+
     log('  Category distribution: '
         f'{sum(1 for t in types if t["category"] == "Kämpfer")} Kämpfer, '
         f'{sum(1 for t in types if t["category"] == "KampfZauberer")} KampfZauberer, '
@@ -998,6 +1032,9 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
         'costPatterns': cost_patterns,
         'types': types,
         'skills': skills,
+        'universalRules': {
+            'gradUpRules': M5_GRADUP_RULES,
+        },
     }
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)

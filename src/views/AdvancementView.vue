@@ -6,6 +6,9 @@ import { characterStorage } from '../services/CharacterStorage'
 import { characterValidator } from '../services/CharacterValidator'
 import { advancementService } from '../services/AdvancementService'
 import { computeGrad } from '../services/GradUtils'
+import { gradUpService } from '../services/GradUpService'
+import type { GradStepInput } from '../services/GradUpService'
+import GradUpPopup from '../components/GradUpPopup.vue'
 import { UI } from '../constants/ui'
 import { useNotifications } from '../composables/useNotifications'
 import type { Character } from '../types/Character'
@@ -67,6 +70,16 @@ const selectedInstance = ref<string>('')
 const epToAdd = ref(1)
 
 /** Whether the current browser supports the File System Access API. */
+
+// ── GradUp Popup State ──────────────────────────────────────────────────────────
+
+/** Zeigt das Gradaufstiegs-Popup an. */
+const showGradUp = ref(false)
+/** Anzahl der Gradschritte für das Popup. */
+const gradUpSteps = ref(0)
+/** Character-Zwischenstand nach EP-Hinzufügen, aber vor Gradschritten. */
+const gradUpChar = ref<Character | null>(null)
+
 // ── Computed ─────────────────────────────────────────────────────────────────
 
 /** Current Grad derived from totalEs. */
@@ -304,23 +317,75 @@ function cancelAction(): void {
 /**
  * Add earned EP to the character.
  * Both availableEp and totalEs increase by the same amount.
+ * If a Grad threshold is crossed, show the GradUp popup.
  */
 async function addEp(): Promise<void> {
   const char = character.value
-  if (!char) return
+  if (!char || !rules.value) return
   const amount = epToAdd.value
   if (!Number.isInteger(amount) || amount < 1) return
+
+  const oldGrad = computeGrad(char.totalEs)
+  const newTotalEs = char.totalEs + amount
+  const newGrad = computeGrad(newTotalEs)
 
   const updated: Character = {
     ...char,
     availableEp: char.availableEp + amount,
-    totalEs: char.totalEs + amount,
+    totalEs: newTotalEs,
     updatedAt: new Date().toISOString(),
   }
 
+  const steps = newGrad - oldGrad
+  if (steps > 0) {
+    // Grad-Sprung erkannt → Popup öffnen
+    gradUpChar.value = updated
+    gradUpSteps.value = steps
+    showGradUp.value = true
+  } else {
+    // Kein Grad-Sprung → normal speichern
+    try {
+      await characterStorage.save(updated)
+      character.value = updated
+      epToAdd.value = 1
+    } catch (e) {
+      error(e instanceof Error ? e.message : 'Failed to save.')
+    }
+  }
+}
+
+/**
+ * Wird aufgerufen, wenn der Spieler das GradUp-Popup bestätigt.
+ * Wendet die Gradschritte auf den Character an und speichert.
+ */
+async function onGradUpConfirm(inputs: GradStepInput[]): Promise<void> {
+  const char = gradUpChar.value
+  const r = rules.value
+  if (!char || !r) return
+  showGradUp.value = false
+
   try {
-    await characterStorage.save(updated)
-    character.value = updated
+    const graded = gradUpService.applyGradSteps(char, r, inputs)
+    await characterStorage.save(graded)
+    character.value = graded
+    epToAdd.value = 1
+  } catch (e) {
+    error(e instanceof Error ? e.message : 'Gradaufstieg fehlgeschlagen.')
+  }
+}
+
+/**
+ * Wird aufgerufen, wenn der Spieler das GradUp-Popup abbricht.
+ * Speichert den Character mit den EP-Änderungen, aber ohne Gradschritte.
+ */
+async function onGradUpCancel(): Promise<void> {
+  const char = gradUpChar.value
+  if (!char) return
+  showGradUp.value = false
+
+  try {
+    await characterStorage.save(char)
+    character.value = char
     epToAdd.value = 1
   } catch (e) {
     error(e instanceof Error ? e.message : 'Failed to save.')
@@ -501,6 +566,16 @@ onMounted(async () => {
           </button>
         </div>
       </section>
+
+      <!-- ── GradUp Popup ── -->
+      <GradUpPopup
+        v-if="showGradUp && gradUpChar && rules"
+        :character="gradUpChar"
+        :rules="rules"
+        :steps="gradUpSteps"
+        @confirm="onGradUpConfirm"
+        @cancel="onGradUpCancel"
+      />
 
       <!-- ── Confirmation modal ── -->
       <div v-if="pendingAction !== null" class="modal-overlay" @click.self="cancelAction">

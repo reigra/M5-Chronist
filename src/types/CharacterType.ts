@@ -1,4 +1,12 @@
 /**
+ * ApGainConfig — AP-Gain-Konfiguration pro Charaktertyp (Klasse).
+ * Definiert den Bonus, den ein Typ pro Gradschritt auf AP erhält.
+ */
+export interface ApGainConfig {
+  lowGradBonus: number
+}
+
+/**
  * CharacterType — a character class (Typ) such as Krieger or Zauberer.
  *
  * groupCosts: EP cost per TE for each skill group.
@@ -23,6 +31,12 @@ export interface CharacterType {
    * `mode: 'add'` addiert auf Formel-Ergebnis, `mode: 'set'` ersetzt es.
    */
   propertyBonuses?: Array<{ id: string; value: number; mode: 'add' | 'set' }>
+  /**
+   * AP-Gain-Konfiguration für Gradaufstiege.
+   * Definiert den Bonus, den dieser Typ pro Grad auf AP erhält.
+   * Wird von den Parser-Scripten gesetzt (aus Dynprops oder Kategorie abgeleitet).
+   */
+  apGain?: ApGainConfig
   /**
    * Wenn true: Kein spielbarer Typ, sondern ein Meta-Typ der Felder
    * an alle Typen einer Kategorie vererbt (z.B. ZAU → alle Zauberer).

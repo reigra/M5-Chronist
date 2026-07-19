@@ -6,6 +6,28 @@ import type { SkillRulesConfig } from './SkillRules'
 import type { EquipmentItem } from './Equipment'
 
 /**
+ * GradUpRules — Regeln für den Gradaufstieg.
+ * Definiert die Würfel-Notation, Eigenschaftssteigerungs-Tabelle und Maximalwerte.
+ */
+export interface GradUpRule {
+  /** W%-Range, inklusive, z.B. [51, 55] */
+  range: [number, number]
+  /** Betroffene Eigenschaft (null = keine, "free" = freie Wahl) */
+  property: string | null
+}
+
+export interface GradUpRules {
+  /** Würfel-Notation für AP (z.B. "1W3") */
+  apDice: string
+  /** Tabelle für Eigenschaftssteigerung via W%-Wurf */
+  propertyGainTable: GradUpRule[]
+  /** Maximalwert für Eigenschaften (99) */
+  propertyMaxValue: number
+  /** Würfel-Notation für Eigenschaftssteigerung (z.B. "1W3") */
+  propertyGainDice: string
+}
+
+/**
  * UniversalFormula — eine Formeldefinition im Regelwerk.
  * Wird für Boni und Fertigkeiten verwendet.
  */
@@ -50,6 +72,7 @@ export interface InnateSkill {
 export interface UniversalRules {
   formulas: UniversalFormula[]
   innateSkills: InnateSkill[]
+  gradUpRules?: GradUpRules
 }
 
 /** Eine Sprache aus languages.json. */

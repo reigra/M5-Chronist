@@ -62,6 +62,27 @@ M5_FORMULAS = [
 #    {'id': 'B',      'formula': '4W3 + 16',             'allowsDice': True,  'description': 'Bewegungsweite'},
 ]
 
+# M5-Gradaufstiegs-Regeln (hartcodierte Spielkonstante).
+# Wird in build_universal_rules() in den Output geschrieben.
+M5_GRADUP_RULES = {
+    'apDice': '1W3',
+    'propertyGainDice': '1W3',
+    'propertyMaxValue': 100,
+    'propertyGainTable': [
+        { 'range': [1, 50],   'property': None },
+        { 'range': [51, 55],  'property': 'Wk' },
+        { 'range': [56, 60],  'property': 'pA' },
+        { 'range': [61, 65],  'property': 'Au' },
+        { 'range': [66, 70],  'property': 'St' },
+        { 'range': [71, 75],  'property': 'Gs' },
+        { 'range': [76, 80],  'property': 'Gw' },
+        { 'range': [81, 85],  'property': 'Ko' },
+        { 'range': [86, 90],  'property': 'In' },
+        { 'range': [91, 95],  'property': 'Zt' },
+        { 'range': [96, 100], 'property': 'free' },
+    ]
+}
+
 # Skills whose FW is derived from the gradValues[] table of their rulebook entry.
 GRAD_DEPENDENT_SKILLS = {'Abwehr', 'Resistenz', 'Zaubern'}
 
@@ -273,7 +294,12 @@ def parse_klasse(el: ET.Element) -> dict:
         ctype['propertyBonuses'] = property_bonuses
     if spell_costs:
         ctype['spellCosts'] = spell_costs
-        
+
+    # apGain: Dynprops-Attribut "apbonus" auslesen
+    apbonus = attr(dp, 'apbonus')
+    if apbonus:
+        ctype['apGain'] = { 'lowGradBonus': int(apbonus) }
+
     return ctype
 
 def parse_rasse(el: ET.Element) -> dict:
@@ -457,6 +483,7 @@ def build_universal_rules(skills: list) -> dict:
     return {
         'formulas': M5_FORMULAS,
         'innateSkills': innate_skills,
+        'gradUpRules': M5_GRADUP_RULES,
     }
 
 def parse_kodex_document(xml_path: str) -> dict:

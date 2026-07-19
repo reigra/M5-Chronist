@@ -222,6 +222,25 @@ export const UI = {
   advChooseInstance:    'Spezialisierung:',
   advChoosePlaceholder: '— bitte wählen —',
 
+  // ── Gradaufstieg-Popup (GradUpPopup) ──────────────────────────────────────────
+  gradUpTitle:           'Gradaufstieg',
+  gradUpStep:            'von',
+  gradUpWpLabel:         'W%',
+  gradUpWpResult:        'W%:',
+  gradUpAttrResult:      'Attribut:',
+  gradUpNoAttr:          'keine Steigerung',
+  gradUpFreeChoice:      'Freie Wahl',
+  gradUpPropertyGain:    '1W3:',
+  gradUpApLabel:         'AP 1W3:',
+  gradUpClassBonus:      'Klassenbonus',
+  gradUpAusb:            'AusB',
+  gradUpApFormula:       'AP = 1W3 + AusB',
+  gradUpApFormulaBonus:  'AP = 1W3 + AusB + Klassenbonus',
+  gradUpApIncrease:      'AP um',
+  gradUpErhoeht:         'erhöht',
+  gradUpUebernehmen:     'Übernehmen',
+  gradUpAbbrechen:       'Abbrechen',
+
   // ── Zaubersprüche-Ansicht (SpellsView) ───────────────────────────────────────
   spellsNotCaster: 'Dieser Charaktertyp kann keine Zaubersprüche wirken.',
   spellsEpAfter:   'EP danach:',

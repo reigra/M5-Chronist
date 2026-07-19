@@ -1,8 +1,14 @@
-## ADDED Requirements
+# Grad-Up (Gradaufstiegs-Popup)
+
+## Purpose
+
+Beim EP-Hinzufügen in der AdvancementView kann der Charakter einen oder mehrere Grade aufsteigen. Dieses Popup führt den Spieler Schritt für Schritt durch die M5-Gradaufstiegs-Regeln: Eigenschaftssteigerung (W%-Tabelle → 1W3) und AP-Erhöhung (1W3 + Klassenbonus + ΔAusB).
+
+## Requirements
 
 ### Requirement: Grad-Up-Popup erscheint bei Grad-Sprung
 
-Wenn in der AdvancementView EP hinzugefügt werden und der Charakter dadurch einen oder mehrere Grade aufsteigt, MUSS ein Popup erscheinen, das den Spieler Schritt für Schritt durch die Gradaufstiegs-Regeln führt.
+Wenn in der AdvancementView EP hinzugefügt werden und der Charakter dadurch einen oder mehrere Grade aufsteigt, SHALL ein Popup erscheinen, das den Spieler Schritt für Schritt durch die Gradaufstiegs-Regeln führt.
 
 #### Scenario: Einfacher Grad-Sprung (1 Grad)
 
@@ -24,7 +30,7 @@ Wenn in der AdvancementView EP hinzugefügt werden und der Charakter dadurch ein
 
 ### Requirement: Stepper-UI pro Gradschritt
 
-Das Popup MUSS ein Wizard-Stepper sein. Jeder Durchlauf zeigt eine Seite mit den Eingabefeldern für genau einen Gradschritt. Der Titel MUSS den alten und neuen Grad anzeigen (z.B. "Gradaufstieg 2 → 3 (1 von 2)").
+Das Popup SHALL ein Wizard-Stepper sein. Jeder Durchlauf zeigt eine Seite mit den Eingabefeldern für genau einen Gradschritt. Der Titel SHALL den alten und neuen Grad anzeigen (z.B. "Gradaufstieg 2 → 3 (1 von 2)").
 
 #### Scenario: Stepper-Seite anzeigen
 
@@ -44,9 +50,28 @@ Das Popup MUSS ein Wizard-Stepper sein. Jeder Durchlauf zeigt eine Seite mit den
 
 ---
 
+### Requirement: Default-Werte der Eingabefelder
+
+Alle Würfeleingaben im GradUp-Popup SHALL mit dem abgerundeten Erwartungswert des jeweiligen Würfels vorbelegt sein.
+
+| Feld | Würfel | Default |
+|------|--------|---------|
+| W%-Ergebnis | W100 | 50 |
+| 1W3 Eigenschaft | 1W3 | 2 |
+| 1W3 AP | 1W3 | 2 |
+
+#### Scenario: Default-Werte sind korrekt
+
+- **WHEN** das Popup geöffnet wird
+- **THEN** ist das W%-Feld mit 50 vorbelegt
+- **THEN** ist das 1W3-Eigenschaftsfeld mit 2 vorbelegt
+- **THEN** ist das 1W3-AP-Feld mit 2 vorbelegt
+
+---
+
 ### Requirement: W%-Eigenschaftssteigerung
 
-Jeder Gradschritt MUSS den Spieler auffordern, einen W%-Wurf einzugeben. Anhand der Tabelle in den Rules-Daten wird die betroffene Eigenschaft ermittelt. Der Spieler MUSS dann das 1W3-Ergebnis für die Steigerung eingeben.
+Jeder Gradschritt SHALL den Spieler auffordern, einen W%-Wurf einzugeben. Anhand der Tabelle in den Rules-Daten wird die betroffene Eigenschaft ermittelt. Der Spieler SHALL dann das 1W3-Ergebnis für die Steigerung eingeben.
 
 #### Scenario: W% 01–50 (keine Steigerung)
 
@@ -77,41 +102,41 @@ Jeder Gradschritt MUSS den Spieler auffordern, einen W%-Wurf einzugeben. Anhand 
 
 ### Requirement: AP-Erhöhung
 
-Jeder Gradschritt MUSS den Spieler auffordern, ein 1W3-Ergebnis für die AP-Erhöhung einzugeben. Die Formel lautet:
+Jeder Gradschritt SHALL den Spieler auffordern, ein 1W3-Ergebnis für die AP-Erhöhung einzugeben. Die Formel lautet:
 
-- **Grad ≤ 5**: `AP += 1W3 + AusB + classBonus`
-- **Grad ≥ 6**: `AP += 1W3 + AusB`
+- **Grad ≤ 5**: `AP += 1W3 + classBonus + ΔAusB`
+- **Grad ≥ 6**: `AP += 1W3 + ΔAusB` (kein Klassenbonus)
 
-Der AusB wird auf Basis des neuen Ko-Werts berechnet (falls Ko im selben Schritt geändert wurde). Der classBonus wird aus `rules.types[character.type].apGain.lowGradBonus` gelesen.
+Der classBonus wird aus `rules.types[character.type].apGain.lowGradBonus` gelesen. Höhere Grade (≥ 6) erhalten keinen Klassenbonus. ΔAusB ist die Differenz zwischen dem neuen AusB (nach Ko-Änderung in diesem Schritt) und dem alten AusB.
 
 #### Scenario: AP-Erhöhung Grad 1–5 mit Klassenbonus
 
 - **WHEN** der aktuelle Grad ≤ 5 ist
 - **THEN** wird der Klassenbonus aus den Rules-Daten angezeigt (z.B. "+3 (Krieger)")
-- **THEN** wird `AP += 1W3 + AusB + classBonus` berechnet
+- **THEN** wird `AP += 1W3 + classBonus + ΔAusB` berechnet
 
 #### Scenario: AP-Erhöhung Grad ≥ 6 ohne Klassenbonus
 
 - **WHEN** der aktuelle Grad ≥ 6 ist
 - **THEN** wird KEIN Klassenbonus angezeigt
-- **THEN** wird `AP += 1W3 + AusB` berechnet
+- **THEN** wird `AP += 1W3 + ΔAusB` berechnet
 
 #### Scenario: Erster Grad (Grad 1)
 
 - **WHEN** der Charakter den ersten Grad erreicht (Grad 0 → 1)
-- **THEN** gilt dieselbe Formel wie Grad 1–5: `AP += 1W3 + AusB + classBonus`
+- **THEN** gilt dieselbe Formel wie Grad 1–5: `AP += 1W3 + classBonus + ΔAusB`
 
-#### Scenario: Ko-Änderung beeinflusst AusB
+#### Scenario: Ko-Änderung beeinflusst ΔAusB
 
 - **WHEN** im selben Gradschritt die Ko-Eigenschaft erhöht wurde
-- **THEN** wird der AusB mit dem NEUEN Ko-Wert berechnet
-- **THEN** wird der neue AusB in der AP-Formel verwendet
+- **THEN** wird ΔAusB = neuerAusB - alterAusB berechnet
+- **THEN** wird ΔAusB auf die AP-Erhöhung addiert
 
 ---
 
 ### Requirement: FW-Updates nach Gradschritt
 
-Nach Abschluss aller Gradschritte MÜSSEN die grad-basierten Fähigkeitswerte (Abwehr, Resistenz, Zaubern) auf den aktuellen Grad aktualisiert werden.
+Nach Abschluss aller Gradschritte SHALL die grad-basierten Fähigkeitswerte (Abwehr, Resistenz, Zaubern) auf den aktuellen Grad aktualisiert werden.
 
 #### Scenario: FW-Aktualisierung nach Gradaufstieg
 
@@ -123,7 +148,7 @@ Nach Abschluss aller Gradschritte MÜSSEN die grad-basierten Fähigkeitswerte (A
 
 ### Requirement: Abbrechen möglich
 
-Das Popup MUSS einen "Abbrechen"-Button haben. Bei Abbruch werden KEINE Änderungen gespeichert.
+Das Popup SHALL einen "Abbrechen"-Button haben. Bei Abbruch werden KEINE Änderungen gespeichert.
 
 #### Scenario: Abbrechen ohne Änderungen
 
@@ -136,7 +161,7 @@ Das Popup MUSS einen "Abbrechen"-Button haben. Bei Abbruch werden KEINE Änderun
 
 ### Requirement: GradUpService
 
-Das System MUSS einen `GradUpService` bereitstellen, der die Grad-Up-Logik kapselt. Der Service MUSS immutable arbeiten und einen neuen Character zurückgeben.
+Das System SHALL einen `GradUpService` bereitstellen, der die Grad-Up-Logik kapselt. Der Service SHALL immutable arbeiten und einen neuen Character zurückgeben.
 
 #### Scenario: computeStep gibt neuen Character zurück
 
