@@ -45,15 +45,21 @@ SKIP_SKILLS = {'AP verbessern', 'Fechten tevarrischer Stil'}
 # M5-Standardformeln für Boni und abgeleitete Fertigkeiten.
 # Werden nicht aus der EVA-XML gelesen, sondern sind Spielkonstanten.
 M5_FORMULAS = [
-    {'id': 'AusB',  'formula': 'Ko/10 + St/20',        'allowsDice': False, 'description': 'Ausdauerbonus'},
-    {'id': 'SchB',  'formula': 'St/20 + Gs/30 -3',     'allowsDice': False, 'description': 'Schadensbonus'},
-    {'id': 'AnB',   'formula': 'bonus(Gs)',            'allowsDice': False, 'description': 'Angriffsbonus'},
-    {'id': 'AbB',   'formula': 'bonus(Gw)',            'allowsDice': False, 'description': 'Abwehrbonus'},
-    {'id': 'ZauB',  'formula': 'bonus(Zt)',            'allowsDice': False, 'description': 'Zauberbonus'},
-    {'id': 'ResBg', 'formula': 'bonus(In)',            'allowsDice': False, 'description': 'Resistenzbonus Geist'},
-    {'id': 'ResBk', 'formula': 'bonus(Ko)',            'allowsDice': False, 'description': 'Resistenzbonus Körper'},
-    {'id': 'raufen','formula': '(St+Gw)/20 + AnB',     'allowsDice': False, 'description': 'Raufen-Formel'},
-    {'id': 'trinken','formula': 'Ko/10',               'allowsDice': False, 'description': 'Trinken-Formel'},
+    {'id': 'AusB',   'formula': 'Ko/10 + St/20',        'allowsDice': False, 'description': 'Ausdauerbonus'},
+    {'id': 'SchB',   'formula': 'St/20 + Gs/30 -3',     'allowsDice': False, 'description': 'Schadensbonus'},
+    {'id': 'AnB',    'formula': 'bonus(Gs)',            'allowsDice': False, 'description': 'Angriffsbonus'},
+    {'id': 'AbB',    'formula': 'bonus(Gw)',            'allowsDice': False, 'description': 'Abwehrbonus'},
+    {'id': 'ZauB',   'formula': 'bonus(Zt)',            'allowsDice': False, 'description': 'Zauberbonus'},
+    {'id': 'ResBg',  'formula': 'bonus(In)',            'allowsDice': False, 'description': 'Resistenzbonus Geist'},
+    {'id': 'ResBk',  'formula': 'bonus(Ko)',            'allowsDice': False, 'description': 'Resistenzbonus Körper'},
+    {'id': 'raufen', 'formula': '(St+Gw)/20 + AnB',     'allowsDice': False, 'description': 'Raufen-Formel'},
+    {'id': 'trinken','formula': 'Ko/10',                'allowsDice': False, 'description': 'Trinken-Formel'},
+    {'id': 'pA',     'formula': 'W% + 4*In/10 -20',     'allowsDice': True,  'description': 'persönliche Ausstrahlung'},
+    {'id': 'Wk',     'formula': 'W% + 2*(Ko/10 + In/10) -20','allowsDice': True,  'description': 'Willenskraft'},
+    {'id': 'Au',     'formula': 'W%','allowsDice': True,  'description': 'Aussehen'},
+#    {'id': 'LP',     'formula': '1W3 +7 +Ko/10',        'allowsDice': True,  'description': 'Lebenspunkte'},
+#    {'id': 'AP',     'formula': '1W3 + AusB',           'allowsDice': True,  'description': 'Ausdauerpunkte'},
+#    {'id': 'B',      'formula': '4W3 + 16',             'allowsDice': True,  'description': 'Bewegungsweite'},
 ]
 
 # Skills whose FW is derived from the gradValues[] table of their rulebook entry.

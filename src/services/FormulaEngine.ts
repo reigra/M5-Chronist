@@ -67,19 +67,27 @@ export class FormulaEngine {
    * Würfel werden als Range betrachtet.
    */
   evaluateRange(formula: string, context: Record<string, number>): DiceRange {
-    // Ersetze alle Würfel durch ihren Erwartungswert für expected
-    const expectedStr = formula.replace(/W\d+|W%/gi, (m) => {
-      if (m.toUpperCase() === 'W%') return '50.5'
-      const sides = parseInt(m.slice(1), 10)
-      return String((sides + 1) / 2)
+    const diceRegex = /(\d*)W(\d+|%)/gi
+
+    // Für min: n × 1
+    const minStr = formula.replace(diceRegex, (_, count) => {
+      const n = count ? parseInt(count, 10) : 1
+      return String(n)
     })
 
-    // Für min: ersetze Wx durch 1 (Minimum jedes Würfels)
-    const minStr = formula.replace(/W\d+|W%/gi, () => '1')
+    // Für max: n × Seiten
+    const maxStr = formula.replace(diceRegex, (_, count, sides) => {
+      const n = count ? parseInt(count, 10) : 1
+      const s = sides === '%' ? 100 : parseInt(sides, 10)
+      return String(n * s)
+    })
 
-    // Für max: ersetze Wx durch x (Maximum jedes Würfels)
-    const maxStr = formula.replace(/W(\d+)/gi, (_, sides) => sides)
-      .replace(/W%/gi, '100')
+    // Erwartungswert: n × (Seiten + 1) / 2
+    const expectedStr = formula.replace(diceRegex, (_, count, sides) => {
+      const n = count ? parseInt(count, 10) : 1
+      const s = sides === '%' ? 100 : parseInt(sides, 10)
+      return String(n * (s + 1) / 2)
+    })
 
     return {
       min: Math.floor(this.evaluate(minStr, context)),
@@ -149,9 +157,11 @@ export class FormulaEngine {
 
         const raw = input.slice(start, i)
 
-        // Dice: (Zahl)W(Zahl) oder (Zahl)W%
-        // Nur wenn nach 'W' eine Ziffer kommt — 'Gw' ist kein Würfel.
-        if (hasLetters && /^\d*W\d+$/i.test(raw)) {
+        // W% / nW% als Würfel erkennen (z.B. W%, 2W%)
+        if (hasLetters && /^\d*W$/i.test(raw) && i < input.length && input[i] === '%') {
+          i++ // '%' mitkonsumieren
+          tokens.push({ type: 'DICE', value: raw + '%', pos: start })
+        } else if (hasLetters && /^\d*W\d+$/i.test(raw)) {
           tokens.push({ type: 'DICE', value: raw, pos: start })
         } else if (isNumeric && !hasLetters) {
           tokens.push({ type: 'NUMBER', value: raw, pos: start })

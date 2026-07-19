@@ -2,7 +2,7 @@ import type { Character } from '../types/Character'
 import type { RulesData, InnateSkill } from '../types/Rules'
 import type { Skill } from '../types/Skill'
 import type { ValidationIssue, ValidationResult, FixDescription, FixResult } from '../types/CharacterValidation'
-import { formulaEngine } from './FormulaEngine'
+import { formulaEngine, type DiceRange } from './FormulaEngine'
 import { computeGrad } from './GradUtils'
 
 /**
@@ -219,11 +219,13 @@ export class CharacterValidator {
     const applied: FixDescription[] = []
 
     let boni: Character['boni'] = { ...(character.boni ?? {}) }
+    let properties = { ...(character.properties ?? {}) }
+    let personalia = { ...(character.personalia ?? {}) }
     let skills = character.skills.map(s => ({ ...s }))
 
     // ── Kontext für FormulaEngine ──
     const ctx: Record<string, number> = {
-      ...character.properties,
+      ...properties,
       ...boni,
     }
 
@@ -233,21 +235,46 @@ export class CharacterValidator {
       formulaMap.set(f.id, f.formula)
     }
 
-    // ── 1. Boni aus Formeln korrigieren ──
+    // ── 1. Formel-basierte Werte korrigieren (boni / properties / personalia) ──
     for (const formula of (rules.universalRules?.formulas ?? [])) {
-      const id = formula.id as keyof Character['boni']
-      if (!(id in boni)) continue
+      const id = formula.id
+
+      // 3-Quellen-Lookup
+      let source: 'boni' | 'properties' | 'personalia'
+      if (id in boni) {
+        source = 'boni'
+      } else if (id in properties) {
+        source = 'properties'
+      } else if (id in personalia) {
+        source = 'personalia'
+      } else {
+        continue
+      }
 
       try {
-        const expected = formulaEngine.evaluate(formula.formula, ctx)
-        if (boni[id] !== expected) {
-          const old = boni[id]
-          boni[id] = expected
+        let expected: number
+        if (formula.allowsDice) {
+          const range = formulaEngine.evaluateRange(formula.formula, ctx)
+          expected = Math.floor(range.expected)
+        } else {
+          expected = formulaEngine.evaluate(formula.formula, ctx)
+        }
+
+        const target = (source === 'boni' ? boni
+                     : source === 'properties' ? properties
+                     : personalia) as unknown as Record<string, number>
+        const actual = target[id]
+
+        if (actual !== expected) {
+          const old = target[id]
+          target[id] = expected
           ctx[id] = expected
           applied.push({
             action: 'correct_bonus',
             target: id,
-            description: `Bonus ${id} von ${old} auf ${expected} korrigiert (${formula.formula})`,
+            description: source === 'boni'
+              ? `Bonus ${id} von ${old} auf ${expected} korrigiert (${formula.formula})`
+              : `Wert ${id} (${source}) von ${old} auf ${expected} korrigiert (${formula.formula})`,
           })
         }
       } catch {
@@ -255,36 +282,40 @@ export class CharacterValidator {
       }
     }
 
-    // ── 1b. Rassen- und Typ-Boni auf Boni anwenden (Formel → Rasse → Typ) ──
+    // ── 1b. Rassen- und Typ-Boni auf die korrekte Quelle anwenden ──
     const corrRace = rules.races.find(r => r.id === character.raceId)
     const corrType = rules.types.find(t => t.id === character.typeId)
-    for (const pb of corrRace?.propertyBonuses ?? []) {
-      const key = pb.id as keyof Character['boni']
-      if (!(key in boni)) continue
-      const old = boni[key]
-      boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
-      ctx[key] = boni[key]
-      if (old !== boni[key]) {
+
+    const applyPropertyBonus = (pb: { id: string; mode: string; value: number }, label: string): void => {
+      const key = pb.id
+      let target: any
+      let sourceName: string
+      if (key in boni) {
+        target = boni; sourceName = 'boni'
+      } else if (key in properties) {
+        target = properties; sourceName = 'properties'
+      } else if (key in personalia) {
+        target = personalia; sourceName = 'personalia'
+      } else {
+        return
+      }
+      const old = target[key]
+      target[key] = pb.mode === 'set' ? pb.value : target[key] + pb.value
+      ctx[key] = target[key]
+      if (old !== target[key]) {
         applied.push({
           action: 'correct_bonus',
           target: key,
-          description: `Bonus ${key} von ${old} auf ${boni[key]} korrigiert (Rasse, mode:${pb.mode})`,
+          description: `Wert ${key} (${sourceName}) von ${old} auf ${target[key]} korrigiert (${label}, mode:${pb.mode})`,
         })
       }
     }
+
+    for (const pb of corrRace?.propertyBonuses ?? []) {
+      applyPropertyBonus(pb, 'Rasse')
+    }
     for (const pb of corrType?.propertyBonuses ?? []) {
-      const key = pb.id as keyof Character['boni']
-      if (!(key in boni)) continue
-      const old = boni[key]
-      boni[key] = pb.mode === 'set' ? pb.value : boni[key] + pb.value
-      ctx[key] = boni[key]
-      if (old !== boni[key]) {
-        applied.push({
-          action: 'correct_bonus',
-          target: key,
-          description: `Bonus ${key} von ${old} auf ${boni[key]} korrigiert (Typ, mode:${pb.mode})`,
-        })
-      }
+      applyPropertyBonus(pb, 'Typ')
     }
 
     // ── 2. InnateSkill-FWs aus Formeln korrigieren ──
@@ -418,6 +449,8 @@ export class CharacterValidator {
     const fixed: Character = {
       ...character,
       boni,
+      properties,
+      personalia,
       skills,
     }
 
@@ -801,7 +834,11 @@ export class CharacterValidator {
   // ── Kategorie I: Formel-basierte Werte ──────────────────────────────────────
 
   private validateCategoryI(character: Character, rules: RulesData, issues: ValidationIssue[]): void {
-    if (!character.boni || Object.keys(character.boni).length === 0) return
+    // Nur abbrechen wenn ALLE drei Quellen leer/nicht vorhanden sind
+    const hasBoni = !!character.boni && Object.keys(character.boni).length > 0
+    const hasProperties = !!character.properties && Object.keys(character.properties).length > 0
+    const hasPersonalia = !!character.personalia && Object.keys(character.personalia).length > 0
+    if (!hasBoni && !hasProperties && !hasPersonalia) return
 
     const ctx = {
       ...character.properties,
@@ -818,38 +855,91 @@ export class CharacterValidator {
     const valRace = rules.races.find(r => r.id === character.raceId)
     const valType = rules.types.find(t => t.id === character.typeId)
 
-    // 1. Bonus-Formeln prüfen (character.boni[key] vs. Formel + Rasse/Typ)
+    // 1. Formel-basierte Werte prüfen (boni / properties / personalia vs. Formel + Rasse/Typ)
     for (const formula of (rules.universalRules?.formulas ?? [])) {
       const id = formula.id
-      if (!(id in character.boni)) continue
 
-      let expected: number
-      try {
-        expected = formulaEngine.evaluate(formula.formula, ctx)
-      } catch {
-        continue  // Syntax-Fehler wird von Kategorie H gemeldet
+      // 3-Quellen-Lookup: boni → properties → personalia
+      let source: string
+      let actual: number
+      if (id in (character.boni ?? {})) {
+        source = 'boni'
+        actual = (character.boni as unknown as Record<string, number>)[id]
+      } else if (id in (character.properties ?? {})) {
+        source = 'properties'
+        actual = (character.properties as unknown as Record<string, number>)[id]
+      } else if (id in (character.personalia ?? {})) {
+        source = 'personalia'
+        actual = (character.personalia as unknown as Record<string, number>)[id]
+      } else {
+        continue
       }
 
-      // Rassen- und Typ-Boni auf den Sollwert anrechnen
+      // Rassen- und Typ-Boni ermitteln (für beide Branches)
       const raceBonus = valRace?.propertyBonuses?.find(pb => pb.id === id)
-      if (raceBonus) {
-        expected = raceBonus.mode === 'set' ? raceBonus.value : expected + raceBonus.value
-      }
       const typeBonus = valType?.propertyBonuses?.find(pb => pb.id === id)
-      if (typeBonus) {
-        expected = typeBonus.mode === 'set' ? typeBonus.value : expected + typeBonus.value
-      }
 
-      const actual = (character.boni as unknown as Record<string, number>)[id]
-      if (actual !== expected) {
-        issues.push({
-          path: `boni.${id}`,
-          severity: 'warning',
-          code: 'BONUS_FORMULA_MISMATCH',
-          message: `Bonus ${id} ist ${actual}, erwartet ${expected} (Formel + Rasse/Typ-Boni)`,
-          actual,
-          expected,
-        })
+      if (formula.allowsDice) {
+        // Dice-Formel: Range-Prüfung via evaluateRange()
+        let range: DiceRange
+        try {
+          range = formulaEngine.evaluateRange(formula.formula, ctx)
+        } catch {
+          continue // Syntax-Fehler wird von Kategorie H gemeldet
+        }
+
+        // Rassen-/Typ-Boni auf den Range anrechnen
+        if (raceBonus) {
+          if (raceBonus.mode === 'set') {
+            range = { min: raceBonus.value, max: raceBonus.value, expected: raceBonus.value }
+          } else {
+            range = { min: range.min + raceBonus.value, max: range.max + raceBonus.value, expected: range.expected + raceBonus.value }
+          }
+        }
+        if (typeBonus) {
+          if (typeBonus.mode === 'set') {
+            range = { min: typeBonus.value, max: typeBonus.value, expected: typeBonus.value }
+          } else {
+            range = { min: range.min + typeBonus.value, max: range.max + typeBonus.value, expected: range.expected + typeBonus.value }
+          }
+        }
+
+        if (actual < range.min || actual > range.max) {
+          issues.push({
+            path: `${source}.${id}`,
+            severity: 'warning',
+            code: 'DICE_VALUE_OUT_OF_RANGE',
+            message: `Wert ${id} ist ${actual}, möglicher Bereich [${range.min}, ${range.max}] (Formel ${formula.formula})`,
+            actual,
+            expected: Math.floor(range.expected),
+          })
+        }
+      } else {
+        // Deterministische Formel: exakter Vergleich via evaluate()
+        let expected: number
+        try {
+          expected = formulaEngine.evaluate(formula.formula, ctx)
+        } catch {
+          continue // Syntax-Fehler wird von Kategorie H gemeldet
+        }
+
+        if (raceBonus) {
+          expected = raceBonus.mode === 'set' ? raceBonus.value : expected + raceBonus.value
+        }
+        if (typeBonus) {
+          expected = typeBonus.mode === 'set' ? typeBonus.value : expected + typeBonus.value
+        }
+
+        if (actual !== expected) {
+          issues.push({
+            path: `${source}.${id}`,
+            severity: 'warning',
+            code: 'BONUS_FORMULA_MISMATCH',
+            message: `Wert ${id} ist ${actual}, erwartet ${expected} (Formel + Rasse/Typ-Boni)`,
+            actual,
+            expected,
+          })
+        }
       }
     }
 
