@@ -137,7 +137,25 @@ export class CharacterValidator {
       formulaMap.set(f.id, f.formula)
     }
 
-    // 1. InnateSkills iterieren, fehlende ergänzen
+    // 1. Rassen-Skills aus race.skills[] ergänzen (VOR innateSkills — Rasse gewinnt)
+    for (const rs of (race?.skills ?? [])) {
+      if (knownIds.has(rs.skillId)) continue
+
+      let fw = rs.value
+      const bonus = skillBonuses[rs.skillId] ?? 0
+      fw += bonus
+
+      skills.push({ skillId: rs.skillId, value: fw, pp: 0 })
+      knownIds.add(rs.skillId)
+
+      applied.push({
+        action: 'add_racial_skill',
+        target: rs.skillId,
+        description: `Skill "${rs.skillId}" mit FW ${fw} ergänzt (Rasse)`,
+      })
+    }
+
+    // 1b. InnateSkills iterieren, fehlende ergänzen (nach race.skills — nur wenn noch nicht vorhanden)
     for (const innate of (rules.universalRules?.innateSkills ?? [])) {
       // Condition prüfen
       if (innate.condition === 'hasSpells' && (!character.spells || character.spells.length === 0)) {
@@ -156,24 +174,6 @@ export class CharacterValidator {
         action: 'add_innate_skill',
         target: innate.id,
         description: `Skill "${innate.id}" mit FW ${fw} ergänzt`,
-      })
-    }
-
-    // 1b. Rassen-Skills aus race.skills[] ergänzen
-    for (const rs of (race?.skills ?? [])) {
-      if (knownIds.has(rs.skillId)) continue
-
-      let fw = rs.value
-      const bonus = skillBonuses[rs.skillId] ?? 0
-      fw += bonus
-
-      skills.push({ skillId: rs.skillId, value: fw, pp: 0 })
-      knownIds.add(rs.skillId)
-
-      applied.push({
-        action: 'add_racial_skill',
-        target: rs.skillId,
-        description: `Skill "${rs.skillId}" mit FW ${fw} ergänzt (Rasse)`,
       })
     }
 
@@ -319,10 +319,25 @@ export class CharacterValidator {
       }
     }
 
-    // ── 2b. Fehlende InnateSkills ergänzen ──
+    // ── 2b. Fehlende Rassen-Skills ergänzen (VOR innateSkills — Rasse gewinnt) ──
     const knownIds = new Set(skills.map(s => s.skillId))
-    const addRace = rules.races.find(r => r.id === character.raceId)
-    const addSkillBonuses = addRace?.skillBonuses ?? {}
+    const fixRace = rules.races.find(r => r.id === character.raceId)
+    if (fixRace?.skills) {
+      for (const rs of fixRace.skills) {
+        if (knownIds.has(rs.skillId)) continue
+        const bonus = fixRace.skillBonuses?.[rs.skillId] ?? 0
+        skills.push({ skillId: rs.skillId, value: rs.value + bonus, pp: 0 })
+        knownIds.add(rs.skillId)
+        applied.push({
+          action: 'add_racial_skill',
+          target: rs.skillId,
+          description: `Rassen-Fertigkeit "${rs.skillId}" mit FW ${rs.value + bonus} ergänzt`,
+        })
+      }
+    }
+
+    // ── 2c. Fehlende InnateSkills ergänzen (nach race.skills — nur wenn noch nicht vorhanden) ──
+    const addSkillBonuses = fixRace?.skillBonuses ?? {}
     for (const innate of (rules.universalRules?.innateSkills ?? [])) {
       if (innate.condition === 'hasSpells' && (!character.spells || character.spells.length === 0)) {
         continue
@@ -338,6 +353,25 @@ export class CharacterValidator {
         target: innate.id,
         description: `Skill "${innate.id}" mit FW ${fw} ergänzt`,
       })
+}
+
+// ── 2d. Abweichende Rassen-Skill-FWs korrigieren (RACE_SKILL_VALUE_MISMATCH) ──
+    if (fixRace?.skills) {
+      for (const rs of fixRace.skills) {
+        const idx = skills.findIndex(s => s.skillId === rs.skillId)
+        if (idx === -1) continue
+        const bonus = fixRace.skillBonuses?.[rs.skillId] ?? 0
+        const expectedFw = rs.value + bonus
+        if (skills[idx].value !== expectedFw) {
+          const old = skills[idx].value
+          skills[idx] = { ...skills[idx], value: expectedFw }
+          applied.push({
+            action: 'fix_racial_skill_value',
+            target: rs.skillId,
+            description: `Rassen-Fertigkeit "${rs.skillId}" von FW ${old} auf ${expectedFw} korrigiert`,
+          })
+        }
+      }
     }
 
     // ── 3. Grad-basierte Skills korrigieren ──
@@ -608,17 +642,37 @@ export class CharacterValidator {
       }
     }
 
-    // MISSING_RACIAL_SKILL
+      // MISSING_RACIAL_SKILL
     const race = rules.races.find(r => r.id === character.raceId)
     if (race?.skills) {
       for (const rs of race.skills) {
         if (!character.skills.some(s => s.skillId === rs.skillId)) {
           issues.push({
             path: `skills.${rs.skillId}`,
-            severity: 'warning',
+            severity: 'error',
             code: 'MISSING_RACIAL_SKILL',
             message: `Rassen-Fertigkeit "${rs.skillId}" fehlt`,
           })
+        }
+      }
+    }
+
+    // RACE_SKILL_VALUE_MISMATCH — prüft ob vorhandene Rassen-Skills den erwarteten FW haben
+    if (race?.skills) {
+      for (const rs of race.skills) {
+        const cs = character.skills.find(s => s.skillId === rs.skillId)
+        if (cs) {
+          const expectedFw = rs.value + (race.skillBonuses?.[rs.skillId] ?? 0)
+          if (cs.value !== expectedFw) {
+            issues.push({
+              path: `skills.${rs.skillId}.value`,
+              severity: 'warning',
+              code: 'RACE_SKILL_VALUE_MISMATCH',
+              message: `Rassen-Fertigkeit "${rs.skillId}" hat FW ${cs.value}, Rasse erwartet FW ${expectedFw}`,
+              actual: cs.value,
+              expected: expectedFw,
+            })
+          }
         }
       }
     }

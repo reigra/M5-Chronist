@@ -48,7 +48,12 @@ export class CharacterLoadService {
     }
 
     // 3. autoFix — ergänzt fehlende Pflicht-Skills
-    const { fixed } = characterValidator.autoFix(raw, rules)
+    const { fixed, applied } = characterValidator.autoFix(raw, rules)
+
+    // 3b. Wenn autoFix Änderungen vorgenommen hat, persistieren
+    if (applied.length > 0) {
+      await characterStorage.save(fixed)
+    }
 
     // 4. validate
     const issues = characterValidator.validate(fixed, rules)

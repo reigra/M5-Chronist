@@ -4,9 +4,9 @@ Rassen-Skills (`race.skills[]`) werden bei der Charaktererstellung weder ins For
 
 ## What Changes
 
-- **`correctIssues()` erweitern**: Fehlende Rassen-Skills (`race.skills[]`) werden ergänzt — analog zur bestehenden `innateSkills`-Ergänzung in `correctIssues()`. Bisher konnte der "Auto-Korrektur"-Button nur universelle InnateSkills nachfüllen, nicht aber Rassen-Skills.
+- **`correctIssues()` erweitern**: Fehlende Rassen-Skills (`race.skills[]`) werden **VOR** den universellen InnateSkills ergänzt — analog zur bestehenden `innateSkills`-Ergänzung, aber mit Vorrang für rassen-spezifische Werte. Bisher konnte der "Auto-Korrektur"-Button nur universelle InnateSkills nachfüllen, nicht aber Rassen-Skills.
 - **`MISSING_RACIAL_SKILL` → error**: Die Severity wird von `warning` auf `error` gehoben. Fehlende Rassen-Skills blockieren das Speichern — der User muss vorher korrigieren (manuell oder via Auto-Korrektur).
-- **`CharacterLoadService` persistiert autoFix**: Wenn `autoFix()` Änderungen an einem geladenen Character vornimmt (`applied.length > 0`), wird der gefixte Character sofort in IndexedDB gespeichert.
+- **`CharacterLoadService` persistiert autoFix**: Wenn `autoFix()` Änderungen an einem geladenen Character vornimmt (`applied.length > 0`), wird der gefixte Character sofort in IndexedDB gespeichert. `autoFix()` verarbeitet dabei `race.skills[]` **VOR** `innateSkills[]`.
 - **`CharacterEditView` validiert bei Rasse/Klassen-Wechsel**: Die `<select>`-Elemente für Rasse und Klasse erhalten `@change`-Handler, die `validate()` auf dem aktuellen Formularstand auslösen. Der User sieht sofort Fehler/Warnungen im Validation-Banner — ohne dass das Formular automatisch verändert wird.
 
 ## Capabilities

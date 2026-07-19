@@ -439,6 +439,17 @@ function validate(): string | null {
   return null
 }
 
+/**
+ * Wird bei User-Änderung von Rasse oder Klasse getriggert.
+ * Validiert den aktuellen Formularstand und zeigt Fehler/Warnungen im Banner.
+ * Ändert KEINE Formularfelder — nur validationResult.value wird gesetzt.
+ */
+function onRaceOrTypeChanged(): void {
+  if (!rules.value || !raceId.value || !typeId.value) return
+  const temp = buildCharacter()
+  validationResult.value = characterValidator.validate(temp, rules.value)
+}
+
 /** Save the character to IndexedDB and navigate to the character sheet. */
 async function saveCharacter(): Promise<void> {
   const validationError = validate()
@@ -576,14 +587,14 @@ onMounted(async () => {
           </label>
 
           <label class="form-field">{{ UI.labelRace }} *
-            <select v-model="raceId" required>
+            <select v-model="raceId" required @change="onRaceOrTypeChanged">
               <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
               <option v-for="r in rules?.races" :key="r.id" :value="r.id">{{ r.name }}</option>
             </select>
           </label>
 
           <label class="form-field">{{ UI.labelType }} *
-            <select v-model="typeId" required>
+            <select v-model="typeId" required @change="onRaceOrTypeChanged">
               <option value="" disabled>{{ UI.formSelectPlaceholder }}</option>
               <option v-for="t in playableTypes" :key="t.id" :value="t.id">{{ t.name ?? t.id }}</option>
             </select>

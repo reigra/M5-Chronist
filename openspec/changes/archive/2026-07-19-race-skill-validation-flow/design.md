@@ -19,6 +19,7 @@ Hinzu kommt: `MISSING_RACIAL_SKILL` ist ein `warning` — der Save wird nicht bl
 - `CharacterLoadService` persistiert autoFix-Änderungen in IndexedDB
 - Race/Type-Wechsel im Edit-Formular triggert `validate()` (nur Lesen, keine Mutation)
 - User kann fehlende Rassen-Skills via "Auto-Korrektur"-Button ergänzen
+- **Validator warnt, wenn ein vorhandener Rassen-Skill einen falschen FW hat** (z.B. Nachtsicht=5 statt 2)
 
 **Non-Goals:**
 - Keine automatische Anpassung von Properties/Boni bei Rassenwechsel
@@ -28,12 +29,13 @@ Hinzu kommt: `MISSING_RACIAL_SKILL` ist ein `warning` — der Save wird nicht bl
 
 ## Decisions
 
-### D1: Race.skills-Ergänzung in `correctIssues()` als Section 2c
+### D1: Race.skills-Ergänzung in `correctIssues()` VOR `innateSkills` (Section 2b → 2c)
 
-Die Ergänzung wird als neuer Abschnitt "2c" direkt nach der bestehenden "2b. Fehlende InnateSkills ergänzen" eingefügt. Sie folgt demselben Muster:
+Die Ergänzung wird als neuer Abschnitt **vor** der bestehenden "2b. Fehlende InnateSkills ergänzen" eingefügt (als neue 2b, das bisherige 2b wird 2c). **Rasse-spezifische Werte haben Vorrang vor universellen Defaults** — daher wird `race.skills` zuerst verarbeitet. `knownIds` wird einmalig vor beiden Abschnitten initialisiert.
 
 ```typescript
-// ── 2c. Fehlende Rassen-Skills ergänzen ──
+// ── 2b. Fehlende Rassen-Skills ergänzen (VOR innateSkills — Rasse gewinnt) ──
+const knownIds = new Set(skills.map(s => s.skillId))
 const fixRace = rules.races.find(r => r.id === character.raceId)
 if (fixRace?.skills) {
   for (const rs of fixRace.skills) {
@@ -48,9 +50,32 @@ if (fixRace?.skills) {
     })
   }
 }
+
+// ── 2c. Fehlende InnateSkills ergänzen (nach race.skills — nur wenn noch nicht vorhanden) ──
+const addSkillBonuses = fixRace?.skillBonuses ?? {}
+for (const innate of (rules.universalRules?.innateSkills ?? [])) {
+  if (innate.condition === 'hasSpells' && (!character.spells || character.spells.length === 0)) {
+    continue
+  }
+  if (knownIds.has(innate.id)) continue
+
+  const fw = this.computeInnateFw(innate, ctx, formulaMap, rules, addSkillBonuses, character)
+
+  skills.push({ skillId: innate.id, value: fw, pp: 0 })
+  knownIds.add(innate.id)
+  applied.push({
+    action: 'add_innate_skill',
+    target: innate.id,
+    description: `Skill "${innate.id}" mit FW ${fw} ergänzt`,
+  })
+}
 ```
 
-**Alternative**: In `autoFix()` den Scope erweitern. Aber autoFix wird nur im LoadService aufgerufen, nicht vom Button. correctIssues ist die vom User triggerbare Funktion — sie muss race.skills können.
+**Begründung**: Ein Skill wie "Nachtsicht" kann sowohl in `universalRules.innateSkills` (FW 0, universeller Default) als auch in `race.skills` der Elfen (FW 2, rassen-spezifisch) definiert sein. Wird `innateSkills` zuerst verarbeitet, landet FW 0 im Character und `race.skills` wird übersprungen. Die Reihenfolge **race.skills → innateSkills** stellt sicher, dass rassen-spezifische Werte gewinnen.
+
+**Alternative**: In `autoFix()` den Scope erweitern. Aber autoFix wird nur im LoadService aufgerufen, nicht vom Button. correctIssues ist die vom User triggerbare Funktion — sie muss race.skills VOR innateSkills können.
+
+**Wichtig**: Die gleiche Reihenfolge-Änderung muss auch in `autoFix()` vorgenommen werden (Section 1 vor 1b).
 
 ### D2: `MISSING_RACIAL_SKILL` → severity `'error'`
 
@@ -92,6 +117,44 @@ function onRaceOrTypeChanged(): void {
 ### D5: `runCorrection()` speichert bei Neuanlage nicht
 
 Bestehendes Verhalten bleibt: `runCorrection()` in `CharacterEditView` speichert nur im Edit-Mode (`if (isEdit.value)`). Bei Neuanlage korrigiert es nur das Formular (`fillForm(result.fixed)`). Der User speichert dann explizit via "Create"-Button → der vollständige Character (inkl. korrigierter Skills) landet in IndexedDB.
+
+---
+
+### D6: Validierung von Rassen-Skill-Werten (RACE_SKILL_VALUE_MISMATCH)
+
+Zusätzlich zu `MISSING_RACIAL_SKILL` (fehlender Skill) SHALL der Validator prüfen, ob **vorhandene** Rassen-Skills den erwarteten FW haben.
+
+```typescript
+// In validateCategoryC(), nach MISSING_RACIAL_SKILL Prüfung:
+if (race?.skills) {
+  for (const rs of race.skills) {
+    const cs = character.skills.find(s => s.skillId === rs.skillId)
+    if (cs) {
+      const expectedFw = rs.value + (race.skillBonuses?.[rs.skillId] ?? 0)
+      if (cs.value !== expectedFw) {
+        issues.push({
+          path: `skills.${rs.skillId}.value`,
+          severity: 'warning',
+          code: 'RACE_SKILL_VALUE_MISMATCH',
+          message: `Rassen-Fertigkeit "${rs.skillId}" hat FW ${cs.value}, Rasse erwartet FW ${expectedFw}`,
+          actual: cs.value,
+          expected: expectedFw,
+        })
+      }
+    }
+  }
+}
+```
+
+**Severity: `warning`** (kein `error`), weil:
+- Der User soll informiert werden, aber nicht blockiert
+- Der Repair-Button (`correctIssues()`) korrigiert den Wert auf den erwarteten Rassen-FW
+
+**correctIssues() Verhalten**: Überschreibt den FW mit dem erwarteten Rassen-Wert
+(`rs.value + (race.skillBonuses[skillId] ?? 0)`), inkl. `applied`-Eintrag mit
+`action: 'fix_racial_skill_value'`. Konsistent mit dem Prinzip "Repair-Button fixt
+alle korrigierbaren Warnungen/Fehler" — analog zu Boni- und Attribut-Korrekturen.
+`autoFix()` bleibt unverändert (ergänzt nur fehlende Skills, überschreibt nie Werte).
 
 ## Risks / Trade-offs
 
