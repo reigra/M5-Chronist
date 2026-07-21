@@ -27,9 +27,9 @@ from helpers import get_app_version
 SCRIPT_DIR = os.path.dirname(__file__)
 SKILLS_PATH = os.path.join(SCRIPT_DIR, 'output', 'class_skills.json')
 GROUPS_PATH = os.path.join(SCRIPT_DIR, 'letter_groups.json')
-SKILL_OUT_PATH = os.path.join(SCRIPT_DIR, 'output', 'skill_groups_min_v3.json')
-COSTS_OUT_PATH = os.path.join(SCRIPT_DIR, 'output', 'class_group_costs_min_v3.json')
+SKILL_OUT_PATH = os.path.join(SCRIPT_DIR, 'output', 'skill_groups_min.json')
 
+COSTS_OUT_PATH = os.path.join(SCRIPT_DIR, 'output', 'class_group_costs_min.json')
 ALL_CATEGORIES = [
     'Alltag', 'Halbwelt', 'Kampf', 'Körper',
     'Freiland', 'Wissen', 'Sozial', 'Unterwelt',
@@ -641,7 +641,7 @@ def deduce(log=print):
     costs_output = {
         'version': app_ver,
         'source': 'class_skills.json',
-        'method': 'full_category_min_v3',
+        'method': 'full_category_min',
         'classes': class_costs_out,
     }
 
@@ -668,7 +668,7 @@ def deduce(log=print):
     groups_output = {
         'version': app_ver,
         'source': 'class_skills.json',
-        'method': 'full_category_min_v3',
+        'method': 'full_category_min',
         'skills': skill_groups_out,
     }
 

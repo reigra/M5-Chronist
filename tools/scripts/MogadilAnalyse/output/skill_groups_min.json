@@ -1,7 +1,7 @@
 {
   "version": "0.15.0",
   "source": "class_skills.json",
-  "method": "full_category_min_v3",
+  "method": "full_category_min",
   "skills": [
     {
       "name": "Abrichten",
