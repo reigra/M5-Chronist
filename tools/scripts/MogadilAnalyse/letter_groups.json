@@ -1,0 +1,78 @@
+{
+  "A": {
+    "groups": [
+      { "category": "Alltag", "difficulty": "leicht" },
+      { "category": "Halbwelt", "difficulty": "leicht" },
+      { "category": "Kampf", "difficulty": "leicht" },
+      { "category": "Körper", "difficulty": "leicht" }
+    ]
+  },
+  "B": {
+    "groups": [
+      { "category": "Alltag", "difficulty": "normal" },
+      { "category": "Wissen", "difficulty": "leicht" }
+    ]
+  },
+  "C": {
+    "groups": [
+      { "category": "Freiland", "difficulty": "leicht" }
+    ]
+  },
+  "D": {
+    "groups": [
+      { "category": "Körper", "difficulty": "normal" }
+    ]
+  },
+  "E": {
+    "groups": [
+      { "category": "Alltag", "difficulty": "schwer" },
+      { "category": "Halbwelt", "difficulty": "normal" },
+      { "category": "Kampf", "difficulty": "normal" },
+      { "category": "Körper", "difficulty": "schwer" },
+      { "category": "Wissen", "difficulty": "schwer" },
+      { "category": "Sozial", "difficulty": "leicht" }
+    ]
+  },
+  "F": {
+    "groups": [
+      { "category": "Freiland", "difficulty": "normal" },
+      { "category": "Wissen", "difficulty": "schwer" }
+    ]
+  },
+  "G": {
+    "groups": [
+      { "category": "Halbwelt", "difficulty": "schwer" },
+      { "category": "Sozial", "difficulty": "normal" },
+      { "category": "Unterwelt", "difficulty": "leicht" }
+    ]
+  },
+  "H": {
+    "groups": [
+      { "category": "Freiland", "difficulty": "schwer" },
+      { "category": "Sozial", "difficulty": "schwer" },
+      { "category": "Unterwelt", "difficulty": "normal" }
+    ]
+  },
+  "I": {
+    "groups": [
+      { "category": "Wissen", "difficulty": "sehr schwer" }
+    ]
+  },
+  "J": {
+    "groups": [
+      { "category": "Alltag", "difficulty": "sehr schwer" },
+      { "category": "Halbwelt", "difficulty": "sehr schwer" }
+    ]
+  },
+  "K": {
+    "groups": [
+      { "category": "Kampf", "difficulty": "schwer" },
+      { "category": "Unterwelt", "difficulty": "schwer" }
+    ]
+  },
+  "L": {
+    "groups": [
+      { "category": "Kampf", "difficulty": "sehr schwer" }
+    ]
+  }
+}

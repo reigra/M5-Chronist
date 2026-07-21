@@ -1,0 +1,826 @@
+{
+  "version": "0.15.0",
+  "source": "class_skills.json",
+  "method": "full_category_min_v3",
+  "classes": [
+    {
+      "id": "As",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 30,
+        "Körper": 10,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 10
+      }
+    },
+    {
+      "id": "Ba",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 30,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Bb",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 10,
+        "Körper": 10,
+        "Freiland": 10,
+        "Wissen": 40,
+        "Sozial": 30,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Bj",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 30,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "DBe",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "DDr",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 10,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "De",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 40,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "DFi",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 10,
+        "Körper": 10,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Dr",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 10,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Ds",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "DSc",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 10,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "DWh",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 30,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 40,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Du",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "EBe",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Er",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 30,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 10
+      }
+    },
+    {
+      "id": "Fc",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 30,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 10,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "Fe",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 20,
+        "Körper": 40,
+        "Freiland": 40,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Fi",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 10,
+        "Körper": 10,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "FMa",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Ge",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 20,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Gl",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 10,
+        "Kampf": 20,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Hä",
+      "groupCosts": {
+        "Alltag": 10,
+        "Halbwelt": 20,
+        "Kampf": 20,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Hj",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 30,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "Hl",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Hx",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "KD",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 20,
+        "Körper": 10,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Km",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 20,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 20,
+        "Sozial": 40,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Kr",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 40,
+        "Sozial": 20,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Kw",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 40,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Ma",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Mg",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 30,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 10,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Ne",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 40,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Nh",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 10,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "NY",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 10,
+        "Körper": 10,
+        "Freiland": 20,
+        "Wissen": 30,
+        "Sozial": 20,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "Or",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 20,
+        "Körper": 10,
+        "Freiland": 20,
+        "Wissen": 30,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "PB",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "PC",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 10,
+        "Sozial": 20,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Pk",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 40,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "PS",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 30,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Rm",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Rs",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Sa",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 10,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Sc",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 10,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Sg",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 10,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 20,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "SHx",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Sk",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 20,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Sp",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 10,
+        "Kampf": 40,
+        "Körper": 10,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 10,
+        "Unterwelt": 10
+      }
+    },
+    {
+      "id": "Sr",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Sw",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 30,
+        "Sozial": 30,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "Th",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Tm",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 30,
+        "Körper": 10,
+        "Freiland": 10,
+        "Wissen": 30,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Va",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 30,
+        "Unterwelt": 20
+      }
+    },
+    {
+      "id": "Vo",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 30,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 20,
+        "Unterwelt": 10
+      }
+    },
+    {
+      "id": "Wa",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 20,
+        "Körper": 10,
+        "Freiland": 10,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Wh",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 30,
+        "Körper": 20,
+        "Freiland": 20,
+        "Wissen": 20,
+        "Sozial": 40,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Wm",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 30,
+        "Kampf": 10,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 40,
+        "Sozial": 30,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "Ws",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Zk",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 30,
+        "Körper": 30,
+        "Freiland": 30,
+        "Wissen": 30,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "SiK",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 20,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 30,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "PSKr",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 20,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 20,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "Se",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 20,
+        "Kampf": 20,
+        "Körper": 10,
+        "Freiland": 30,
+        "Wissen": 20,
+        "Sozial": 10,
+        "Unterwelt": 30
+      }
+    },
+    {
+      "id": "PWs",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 30,
+        "Freiland": 40,
+        "Wissen": 20,
+        "Sozial": 20,
+        "Unterwelt": 40
+      }
+    },
+    {
+      "id": "MS",
+      "groupCosts": {
+        "Alltag": 20,
+        "Halbwelt": 40,
+        "Kampf": 40,
+        "Körper": 20,
+        "Freiland": 30,
+        "Wissen": 10,
+        "Sozial": 30,
+        "Unterwelt": 40
+      }
+    }
+  ]
+}

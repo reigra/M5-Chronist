@@ -1,0 +1,607 @@
+{
+  "version": "0.15.0",
+  "source": "class_skills.json",
+  "method": "full_category_min_v3",
+  "skills": [
+    {
+      "name": "Abrichten",
+      "letter": "H",
+      "groupCostCats": "Freiland",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Akrobatik",
+      "letter": "E",
+      "groupCostCats": "Halbwelt+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Alchemie",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Anführen",
+      "letter": "E",
+      "groupCostCats": "Kampf+Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Architektur",
+      "letter": "E",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Askese",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Astrologie",
+      "letter": "I",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Athletik",
+      "letter": "E",
+      "groupCostCats": "Kampf+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Balancieren",
+      "letter": "A",
+      "groupCostCats": "Halbwelt+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Beidhändiger Kampf",
+      "letter": "L",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Beredsamkeit",
+      "letter": "G",
+      "groupCostCats": "Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Bergreiten",
+      "letter": "A",
+      "groupCostCats": "Alltag+Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Betäuben",
+      "letter": "K",
+      "groupCostCats": "",
+      "certainty": "contradiction"
+    },
+    {
+      "name": "Betäubungsgriff",
+      "letter": "I",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Bildhauerei",
+      "letter": "E",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Bootfahren",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Brettspiel",
+      "letter": "B",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Dichten",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Dickhäuter lenken",
+      "letter": "E",
+      "groupCostCats": "Alltag+Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Drachenfliegen",
+      "letter": "D",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "DschaDu (Giftpressen)",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Erste Hilfe",
+      "letter": "E",
+      "groupCostCats": "Alltag+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Etikette",
+      "letter": "E",
+      "groupCostCats": "Alltag+Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Fallen entdecken",
+      "letter": "H",
+      "groupCostCats": "Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Fallenmechanik",
+      "letter": "K",
+      "groupCostCats": "Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Fälschen",
+      "letter": "A",
+      "groupCostCats": "Halbwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Fangen",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Fechten",
+      "letter": "L",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "FengSchui",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Feueralchimie",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Gassenwissen",
+      "letter": "G",
+      "groupCostCats": "Halbwelt+Sozial+Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Gaukeln",
+      "letter": "A",
+      "groupCostCats": "Halbwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Geländelauf",
+      "letter": "A",
+      "groupCostCats": "Kampf+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Gerätekunde",
+      "letter": "J",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Geschäftssinn",
+      "letter": "J",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Geschützkunde",
+      "letter": "E",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Glücksspiel",
+      "letter": "A",
+      "groupCostCats": "Alltag+Halbwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Grafik",
+      "letter": "E",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Heilkunde",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Kamelreiten",
+      "letter": "A",
+      "groupCostCats": "Alltag+Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Kampf in Schlachtreihe",
+      "letter": "E",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Kampf in Vollrüstung",
+      "letter": "L",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Kampfkunst",
+      "letter": "E",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "KiDo",
+      "letter": "E",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Klettern",
+      "letter": "A",
+      "groupCostCats": "Alltag+Halbwelt+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Landeskunde",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Laufen",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Lesen von Geisterschrift",
+      "letter": "B",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Lesen von Ogamstäben",
+      "letter": "B",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Lesen von Zauberrunen",
+      "letter": "B",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Lesen von Zauberschrift",
+      "letter": "B",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Libellenfliegen",
+      "letter": "E",
+      "groupCostCats": "Alltag+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Malerei",
+      "letter": "E",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Meditieren",
+      "letter": "E",
+      "groupCostCats": "Körper+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Menschenkenntnis",
+      "letter": "H",
+      "groupCostCats": "Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Meucheln",
+      "letter": "K",
+      "groupCostCats": "Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Musizieren",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Naturkunde",
+      "letter": "F",
+      "groupCostCats": "Freiland+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "NinJutsu",
+      "letter": "K",
+      "groupCostCats": "Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Orakelkunst",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Pflanzenkunde",
+      "letter": "F",
+      "groupCostCats": "Freiland+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Raunen",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Reiten",
+      "letter": "A",
+      "groupCostCats": "Alltag+Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Reiterkampf",
+      "letter": "A",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Rutengehen",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Scharfschießen",
+      "letter": "L",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schießkunst",
+      "letter": "E",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "SchiyoKi (innere Kraft)",
+      "letter": "A",
+      "groupCostCats": "Kampf+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schleichen",
+      "letter": "H",
+      "groupCostCats": "Freiland+Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schlösser öffnen",
+      "letter": "H",
+      "groupCostCats": "Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schmerzen ertragen",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schreiben",
+      "letter": "B",
+      "groupCostCats": "Alltag+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schwerttanz",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Schwimmen",
+      "letter": "A",
+      "groupCostCats": "Alltag+Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Seilkunst",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Selbstkontrolle",
+      "letter": "A",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Skifahren",
+      "letter": "A",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Speerfechten",
+      "letter": "L",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Spinnengang",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Sprechen",
+      "letter": "B",
+      "groupCostCats": "Alltag+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Spurensuche",
+      "letter": "H",
+      "groupCostCats": "Freiland+Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Stehlen",
+      "letter": "G",
+      "groupCostCats": "Halbwelt+Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "TaiTschi",
+      "letter": "E",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Tanzen",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Tarnen",
+      "letter": "H",
+      "groupCostCats": "Freiland+Unterwelt",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Tauchen",
+      "letter": "D",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "TeDo (Te nutzen)",
+      "letter": "J",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Thaumagraphie",
+      "letter": "E",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Thaumalogie",
+      "letter": "I",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Tierkunde",
+      "letter": "F",
+      "groupCostCats": "Freiland+Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Überleben",
+      "letter": "C",
+      "groupCostCats": "Freiland",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Verführen",
+      "letter": "E",
+      "groupCostCats": "Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Verhören",
+      "letter": "G",
+      "groupCostCats": "Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Verstellen",
+      "letter": "E",
+      "groupCostCats": "Sozial",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Volkstanz",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Wagenlenken",
+      "letter": "A",
+      "groupCostCats": "Alltag",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Wahrsagen",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Wasserkampf",
+      "letter": "E",
+      "groupCostCats": "Kampf",
+      "certainty": "assigned"
+    },
+    {
+      "name": "XiHaoda",
+      "letter": "D",
+      "groupCostCats": "Körper",
+      "certainty": "assigned"
+    },
+    {
+      "name": "Zauberkunde",
+      "letter": "F",
+      "groupCostCats": "Wissen",
+      "certainty": "assigned"
+    }
+  ]
+}

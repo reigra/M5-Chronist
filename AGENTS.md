@@ -61,3 +61,9 @@ Rules merge priority: houseRule → isCore → other (first-wins per field).
 ## Copilot Instructions
 
 See `.github/copilot-instructions.md` for detailed language, workflow, and code style rules. Loaded automatically by this project's `opencode.json`.
+
+## Rule Data — DO NOT TOUCH (CRITICAL)
+
+**NEVER, under any circumstances, modify files under `tools/rules/*.json`.**
+
+Parser scripts under `tools/` are the single source of truth. Rule files are generated artifacts — any manual edit will be overwritten on the next parse run. If rule data needs fixing, fix the parser script, then regenerate.
