@@ -10,16 +10,16 @@ Ein Skill nutzt typischerweise alle Kategorien seines Letters, manchmal eine
 Teilmenge. Der Algorithmus probiert zuerst alle Kategorien; wenn das scheitert,
 werden kleinere Teilmengen getestet.
 
-Auf diese Weise wurden **99 von 100 Skills** eindeutig zugewiesen, die
-Kategorie-Kosten in **504/504 Fällen** bestätigt, und **54/55 Skill-Gruppen**
+Auf diese Weise wurden **100 von 100 Skills** eindeutig zugewiesen, die
+Kategorie-Kosten in **504/504 Fällen** bestätigt, und **alle 56 Skill-Gruppen**
 stimmen exakt mit eva überein.
 
 ### Abweichungen zu eva
 
 | Skill | Letter | Mogadil (deduziert) | eva | Grund |
 |-------|--------|---------------------|-----|-------|
-| Betäuben | K | Kampf+Unterwelt | Halbwelt+Kampf | Letter K in Mogadil hat {Kampf,Unterwelt}, eva erwartet {Halbwelt,Kampf}. Cross-Letter-Konflikt — nicht automatisch auflösbar. |
 | Skifahren | A | Körper | Alltag | Körper-Kosten matchen 63/63 Klassen perfekt. eva hat für die 15 Typen gar keinen Körper-Eintrag → eva kann {Körper} nicht ausdrücken.|
+| ~~Betäuben~~ | ~~K~~ | ~~Halbwelt+Kampf~~ | ~~Halbwelt+Kampf~~ | **Gefixt**: Letter K wurde um Halbwelt ergänzt (fehlte in `letter_groups.json`). Der Algorithmus deduziert jetzt korrekt {Halbwelt+Kampf}. |
 
 ## Algorithmus (implementiert in `deduce_groups.py`)
 
@@ -35,7 +35,7 @@ C → Freiland, D → Körper, I → Wissen, L → Kampf
 lower[cid][cat] = upper[cid][cat] = observed_cost → bestätigt
 ```
 
-### Phase 2: 2-Candidate Letters mit bekanntem cat1 (B, F, K)
+### Phase 2: 2-Candidate Letters mit bekanntem cat1 (B, F)
 
 Vector matching: finde den häufigsten Kostenvektor für cat2.
 
@@ -43,22 +43,22 @@ Vector matching: finde den häufigsten Kostenvektor für cat2.
 |--------|-------------------|------|
 | B (Alltag, Wissen) | Wissen (I) | Alltag |
 | F (Freiland, Wissen) | Freiland (C) | Wissen |
-| K (Kampf, Unterwelt) | Kampf (L) | Unterwelt |
 
-J (Alltag, Halbwelt) hat keinen cat1 aus Single-Cat → wird iterativ in Phase 3
-gelöst sobald Alltag oder Halbwelt bestätigt sind.
+J (Alltag, Halbwelt) und K (Kampf, Halbwelt, Unterwelt) haben keine 2 Kandidaten
+bzw. keinen cat1 aus Single-Cat → werden iterativ in Phase 3 gelöst.
 
 ### Phase 3: Multi-Cat Skills — Full-Set + Subset Search
 
 Für jedes noch nicht zugewiesene Skill (A, E, G, H; plus iterative 2-Cat-Letters):
 
 **Schritt 1 — Full-Cat Check**: Prüfe ob `min(ALL letter cats)` in allen Klassen
-mit dem beobachteten Cost übereinstimmt (d.h. alle Kategorien-Kosten sind bestätigt
-und `min == observed`). Wenn ja → assigne ALL Cats.
+mit dem beobachteten Cost übereinstimmt. Bestätigte Kat-Kosten müssen >= observed
+sein, und keine unbestätigte Kat darf einen Lower-Bound < observed haben (sonst
+könnte sie den Min drücken). Wenn ok → assigne ALL Cats.
 
-**Schritt 2 — Subset Fallback**: Wenn Full-Cat scheitert, suche N-1, N-2, ..., 1
-Subsets (größte zuerst). Sortiere nach (Größe desc, Confidence desc).
-Picke das Beste mit eindeutigem Sieger.
+**Schritt 2 — Subset Fallback**: Wenn Full-Cat scheitert, suche N, N-1, ..., 1
+Subsets (größte zuerst). Die Subset-Suche inkludiert jetzt auch das N-Set (alle
+Letter-Kats), falls es erst später bestätigt wird.
 
 ### Fixpunkt-Iteration
 
@@ -73,7 +73,7 @@ Nach jeder Zuweisung:
 
 ### Subset-Evaluierung (`evaluate_multicat_subsets`)
 
-Für jedes Subset (N-1 bis 1 Kategorien) in jeder Klasse:
+Für jedes Subset (N bis 1 Kategorien) in jeder Klasse:
 - **Bestätigte Kat < observed** → Subset ungültig (diese Kat kann nicht genutzt werden)
 - **Alle bestätigt** → `min == observed` erforderlich
 - **Alle bis auf eine bestätigt, alle > observed** → letzte muss = observed (Lesson!)
@@ -83,30 +83,37 @@ Für jedes Subset (N-1 bis 1 Kategorien) in jeder Klasse:
 
 | Metrik | Wert |
 |--------|------|
-| Assigned | 99 von 100 |
+| Assigned | 100 von 100 |
 | Ambiguous | 0 |
-| Contradictions | 1 (Betäuben — Cross-Letter-Konflikt) |
+| Contradictions | 0 |
 | Confirmed Costs | 504 / 504 (100%) |
-| eva group match (55 Skills) | 54 / 55 (98%) |
+| eva group match (56 Skills) | 56 / 56 (100%) |
 | groupCost match (15 Typen × 8 Kategorien) | 120 / 120 (100%) |
 
 ### Abweichungen zu eva
 
-1. **Betäuben** (Letter K): eva sagt {Halbwelt, Kampf}, aber Letter K im
-   Mogadil-System ist {Kampf, Unterwelt}. Cross-Letter-Konflikt — kein
-   Algorithmusfehler, die Datenquellen sind hier inkonsistent.
+1. **Skifahren** (Letter A): Algorithmus deduziert {Körper}, eva ordnet dem Skill
+   fälschlich {Alltag} zu. Körpers Kosten matchen 63/63 Klassen perfekt, und
+   evas eigene Typ-Kosten enthalten Körper (z.B. As: Körper=10). Die
+   Skill-Gruppenzuweisung in eva ist hier inkonsistent mit den Kosten.
 
-2. **Skifahren** (Letter A): Algorithmus deduziert {Körper}, eva sagt {Alltag}.
-   Körper-Kosten matchen 63/63 Klassen perfekt. In eva fehlt Körper für die
-   15 Typen komplett (nur Alltag, Halbwelt, Kampf vorhanden) → eva kann {Körper}
-   gar nicht ausdrücken. Vermutlich ein Fehler in evas Typ-Struktur.
+### Bugfix: `check_full_set` zu permissiv
+
+**Problem**: `check_full_set` prüfte nur bestätigte Kat-Kosten, ignorierte aber
+unbestätigte Kats. Wenn ein Skill nicht alle Letter-Kats nutzt, aber die
+unbestätigten Kats keinen Lower-Bound hatten, passierte der Check fälschlich →
+Full-Set-Zuweisung propagierte falsche Lower-Bounds → Kaskade von Contradictions.
+
+**Fix**: `check_full_set` prüft jetzt auch unbestätigte Kats: wenn deren
+Lower-Bound < observed (oder None), gilt das Full-Set als nicht beweisbar →
+Fallback zur Subset-Suche. Subset-Suche inkludiert jetzt auch das N-Set.
 
 ### Konsistenznachweis
 
 - **120/120 groupCost-Werte** der 15 überlappenden Typen identisch mit eva
-- **54/55 Skill-Gruppen** exakter Match (Skifahren ausgenommen)
+- **56/56 Skill-Gruppen** exakter Match
 - **504/504 Kategorie-Kosten** bestätigt (63 × 8)
-- **0 Ambiguities**
+- **0 Ambiguities, 0 Contradictions**
 - Alle 44 Mogadil-only Skills (MagusNG-Erweiterungen) korrekt zugewiesen
 
 ## 4. Dateien

@@ -67,7 +67,8 @@
   "K": {
     "groups": [
       { "category": "Kampf", "difficulty": "schwer" },
-      { "category": "Unterwelt", "difficulty": "schwer" }
+      { "category": "Unterwelt", "difficulty": "schwer" },
+      { "category": "Halbwelt", "difficulty": "sehr schwer" }
     ]
   },
   "L": {

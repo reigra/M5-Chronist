@@ -1,97 +1,104 @@
 """
-Check if eva_kodex skill groups are compatible with Mogadil letter categories.
+Compare deduced Mogadil groups against eva_kodex groups.
 
 Reads:
-  output/class_skills.json   — skill → letter mapping
-  letter_groups.json         — letter → candidate categories
-  ../../rules/eva_kodex.json — skill → groups (reference)
+  output/skill_groups_min.json  — deduced Mogadil groups
+  ../../rules/eva_kodex.json    — skill groups + type costs (reference)
 
-For each skill in both sources: if any eva group is NOT in the
-letter's candidate categories, report it.
+Outcome per skill:
+  [OK]    M == E
+  [WARN]  M is subset of E  (M more specific)
+  [ERROR] M has cats not in E
+
+Outcome per type groupCost: any deviation = ERROR.
 """
 
 import json
 import os
-import sys
 
 SCRIPT_DIR = os.path.dirname(__file__)
-SKILLS_PATH = os.path.join(SCRIPT_DIR, 'output', 'class_skills.json')
-GROUPS_PATH = os.path.join(SCRIPT_DIR, 'letter_groups.json')
+SKILL_PATH = os.path.join(SCRIPT_DIR, 'output', 'skill_groups_min.json')
+COSTS_PATH = os.path.join(SCRIPT_DIR, 'output', 'class_group_costs_min.json')
 EVA_PATH = os.path.join(SCRIPT_DIR, '..', '..', 'rules', 'eva_kodex.json')
+
+ALL_CATEGORIES = [
+    'Alltag', 'Halbwelt', 'Kampf', 'Körper',
+    'Freiland', 'Wissen', 'Sozial', 'Unterwelt',
+]
 
 
 def main():
-    with open(SKILLS_PATH, encoding='utf-8') as f:
-        mog_data = json.load(f)
-    with open(GROUPS_PATH, encoding='utf-8') as f:
-        groups_data = json.load(f)
+    with open(SKILL_PATH, encoding='utf-8') as f:
+        mog_skills = json.load(f)
+    with open(COSTS_PATH, encoding='utf-8') as f:
+        mog_costs = json.load(f)
     with open(EVA_PATH, encoding='utf-8') as f:
         eva = json.load(f)
 
-    # Build letter → categories
-    letter_cats = {
-        letter: {g['category'] for g in info['groups']}
-        for letter, info in groups_data.items()
-    }
-
-    # Build skill → letter from Mogadil
-    skill_letter = {}
-    for sk in mog_data['skills']:
-        skill_letter[sk['name']] = sk['letter']
-
-    # Build eva skills with groups
     eva_skills = {}
     for s in eva['skills']:
-        g = s.get('groups')
-        if g:
-            eva_skills[s['name']] = set(g)
+        eva_skills[s['name']] = s
 
-    total = 0
-    compatible = 0
-    incompatible = 0
-    details = []
+    # --- Skills ---
+    ok_count = 0
+    warn_count = 0
+    err_count = 0
 
-    for name, eva_groups in sorted(eva_skills.items()):
-        letter = skill_letter.get(name)
-        if letter is None:
-            print(f'  ??? {name:25s} — nicht in Mogadil')
+    print('\n  --- Skill groups (Mogadil vs EVA) ---')
+    for entry in mog_skills['skills']:
+        name = entry['name']
+        eva_sk = eva_skills.get(name)
+        if not eva_sk or entry['certainty'] not in ('assigned', 'ambiguous'):
             continue
 
-        candidates = letter_cats.get(letter, set())
-        total += 1
+        mog_cats = set(entry['groupCostCats'].split('+'))
+        if not mog_cats:
+            continue
 
-        if eva_groups.issubset(candidates):
-            compatible += 1
+        eva_cats = set(eva_sk.get('groups', []))
+
+        if mog_cats == eva_cats:
+            print(f'  [OK]     {name:25s} {entry["groupCostCats"]}')
+            ok_count += 1
+        elif mog_cats < eva_cats:
+            diff = sorted(eva_cats - mog_cats)
+            print(f'  [WARN]   {name:25s} {entry["groupCostCats"]}  '
+                  f'subset of EVA {sorted(eva_cats)}  (EVA extra: {diff})')
+            warn_count += 1
         else:
-            incompatible += 1
-            extra = eva_groups - candidates
-            missing = candidates - eva_groups
-            details.append({
-                'name': name,
-                'letter': letter,
-                'eva_groups': sorted(eva_groups),
-                'candidates': sorted(candidates),
-                'extra': sorted(extra),
-                'missing': sorted(missing),
-            })
+            diff = sorted(mog_cats - eva_cats)
+            print(f'  [ERROR]  {name:25s} {entry["groupCostCats"]}  '
+                  f'not in EVA {sorted(eva_cats)}  (Mogadil extra: {diff})')
+            err_count += 1
 
-    print(f'Skills in beiden Quellen: {total}')
-    print(f'  Gruppen passen zu Letter:   {compatible}')
-    print(f'  Gruppen passen NICHT:       {incompatible}')
-    print()
+    print(f'\n  Skills: {ok_count} OK, {warn_count} WARN, {err_count} ERROR')
 
-    if not details:
-        print('Alle eva-Gruppen sind mit den Mogadil-Letters kompatibel.')
-        return
+    # --- Type costs ---
+    eva_types = {t['id']: t for t in eva['types']}
+    cost_ok = 0
+    cost_err = 0
 
-    print(f'=== {len(details)} Skills mit inkompatiblen Gruppen ===')
-    print()
-    for d in details:
-        print(f'{d["name"]:30s} Letter={d["letter"]}')
-        print(f'  eva-Gruppen:    {d["eva_groups"]}')
-        print(f'  Kandidaten:     {d["candidates"]}')
-        print(f'  Nicht in Letter: {d["extra"]}')
-        print()
+    print('\n  --- Type groupCosts (Mogadil vs EVA) ---')
+    for cls in mog_costs['classes']:
+        cid = cls['id']
+        eva_type = eva_types.get(cid)
+        if not eva_type:
+            continue
+
+        mog_gc = cls['groupCosts']
+        eva_gc = eva_type['groupCosts']
+
+        for cat in ALL_CATEGORIES:
+            mv = mog_gc.get(cat)
+            ev = eva_gc.get(cat)
+            if isinstance(mv, int) and isinstance(ev, int):
+                if mv == ev:
+                    cost_ok += 1
+                else:
+                    print(f'  [ERROR]  {cid:4s} {cat:12s} Mogadil={mv}  EVA={ev}')
+                    cost_err += 1
+
+    print(f'\n  Type groupCosts: {cost_ok} OK, {cost_err} ERROR')
 
 
 if __name__ == '__main__':

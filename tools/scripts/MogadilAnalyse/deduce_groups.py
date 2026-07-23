@@ -198,37 +198,39 @@ def solve_2cat_letter(
 def check_full_set(sk, cats, lower, upper, all_cids):
     """
     Check if the full category set is consistent: min(all cats) = observed
-    in all classes where costs are fully confirmed.
-    Returns True if consistent everywhere.
+    in all classes. Returns True only if:
+    - All category costs are confirmed and their min == observed, OR
+    - Confirmed costs are >= observed AND no unconfirmed cat could be cheaper.
     """
     for cid in all_cids:
         observed = sk['costs'].get(cid)
         if not isinstance(observed, int):
             continue
 
-        confirmed_vals = []
         all_known = True
         for cat in cats:
             cc = confirmed_cost(lower, upper, cid, cat)
-            if cc is not None:
-                confirmed_vals.append(cc)
-            else:
+            if cc is None:
                 all_known = False
 
         if all_known:
+            confirmed_vals = [
+                confirmed_cost(lower, upper, cid, cat)
+                for cat in cats
+            ]
             if min(confirmed_vals) != observed:
                 return False
         else:
-            # Not all cats confirmed, but check partial consistency
-            if confirmed_vals:
-                min_conf = min(confirmed_vals)
-                if min_conf < observed:
-                    return False  # A confirmed cat is cheaper than observed
-                if min_conf > observed:
-                    # All confirmed > observed, so one of the unknowns must = observed
-                    # This is plausible, not a contradiction
-                    pass
-            # else: all unknown → no constraint to verify
+            # Partial check: reject if any unconfirmed cat COULD be cheaper
+            for cat in cats:
+                cc = confirmed_cost(lower, upper, cid, cat)
+                if cc is not None:
+                    if cc < observed:
+                        return False
+                else:
+                    lb = lower.get(cid, {}).get(cat)
+                    if lb is None or lb < observed:
+                        return False
     return True
 
 
@@ -243,7 +245,7 @@ def evaluate_multicat_subsets(sk, cats, lower, upper, all_cids):
     """
     cat_list = list(cats)
     subsets = []
-    for r in range(len(cat_list) - 1, 0, -1):  # N-1 down to 1
+    for r in range(len(cat_list), 0, -1):  # N down to 1
         for combo in combinations(cat_list, r):
             subsets.append(set(combo))
 
@@ -688,41 +690,67 @@ def verify_output(groups_output, costs_output, log=print):
     for sk in eva['skills']:
         eva_skills[sk['name']] = sk
 
-    compatible = 0
-    total_checked = 0
+    ok_count = 0
+    warn_count = 0
+    err_count = 0
 
+    log('\n  --- Skill groups (Mogadil vs EVA) ---')
     for entry in groups_output['skills']:
         name = entry['name']
         eva_sk = eva_skills.get(name)
         if not eva_sk or entry['certainty'] not in ('assigned', 'ambiguous'):
             continue
 
-        deduced_cats = set(entry['groupCostCats'].split('+'))
+        mog_cats = set(entry['groupCostCats'].split('+'))
+        if not mog_cats:
+            continue
+
         eva_cats = set(eva_sk.get('groups', []))
 
-        total_checked += 1
-        if deduced_cats == eva_cats:
-            compatible += 1
-        elif not deduced_cats:
-            continue
+        if mog_cats == eva_cats:
+            log(f'  [OK]     {name:25s} {entry["groupCostCats"]}')
+            ok_count += 1
+        elif mog_cats < eva_cats:
+            diff = sorted(eva_cats - mog_cats)
+            log(f'  [WARN]   {name:25s} {entry["groupCostCats"]}  subset of EVA {sorted(eva_cats)}  '
+                f'(EVA extra: {diff})')
+            warn_count += 1
         else:
-            if eva_cats.intersection(deduced_cats):
-                compatible += 1
+            diff = sorted(mog_cats - eva_cats)
+            log(f'  [ERROR]  {name:25s} {entry["groupCostCats"]}  not in EVA {sorted(eva_cats)}  '
+                f'(Mogadil extra: {diff})')
+            err_count += 1
 
-    log(f'\n  eva comparison: {compatible}/{total_checked} compatible '
-        f'({100 * compatible // max(total_checked, 1)}%)')
+    log(f'\n  Skills: {ok_count} OK, {warn_count} WARN, {err_count} ERROR')
 
-    log(f'\n  Contradiction details:')
-    for entry in groups_output['skills']:
-        if entry['certainty'] != 'contradiction':
+    # -----------------------------------------------------------------------
+    #  Type cost comparison
+    # -----------------------------------------------------------------------
+    eva_types = {t['id']: t for t in eva['types']}
+    cost_ok = 0
+    cost_err = 0
+
+    log('\n  --- Type groupCosts (Mogadil vs EVA) ---')
+    for cls in costs_output['classes']:
+        cid = cls['id']
+        eva_type = eva_types.get(cid)
+        if not eva_type:
             continue
-        name = entry['name']
-        eva_sk = eva_skills.get(name)
-        if eva_sk:
-            log(f'    {name:25s} letter={entry["letter"]} '
-                f'eva_groups={eva_sk.get("groups", [])}')
-        else:
-            log(f'    {name:25s} letter={entry["letter"]} (not in eva)')
+
+        mog_costs = cls['groupCosts']
+        eva_gc = eva_type['groupCosts']
+
+        for cat in ALL_CATEGORIES:
+            mv = mog_costs.get(cat)
+            ev = eva_gc.get(cat, '?')
+            if isinstance(mv, int) and isinstance(ev, int):
+                if mv == ev:
+                    cost_ok += 1
+                else:
+                    log(f'  [ERROR]  {cid:4s} {cat:12s} Mogadil={mv}  EVA={ev}')
+                    cost_err += 1
+
+    log(f'\n  Type groupCosts: {cost_ok} OK, {cost_err} ERROR')
 
 
 if __name__ == '__main__':

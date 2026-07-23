@@ -78,8 +78,8 @@
     {
       "name": "Betäuben",
       "letter": "K",
-      "groupCostCats": "",
-      "certainty": "contradiction"
+      "groupCostCats": "Halbwelt+Kampf",
+      "certainty": "assigned"
     },
     {
       "name": "Betäubungsgriff",
