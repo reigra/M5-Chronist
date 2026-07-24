@@ -165,6 +165,25 @@ LERNEN_LINE_RE = re.compile(
     re.IGNORECASE
 )
 
+# Regex: matches a standalone linked property continuation line like "(Gs)" or "(In)"
+# (Legacy — no longer used; kept for reference)
+# STANDALONE_PROP_RE = re.compile(r'^\((\w+)\)$')
+
+
+def join_lernen_lines(lines: list[str]) -> str:
+    """
+    Join lines of a single difficulty block, resolving hyphenation.
+    A trailing hyphen indicates a word broken across lines (e.g. "Naturkun-" + "de+8").
+    Otherwise, lines are joined with a space.
+    """
+    result = lines[0]
+    for line in lines[1:]:
+        if result.endswith("-"):
+            result = result[:-1] + line
+        else:
+            result += " " + line
+    return result
+
 
 def parse_skill_tokens(text: str) -> list[dict]:
     """
@@ -391,6 +410,48 @@ def stage1_detect_groups(pdf) -> list[dict]:
 
 # ── Stage 2: Parse Lernen blocks ─────────────────────────────────────────────
 
+def _parse_lernen_block(lines: list[dict], group: str) -> list[dict]:
+    """
+    Parse a complete Lernen block (all lines between Lernen: and Verbessern).
+    Groups lines by difficulty marker, joins them cleaning hyphenation,
+    then extracts skill tokens from each block.
+    """
+    # Split lines into difficulty blocks
+    blocks: list[tuple[str, int, list[str]]] = []
+    current_diff = None
+    current_cost = None
+    current_texts: list[str] = []
+
+    for line in lines:
+        text = line["text"].strip()
+        m = LERNEN_LINE_RE.match(text)
+        if m:
+            if current_diff is not None and current_texts:
+                blocks.append((current_diff, current_cost, current_texts))
+            diff_raw = m.group(1).lower()
+            current_diff = DIFFICULTY_MAP.get(diff_raw, diff_raw)
+            current_cost = int(m.group(2))
+            current_texts = [m.group(3)]
+        elif current_diff is not None:
+            current_texts.append(text)
+
+    if current_diff is not None and current_texts:
+        blocks.append((current_diff, current_cost, current_texts))
+
+    instances = []
+    for diff, learn_cost, text_lines in blocks:
+        joined = join_lernen_lines(text_lines)
+        for skill in parse_skill_tokens(joined):
+            instances.append({
+                **skill,
+                "learn_cost": learn_cost,
+                "difficulty": diff,
+                "group":      group,
+            })
+
+    return instances
+
+
 def stage2_parse_lernen(pdf) -> list[dict]:
     """
     Stage 2: For each group on each page, parse the Lernen block.
@@ -398,6 +459,9 @@ def stage2_parse_lernen(pdf) -> list[dict]:
       {name, base_value, linked_property, learn_cost, difficulty, group}
     Skills appearing in multiple groups will have multiple entries here.
     Deduplication happens in Stage 3.
+
+    Uses accumulate-then-parse: all lines between Lernen: and Verbessern
+    are collected, then joined with hyphenation resolution before parsing.
     """
     instances = []
 
@@ -406,10 +470,9 @@ def stage2_parse_lernen(pdf) -> list[dict]:
         page = pdf.pages[pdf_index]
         lines = extract_lines(page)
 
-        current_group = None   # current group abbreviation
-        in_lernen     = False  # inside a Lernen block
-        pending_diff  = None   # difficulty of last parsed line (for continuation lines)
-        pending_cost  = None   # learn cost of last parsed line
+        current_group = None
+        in_lernen     = False
+        lernen_lines: list[dict] = []
 
         for line in lines:
             text = line["text"].strip()
@@ -418,9 +481,11 @@ def stage2_parse_lernen(pdf) -> list[dict]:
             if is_heading(line) and not is_page_number(line):
                 abbrev = get_group_abbrev(text)
                 if abbrev:
+                    if current_group and in_lernen and lernen_lines:
+                        instances.extend(_parse_lernen_block(lernen_lines, current_group))
                     current_group = abbrev
                     in_lernen     = False
-                    pending_diff  = None
+                    lernen_lines   = []
                 continue
 
             # ── Skip if no group active yet ────────────────────────────────
@@ -434,42 +499,24 @@ def stage2_parse_lernen(pdf) -> list[dict]:
             # ── Lernen: trigger ────────────────────────────────────────────
             if text.startswith("Lernen:"):
                 in_lernen = True
-                pending_diff = None
+                lernen_lines = []
                 continue
 
             # ── Verbessern trigger: end of Lernen block ────────────────────
             if text.startswith("Verbessern"):
+                if in_lernen and lernen_lines:
+                    instances.extend(_parse_lernen_block(lernen_lines, current_group))
                 in_lernen = False
-                pending_diff = None
+                lernen_lines = []
                 continue
 
-            if not in_lernen:
-                continue
+            if in_lernen:
+                lernen_lines.append(line)
 
-            # ── Try to parse a difficulty line ─────────────────────────────
-            m = LERNEN_LINE_RE.match(text)
-            if m:
-                diff_raw   = m.group(1).lower()
-                difficulty = DIFFICULTY_MAP.get(diff_raw, diff_raw)
-                learn_cost = int(m.group(2))
-                rest       = m.group(3)
-                pending_diff = difficulty
-                pending_cost = learn_cost
-
-                for skill in parse_skill_tokens(rest):
-                    instances.append({**skill,
-                                      "learn_cost": learn_cost,
-                                      "difficulty": difficulty,
-                                      "group":      current_group})
-                continue
-
-            # ── Continuation line (indented, x0 > 150) ────────────────────
-            if pending_diff is not None and line["x0"] > 150:
-                for skill in parse_skill_tokens(text):
-                    instances.append({**skill,
-                                      "learn_cost": pending_cost,
-                                      "difficulty": pending_diff,
-                                      "group":      current_group})
+        # End of page: flush remaining Lernen block if any
+        if in_lernen and lernen_lines and current_group:
+            instances.extend(_parse_lernen_block(lernen_lines, current_group))
+            lernen_lines = []
 
     return instances
 
