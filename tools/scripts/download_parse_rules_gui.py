@@ -13,8 +13,8 @@ from tkinter import scrolledtext, ttk
 TOOLS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMP_ZIP = os.path.join(TOOLS_DIR, "EVAsrc_temp.zip")
 EVA_ZIP_URL = "https://ebruenner.de/download/EVAsrc.zip"
-PDF_URL = "http://www.heidebrunn.de/Midgard/Lerntabellen_5_8_2.pdf"
-PDF_DST = os.path.join(TOOLS_DIR, "Mogadil", "Lerntabellen_5_8_2.pdf")
+PDF_URL = "http://www.heidebrunn.de/Midgard/Lerntabellen_5_8_3.pdf"
+PDF_DST = os.path.join(TOOLS_DIR, "Mogadil", "Lerntabellen_5_8_3.pdf")
 
 XML_DIR = os.path.join(TOOLS_DIR, "EVA")
 JSON_DIR = os.path.join(TOOLS_DIR, "rules")

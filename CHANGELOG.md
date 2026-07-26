@@ -1,3 +1,12 @@
+
+### Rule Parse Scripte
+- Mogadil neue Version (Fix Leiteigenschaft für Fälschen)
+
+### Diverses
+- Analysescript für Mogadil (Groupcost der Klassen & Skillgruppen der Skills ermitteln)
+- Plan um den Algorithmus des Analysescrips in den Mogadil-Parser zu integrieren
+- Skill-Parser für Ars Armorum und Mysterium
+
 ## [v0.15.1] - 2026-07-19
 
 ### Diverses
