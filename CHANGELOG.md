@@ -1,6 +1,7 @@
 
 ### Rule Parse Scripte
 - Mogadil neue Version (Fix Leiteigenschaft für Fälschen)
+- FIX: Layoutänderungen in Lerntabellen hat parser gebrochen
 
 ### Diverses
 - Analysescript für Mogadil (Groupcost der Klassen & Skillgruppen der Skills ermitteln)

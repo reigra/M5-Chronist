@@ -571,6 +571,7 @@ def extract_type_costs(pdf_path: str, cost_columns: list[str], log=print) -> tup
 
             fertig_table = None
             kt_table = None
+            zaub_table = None
             for table in tables:
                 if not table or not table[0]:
                     continue
@@ -579,6 +580,8 @@ def extract_type_costs(pdf_path: str, cost_columns: list[str], log=print) -> tup
                     fertig_table = table
                 elif h0 == 'Kampftechniken':
                     kt_table = table
+                elif h0.startswith('Zaubersprü'):
+                    zaub_table = table
 
             # Column abbreviations for this page (from Kampftechniken header, fallback Fertigkeiten header)
             page_columns: list[str] = []
@@ -623,6 +626,32 @@ def extract_type_costs(pdf_path: str, cost_columns: list[str], log=print) -> tup
                             if type_id not in spell_costs:
                                 spell_costs[type_id] = {}
                             spell_costs[type_id][name] = cost
+
+            # ---- Zaubersprüche as separate table (5.8.3+) → spellCosts ----
+            if zaub_table is not None and len(zaub_table) > 1:
+                for ri in range(1, len(zaub_table)):
+                    row = zaub_table[ri]
+                    name = _cell(row[0]) if row else ''
+                    if not name or name.startswith('*'):
+                        continue
+
+                    cost_cells = row[1:1 + n_cols] if row else []
+                    if not any(c is not None for c in cost_cells):
+                        continue
+
+                    for ci, cell in enumerate(cost_cells):
+                        if cell is None:
+                            continue
+                        cost_str = _cell(cell)
+                        if not cost_str:
+                            continue
+                        cost = _parse_group_cost(cost_str)
+                        if cost is None or cost <= 0:
+                            continue
+                        type_id = page_columns[ci]
+                        if type_id not in spell_costs:
+                            spell_costs[type_id] = {}
+                        spell_costs[type_id][name] = cost
 
             # ---- Kampftechniken table → fightCosts ----
             if kt_table and len(kt_table) > 1:
@@ -726,6 +755,45 @@ def extract_fertigkeiten_tables(pdf_path: str):
                 # Carry over source from the last block (which has the Quelle column)
                 if b.get('source_raw'):
                     m['source_raw'] = b['source_raw']
+
+    # ---- Collect standalone Waffen tables (5.8.3+) ----
+    waffen_tables = []
+    for table in all_raw_tables:
+        if not table or not table[0]:
+            continue
+        if _cell(table[0][0]) == 'Waffen':
+            waffen_tables.append(table)
+
+    if waffen_tables:
+        all_waffen_costs: list[str] = []
+        waffen_prop = ''
+        waffen_letter = ''
+        for table in waffen_tables:
+            row = _fix_merged_cells(table[0])
+            waffen_prop = _cell(row[1])
+            waffen_letter = _cell(row[2])
+            waffen_prop, waffen_letter = _split_letter(waffen_prop, waffen_letter)
+            for c in range(3, len(row)):
+                cell = _cell(row[c])
+                m = re.match(r'^(\d+)', cell)
+                if m:
+                    all_waffen_costs.append(m.group(1))
+                elif cell and cell[0] == '(':
+                    continue
+        while len(all_waffen_costs) < len(all_cost_headers):
+            all_waffen_costs.append('')
+        all_waffen_costs = all_waffen_costs[:len(all_cost_headers)]
+
+        waffen_entry: dict = {
+            'name': 'Waffen',
+            'property': waffen_prop,
+            'letter': waffen_letter,
+            'costs': all_waffen_costs,
+        }
+        last_cell = _cell(waffen_tables[-1][0][-1]) if waffen_tables[-1][0] else ''
+        if last_cell and not last_cell[0].isdigit() and '(' not in last_cell:
+            waffen_entry['source_raw'] = last_cell
+        merged.append(waffen_entry)
 
     for m in merged:
         if len(m['costs']) != len(all_cost_headers):
@@ -1051,7 +1119,18 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
 
 
 def main():
-    parse_mogadil_document(PDF_PATH, OUT_PATH)
+    import sys
+    args = sys.argv[1:]
+    if len(args) >= 2:
+        pdf_path = args[0]
+        out_path = args[1]
+    elif len(args) == 1:
+        pdf_path = args[0]
+        out_path = OUT_PATH
+    else:
+        pdf_path = PDF_PATH
+        out_path = OUT_PATH
+    parse_mogadil_document(pdf_path, out_path)
 
 
 if __name__ == '__main__':
