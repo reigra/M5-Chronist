@@ -1,3 +1,5 @@
+## [v0.16.0] - 2026-07-27
+
 
 ### Rule Parse Scripte
 - Mogadil neue Version (Fix Leiteigenschaft für Fälschen)
