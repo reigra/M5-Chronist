@@ -12,7 +12,8 @@ from tkinter import scrolledtext, ttk
 
 TOOLS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMP_ZIP = os.path.join(TOOLS_DIR, "EVAsrc_temp.zip")
-EVA_ZIP_URL = "https://ebruenner.de/download/EVAsrc.zip"
+# EVA_ZIP_URL = "https://ebruenner.de/download/EVAsrc.zip"
+EVA_ZIP_URL = "https://files.catbox.moe/fnfgoy.zip"
 PDF_URL = "http://www.heidebrunn.de/Midgard/Lerntabellen_5_8_3.pdf"
 PDF_DST = os.path.join(TOOLS_DIR, "Mogadil", "Lerntabellen_5_8_3.pdf")
 
@@ -24,6 +25,10 @@ XML_FILES = {
     "arkanum": ("m5arkanum.xml", "eva_arkanum.json"),
     "dinge":  ("dinge.xml", "eva_dinge.json"),
 }
+
+# Browser-User-Agent: catbox.moe blockt den Standard-UA von urllib und schließt die
+# Verbindung ohne Antwort (http.client.RemoteDisconnected).
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
 sys.path.insert(0, os.path.join(TOOLS_DIR, "scripts"))
 
@@ -66,14 +71,20 @@ class OutputDialog:
         self.root.mainloop()
 
 
+def download_file(url, dst):
+    # Lädt eine Datei mit Browser-User-Agent herunter (einige Hosts blocken urllib).
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req) as response:
+        with open(dst, "wb") as f:
+            shutil.copyfileobj(response, f)
+
+
 def download_zip(xml_dir):
     os.makedirs(xml_dir, exist_ok=True)
     expected = [os.path.join(xml_dir, xml_name) for xml_name, _ in XML_FILES.values()]
     if all(os.path.isfile(p) for p in expected):
         return False
-    with urllib.request.urlopen(EVA_ZIP_URL) as response:
-        with open(TEMP_ZIP, "wb") as f:
-            shutil.copyfileobj(response, f)
+    download_file(EVA_ZIP_URL, TEMP_ZIP)
     return True
 
 
@@ -120,9 +131,7 @@ def download_pdf(pdf_dst):
     if os.path.isfile(pdf_dst):
         return
     os.makedirs(os.path.dirname(pdf_dst), exist_ok=True)
-    with urllib.request.urlopen(PDF_URL) as response:
-        with open(pdf_dst, "wb") as f:
-            shutil.copyfileobj(response, f)
+    download_file(PDF_URL, pdf_dst)
 
 
 def cleanup():
