@@ -19,6 +19,15 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from pdf_skills_common import SkillParseConfig, run  # noqa: E402
+from pdf_types_common import (  # noqa: E402
+    FIGHT_HEADER_MAP,
+    LED_HEADER_MAP,
+    SKILL_HEADER_MAP,
+    SPELL_HEADER_MAP,
+    TypeParseConfig,
+    TypeTableConfig,
+    run_types,
+)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -47,5 +56,28 @@ CONFIG = SkillParseConfig(
     description="Parse Ars Armorum PDF skill tables into JSON.",
 )
 
+# Type cost tables:
+#   S. 43  Tabelle 1 (groupCosts), Tabelle 2a (spellCosts, Standardgruppen)
+#   S. 44  Tabelle 2b (spellCosts, Kampfverse/Zauberverse), Tabelle 3 (fightCosts, 2-Block)
+TYPE_CONFIG = TypeParseConfig(
+    pdf_path=str(SCRIPT_DIR / "../../books/Ars Armorum.pdf"),
+    out_types=str(SCRIPT_DIR / "../../armorum/types.json"),
+    tables=[
+        TypeTableConfig(page=43, header_map=SKILL_HEADER_MAP, field="groupCosts"),
+        TypeTableConfig(page=43, header_map=SPELL_HEADER_MAP, field="spellCosts"),
+        TypeTableConfig(page=44, header_map=LED_HEADER_MAP, field="spellCosts"),
+        TypeTableConfig(page=44, header_map=FIGHT_HEADER_MAP, field="fightCosts"),
+    ],
+    # Lerneinheiten bei Spielbeginn: S. 42, names only (no category headers).
+    # Ars Armorum is the combat book: identity-page types are Kämpfer, but
+    # types that also learn spells (spellCosts present) are Kampfzauberer.
+    # No category overrides needed — the spell rule covers Fi and Sk.
+    identity_pages=[42],
+    default_category="Kämpfer",
+    spell_category="KampfZauberer",
+    description="Parse Ars Armorum PDF type cost tables into JSON.",
+)
+
 if __name__ == "__main__":
     run(CONFIG)
+    run_types(TYPE_CONFIG)
