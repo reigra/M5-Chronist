@@ -3,19 +3,20 @@ Parse Mogadil Lerntabellen PDF into skills JSON.
 
 JSON structure for PWA lookup of region-based skill costs:
 
-    costColumns: ["As", "Ba", "Bb", ...]  — 63 column names, shared across all skills
-    costPatterns: [[...], [...], ...]      — 23 unique 63-value arrays
+    Each skill carries the deduced category set:
+      skill.groupCostCats = "Alltag+Wissen"   (subset of the letter's categories)
+    Each type carries the deduced category costs:
+      type.groupCosts = { Alltag: 10, Wissen: 20, ... }
 
-    Each skill references its pattern by index:
-      skill.costPatternId = 0..22
+    PWA lookup (cheapest group cost):
+      const cost = Math.min(...skill.groupCostCats.split('+')
+        .map(cat => type.groupCosts[cat]))
 
-    PWA lookup:
-      const colMap = new Map(costColumns.map((name, i) => [name, i]))
-      const pattern = costPatterns[skill.costPatternId]  // 63-element array
-      const colIdx = colMap.get("As")                     // column index
-      const value = pattern[colIdx]                       // cost for this skill/column
+    The categories are deduced from the observed cost matrix by
+    _deduce_skill_groups() (integrated copy of MogadilAnalyse/deduce_groups.py).
+    groupCostCats / groupCosts replace the former costPatternId / costPatterns / costColumns.
 
-    Three values are stored not here but in advancementCosts / baseValue / learnCost
+    Learn/advance TE costs are stored in advancementCosts / baseValue / learnCost
     derived from the LE/TE table on page 1 (see extract_advancement_costs).
 """
 
@@ -24,6 +25,8 @@ import os
 import re
 import subprocess
 import sys
+from collections import Counter
+from itertools import combinations
 
 from helpers import get_app_version
 
@@ -852,6 +855,675 @@ def _compact_arrays(json_str: str) -> str:
     return json_str
 
 
+# ---------------------------------------------------------------------------
+#  Skill-Gruppen-Deduktion (integrierte Kopie aus MogadilAnalyse/deduce_groups.py)
+# ---------------------------------------------------------------------------
+#  Modell: skill_cost = min({ cost_cat für Kat in tatsächlich genutzte Kategorien })
+#  Siehe MogadilAnalyse/PLAN_deduce_groups.md. deduce_groups.py bleibt
+#  Standalone-Referenz; hier wird keine Funktion daraus importiert.
+
+
+ALL_CATEGORIES = [
+    'Alltag', 'Halbwelt', 'Kampf', 'Körper',
+    'Freiland', 'Wissen', 'Sozial', 'Unterwelt',
+]
+
+SINGLE_CAT_LETTERS = {
+    'C': 'Freiland', 'D': 'Körper', 'I': 'Wissen', 'L': 'Kampf',
+}
+
+
+def _letter_categories(groups_data: dict) -> dict[str, list[str]]:
+    """Map letter → sorted list of its possible categories."""
+    return {
+        letter: sorted({g['category'] for g in info['groups']})
+        for letter, info in groups_data.items()
+    }
+
+
+def _skill_cost_vector(sk, all_cids) -> tuple:
+    """Cost vector over all class columns (None for non-numeric cells)."""
+    return tuple(
+        sk['costs'].get(cid) if isinstance(sk['costs'].get(cid), int) else None
+        for cid in all_cids
+    )
+
+
+def _set_lower(lower: dict, cid: str, cat: str, v: int):
+    """Raise the lower cost bound for (class, category)."""
+    cur = lower.get(cid, {}).get(cat)
+    if cur is None or v > cur:
+        lower.setdefault(cid, {})[cat] = v
+
+
+def _set_upper(upper: dict, cid: str, cat: str, v: int):
+    """Lower the upper cost bound for (class, category)."""
+    cur = upper.get(cid, {}).get(cat)
+    if cur is None or v < cur:
+        upper.setdefault(cid, {})[cat] = v
+
+
+def _confirmed_cost(lower: dict, upper: dict, cid: str, cat: str) -> int | None:
+    """Return the confirmed cost if lower == upper, else None."""
+    lb = lower.get(cid, {}).get(cat)
+    ub = upper.get(cid, {}).get(cat)
+    if lb is not None and ub is not None and lb == ub:
+        return lb
+    return None
+
+
+def _solve_2cat_letter(
+    skills_in_letter, cat1, cat2, lower, upper, all_cids, log
+):
+    """Vector matching for 2-candidate letters with known cat1."""
+    known_cat1 = tuple(
+        _confirmed_cost(lower, upper, cid, cat1) for cid in all_cids
+    )
+    if all(v is None for v in known_cat1):
+        return {}, None, [sk['name'] for _, sk in skills_in_letter]
+
+    skills_dict = dict(skills_in_letter)
+
+    cat1_skills = []
+    other_skills = []
+    for i in skills_dict:
+        sk = skills_dict[i]
+        vec = _skill_cost_vector(sk, all_cids)
+        if all(
+            a is not None and b is not None and a == b
+            for a, b in zip(vec, known_cat1) if a is not None
+        ):
+            cat1_skills.append(i)
+        else:
+            other_skills.append((i, vec, sk))
+
+    vec_counts = Counter(vec for _, vec, _ in other_skills)
+
+    assigned = {}
+    contradictions = []
+
+    if not other_skills:
+        for i in cat1_skills:
+            assigned[i] = {cat1}
+        return assigned, None, []
+
+    vec_candidates = sorted(vec_counts.items(), key=lambda x: -x[0].count(None))
+
+    best_contradictions = len(other_skills) + 1
+    best_assignment = None
+    best_cat2 = None
+    best_contras = []
+
+    for cand_vec, _ in vec_candidates:
+        if any(v is None for v in cand_vec):
+            continue
+
+        current = {}
+        contras = []
+
+        for i in cat1_skills:
+            current[i] = {cat1}
+
+        for other_idx, vec, sk in other_skills:
+            if all(a == b for a, b in zip(vec, cand_vec) if a is not None):
+                current[other_idx] = {cat2}
+            else:
+                ok = True
+                for idx, cid in enumerate(all_cids):
+                    v = sk['costs'].get(cid)
+                    k1 = _confirmed_cost(lower, upper, cid, cat1)
+                    k2 = cand_vec[idx]
+                    if not isinstance(v, int) or k1 is None or k2 is None:
+                        continue
+                    if min(k1, k2) != v:
+                        ok = False
+                        break
+                if ok:
+                    current[other_idx] = {cat1, cat2}
+                else:
+                    contras.append(sk['name'])
+                    current[other_idx] = {cat1, cat2}
+
+        n_contra = len(contras)
+        if n_contra < best_contradictions:
+            best_contradictions = n_contra
+            best_assignment = current
+            best_cat2 = cand_vec
+            best_contras = list(contras)
+            if n_contra == 0:
+                break
+
+    if best_assignment is None:
+        best_assignment = {}
+        for i in skills_dict:
+            if all(
+                a is not None and b is not None and a == b
+                for a, b in zip(_skill_cost_vector(skills_dict[i], all_cids), known_cat1)
+                if a is not None
+            ):
+                best_assignment[i] = {cat1}
+            else:
+                best_assignment[i] = {cat1, cat2}
+                contradictions.append(skills_dict[i]['name'])
+        best_cat2 = None
+
+    return best_assignment, best_cat2, best_contras
+
+
+def _check_full_set(sk, cats, lower, upper, all_cids):
+    """Check if the full category set is consistent with the observed costs.
+
+    Returns True only if min(all cats) == observed in every class. Unconfirmed
+    cats must have a lower bound >= observed (else they could pull the min down).
+    """
+    for cid in all_cids:
+        observed = sk['costs'].get(cid)
+        if not isinstance(observed, int):
+            continue
+
+        all_known = True
+        for cat in cats:
+            cc = _confirmed_cost(lower, upper, cid, cat)
+            if cc is None:
+                all_known = False
+
+        if all_known:
+            confirmed_vals = [
+                _confirmed_cost(lower, upper, cid, cat)
+                for cat in cats
+            ]
+            if min(confirmed_vals) != observed:
+                return False
+        else:
+            # Partial check: reject if any unconfirmed cat could be cheaper
+            for cat in cats:
+                cc = _confirmed_cost(lower, upper, cid, cat)
+                if cc is not None:
+                    if cc < observed:
+                        return False
+                else:
+                    lb = lower.get(cid, {}).get(cat)
+                    if lb is None or lb < observed:
+                        return False
+    return True
+
+
+def _evaluate_multicat_subsets(sk, cats, lower, upper, all_cids):
+    """Evaluate subsets from largest to smallest for a multi-cat skill.
+
+    Returns list of (subset, confidence, lessons) sorted by:
+      1. size descending (larger subsets preferred)
+      2. confidence descending
+    """
+    cat_list = list(cats)
+    subsets = []
+    for r in range(len(cat_list), 0, -1):  # N down to 1
+        for combo in combinations(cat_list, r):
+            subsets.append(set(combo))
+
+    results = []
+
+    for subset in subsets:
+        confidence = 0
+        lessons = {}
+        valid = True
+
+        for cid in all_cids:
+            observed = sk['costs'].get(cid)
+            if not isinstance(observed, int):
+                continue
+
+            confirmed_vals = {}
+            unknown_cats = list(subset)
+            for c in subset:
+                cc = _confirmed_cost(lower, upper, cid, c)
+                if cc is not None:
+                    confirmed_vals[c] = cc
+                    unknown_cats.remove(c)
+
+            min_confirmed = min(confirmed_vals.values()) if confirmed_vals else None
+
+            # A confirmed cat with cost < observed → invalid
+            if min_confirmed is not None and min_confirmed < observed:
+                valid = False
+                break
+
+            # Check lower bounds on unknowns
+            for c in unknown_cats:
+                lb = lower.get(cid, {}).get(c)
+                if lb is not None and lb > observed:
+                    valid = False
+                    break
+            if not valid:
+                break
+
+            if len(unknown_cats) == 0:
+                if min_confirmed == observed:
+                    confidence += 1
+                else:
+                    valid = False
+                    break
+
+            elif len(unknown_cats) == 1:
+                uc = unknown_cats[0]
+                if min_confirmed is not None and min_confirmed > observed:
+                    # The one unknown must = observed
+                    lessons[(cid, uc)] = observed
+                    confidence += 1
+                elif min_confirmed is not None and min_confirmed == observed:
+                    confidence += 1
+                else:
+                    # No confirmed, just check bounds
+                    confidence += 1
+
+            else:
+                # Multiple unknowns
+                if min_confirmed is not None and min_confirmed == observed:
+                    confidence += 1
+                elif min_confirmed is not None and min_confirmed > observed:
+                    # Need at least one unknown = observed
+                    any_possible = False
+                    for uc in unknown_cats:
+                        ub = upper.get(cid, {}).get(uc)
+                        if ub is None or observed <= ub:
+                            any_possible = True
+                            break
+                    if not any_possible:
+                        valid = False
+                        break
+                    confidence += 1
+                else:
+                    confidence += 1
+
+        if valid:
+            results.append((frozenset(subset), confidence, lessons))
+
+    results.sort(key=lambda x: (-len(x[0]), -x[1]))
+    return results
+
+
+def _build_class_skills(all_rows: list, cost_columns: list) -> dict:
+    """Build the class_skills input format for _deduce_skill_groups().
+
+    Format:
+      { skills: [{name, letter, costs: {As: 10, Ba: 20, ...}}, ...],
+        classColumns: ["As", "Ba", "Bb", ...] }
+
+    Mirrors MogadilAnalyse/extract_class_skills.py: applies
+    SKILL_NAME_CORRECTIONS, skips the synthetic "Waffen" entry and only keeps
+    numeric cost cells (non-numeric cells are omitted).
+    """
+    skills = []
+    for r in all_rows:
+        # Skip the synthetic "Waffen" entry (weapons are handled elsewhere).
+        if r['name'] == 'Waffen':
+            continue
+
+        skill_name = SKILL_NAME_CORRECTIONS.get(r['name'], r['name'])
+        letter = r['letter']
+        # Normalise "P-Z" to "Z" (Psyche-based spells use letter Z).
+        if letter == 'P-Z':
+            letter = 'Z'
+
+        costs: dict[str, int] = {}
+        for idx, cost_str in enumerate(r['costs']):
+            if idx >= len(cost_columns):
+                break
+            if cost_str.strip() and cost_str.strip().isdigit():
+                costs[cost_columns[idx]] = int(cost_str)
+
+        skills.append({
+            'name': skill_name,
+            'letter': letter,
+            'costs': costs,
+        })
+
+    return {
+        'skills': skills,
+        'classColumns': list(cost_columns),
+    }
+
+
+def _deduce_skill_groups(skills_data: dict, groups_data: dict, log=print) -> tuple[dict, dict]:
+    """Deduce skill groups + category costs (integrated copy of deduce_groups.deduce()).
+
+    Model: skill_cost = min({cost_cat for cat in used_cats}).
+
+    Args:
+        skills_data: dict with 'skills' and 'classColumns' (class_skills.json format)
+        groups_data: dict with letter → categories mapping (letter_groups.json format)
+        log: print function for logging
+
+    Returns:
+        (groups_output, costs_output) — same format as the JSON output files.
+    """
+    skills = skills_data['skills']
+    all_cids = skills_data['classColumns']
+    letter_cats_map = _letter_categories(groups_data)
+    log(f'  {len(skills)} skills, {len(all_cids)} classes, '
+        f'{len(letter_cats_map)} letters')
+
+    lower: dict[str, dict[str, int | None]] = {
+        cid: {cat: None for cat in ALL_CATEGORIES}
+        for cid in all_cids
+    }
+    upper: dict[str, dict[str, int | None]] = {
+        cid: {cat: None for cat in ALL_CATEGORIES}
+        for cid in all_cids
+    }
+
+    assigned: dict[int, set[str]] = {}
+    ambiguous: dict[int, list[set[str]]] = {}
+    contradictions: dict[int, str] = {}
+
+    # --- Phase 1: Single-category letters ---
+    for i, sk in enumerate(skills):
+        letter = sk['letter']
+        if letter in SINGLE_CAT_LETTERS:
+            cat = SINGLE_CAT_LETTERS[letter]
+            assigned[i] = {cat}
+            for cid in all_cids:
+                cost = sk['costs'].get(cid)
+                if isinstance(cost, int):
+                    _set_lower(lower, cid, cat, cost)
+                    _set_upper(upper, cid, cat, cost)
+
+    n_p1 = len(assigned)
+    log(f'  Phase 1: {n_p1} single-category assignments')
+
+    # --- Phase 2: 2-candidate letters with known cat1 ---
+    two_cat_letters = {
+        letter: cats for letter, cats in letter_cats_map.items()
+        if len(cats) == 2
+    }
+
+    total_phase2 = 0
+    p2_contradictions = 0
+    for letter, cats in sorted(two_cat_letters.items()):
+        cat1, cat2 = cats[0], cats[1]
+
+        if cat1 in SINGLE_CAT_LETTERS.values():
+            pass
+        elif cat2 in SINGLE_CAT_LETTERS.values():
+            cat1, cat2 = cat2, cat1
+        else:
+            continue
+
+        cat1_known = any(
+            _confirmed_cost(lower, upper, cid, cat1) is not None
+            for cid in all_cids[:10]
+        )
+        if not cat1_known:
+            continue
+
+        letter_skills = [
+            (i, sk) for i, sk in enumerate(skills)
+            if sk['letter'] == letter and i not in assigned
+            and i not in contradictions
+        ]
+        if not letter_skills:
+            continue
+
+        log(f'  Phase 2: letter {letter} ({cat1}/{cat2}): '
+            f'{len(letter_skills)} skills')
+
+        result, matched_vec, contras = _solve_2cat_letter(
+            letter_skills, cat1, cat2, lower, upper, all_cids, log
+        )
+
+        for i, subset in result.items():
+            if i not in contradictions:
+                assigned[i] = subset
+
+        if matched_vec is not None:
+            for idx, cid in enumerate(all_cids):
+                v = matched_vec[idx]
+                if v is not None:
+                    _set_lower(lower, cid, cat2, v)
+                    _set_upper(upper, cid, cat2, v)
+
+        total_phase2 += len(letter_skills)
+        p2_contradictions += len(contras)
+        for name in contras:
+            idx = next(i for i, sk in letter_skills if sk['name'] == name)
+            contradictions[idx] = name
+            if idx in assigned:
+                del assigned[idx]
+
+    log(f'  Phase 2: {total_phase2} assigned, {p2_contradictions} contradictions')
+
+    # --- Phase 3: Iterative multi-cat + 2-cat leftovers ---
+    total_phase3_n = 0
+    p3_contradictions = 0
+
+    changed = True
+    while changed:
+        changed = False
+
+        # --- Process 2-cat letters whose cat1 became confirmed ---
+        for letter, cats in sorted(two_cat_letters.items()):
+            letter_skills = [
+                (i, sk) for i, sk in enumerate(skills)
+                if sk['letter'] == letter and i not in assigned
+                and i not in contradictions
+            ]
+            if not letter_skills:
+                continue
+
+            for cat1_idx in range(2):
+                cat1 = cats[cat1_idx]
+                cat2 = cats[1 - cat1_idx]
+                cat1_any = any(
+                    _confirmed_cost(lower, upper, cid, cat1) is not None
+                    for cid in all_cids[:10]
+                )
+                if cat1_any:
+                    result, matched_vec, contras = _solve_2cat_letter(
+                        letter_skills, cat1, cat2, lower, upper, all_cids, log
+                    )
+
+                    for i, subset in result.items():
+                        if i not in assigned and i not in contradictions:
+                            assigned[i] = subset
+                            total_phase3_n += 1
+                            changed = True
+
+                    if matched_vec is not None:
+                        for idx, cid in enumerate(all_cids):
+                            v = matched_vec[idx]
+                            if v is not None:
+                                _set_lower(lower, cid, cat2, v)
+                                _set_upper(upper, cid, cat2, v)
+
+                    for name in contras:
+                        idx = next(
+                            (i for i, sk in letter_skills if sk['name'] == name),
+                            None
+                        )
+                        if idx is not None and idx not in contradictions:
+                            contradictions[idx] = name
+                            p3_contradictions += 1
+                            changed = True
+                    break
+
+        # --- Process multi-cat skills (A, E, G, H) ---
+        for i, sk in enumerate(skills):
+            if i in assigned or i in contradictions:
+                continue
+            letter = sk['letter']
+            cats_set = letter_cats_map.get(letter)
+            if not cats_set or len(cats_set) <= 2:
+                continue
+
+            # Step 1: Try full category set
+            if _check_full_set(sk, cats_set, lower, upper, all_cids):
+                assigned[i] = set(cats_set)
+                changed = True
+                total_phase3_n += 1
+
+                # Propagate lower bounds from full-set assignment
+                for cid in all_cids:
+                    v = sk['costs'].get(cid)
+                    if isinstance(v, int):
+                        for cat in cats_set:
+                            _set_lower(lower, cid, cat, v)
+                continue  # success, skip fallback
+
+            # Step 2: Fall back to subset search (N-1 down to 1)
+            results = _evaluate_multicat_subsets(
+                sk, cats_set, lower, upper, all_cids
+            )
+
+            if len(results) == 0:
+                contradictions[i] = sk['name']
+                p3_contradictions += 1
+                changed = True
+            elif len(results) == 1:
+                subset, conf, lessons = results[0]
+                assigned[i] = set(subset)
+                changed = True
+                total_phase3_n += 1
+                for (cid, cat), cost in lessons.items():
+                    _set_lower(lower, cid, cat, cost)
+                    _set_upper(upper, cid, cat, cost)
+                if len(subset) == 1:
+                    c = next(iter(subset))
+                    for cid in all_cids:
+                        v = sk['costs'].get(cid)
+                        if isinstance(v, int):
+                            _set_lower(lower, cid, c, v)
+                            _set_upper(upper, cid, c, v)
+                else:
+                    for cid in all_cids:
+                        v = sk['costs'].get(cid)
+                        if isinstance(v, int):
+                            for cat in subset:
+                                _set_lower(lower, cid, cat, v)
+            else:
+                top = results[0]
+                second = results[1]
+                if top[1] > second[1] and top[1] >= 1:
+                    subset = top[0]
+                    lessons = top[2]
+                    assigned[i] = set(subset)
+                    changed = True
+                    total_phase3_n += 1
+                    for (cid, cat), cost in lessons.items():
+                        _set_lower(lower, cid, cat, cost)
+                        _set_upper(upper, cid, cat, cost)
+                    if len(subset) == 1:
+                        c = next(iter(subset))
+                        for cid in all_cids:
+                            v = sk['costs'].get(cid)
+                            if isinstance(v, int):
+                                _set_lower(lower, cid, c, v)
+                                _set_upper(upper, cid, c, v)
+                    else:
+                        for cid in all_cids:
+                            v = sk['costs'].get(cid)
+                            if isinstance(v, int):
+                                for cat in subset:
+                                    _set_lower(lower, cid, cat, v)
+
+    # Collect remaining as ambiguous
+    for i, sk in enumerate(skills):
+        if i in assigned or i in contradictions:
+            continue
+        letter = sk['letter']
+        cats_set = letter_cats_map.get(letter)
+        if not cats_set:
+            continue
+        results = _evaluate_multicat_subsets(sk, cats_set, lower, upper, all_cids)
+        if len(results) == 0:
+            contradictions[i] = sk['name']
+            p3_contradictions += 1
+        elif len(results) > 0:
+            ambiguous[i] = [r[0] for r in results]
+
+    p3_ambiguous = len(ambiguous)
+    log(f'  Phase 3: {total_phase3_n} assigned, {p3_ambiguous} ambiguous, '
+        f'{p3_contradictions} contradictions')
+
+    # Stats
+    known_count = sum(
+        1 for cid in all_cids
+        for cat in ALL_CATEGORIES
+        if _confirmed_cost(lower, upper, cid, cat) is not None
+    )
+    log(f'\n  Total assigned: {len(assigned)}')
+    log(f'  Ambiguous: {len(ambiguous)}')
+    log(f'  Contradictions: {len(contradictions)}')
+    log(f'  Confirmed group costs: {known_count} / '
+        f'{len(all_cids) * len(ALL_CATEGORIES)}')
+
+    if ambiguous:
+        log(f'\n  Ambiguous skills:')
+        for i, subsets in list(ambiguous.items())[:10]:
+            subsets_str = ['/'.join(sorted(s)) for s in subsets]
+            log(f'    {skills[i]["name"]:25s} letter={skills[i]["letter"]} '
+                f'options={subsets_str}')
+        if len(ambiguous) > 10:
+            log(f'    ... and {len(ambiguous) - 10} more')
+
+    if contradictions:
+        log(f'\n  Contradictions:')
+        for i, name in list(contradictions.items())[:10]:
+            log(f'    {name:25s} letter={skills[i]["letter"]}')
+        if len(contradictions) > 10:
+            log(f'    ... and {len(contradictions) - 10} more')
+
+    # Build output
+    app_ver = get_app_version()
+
+    class_costs_out = []
+    for cid in all_cids:
+        entry = {'id': cid, 'groupCosts': {}}
+        for cat in ALL_CATEGORIES:
+            cc = _confirmed_cost(lower, upper, cid, cat)
+            if cc is not None:
+                entry['groupCosts'][cat] = cc
+            else:
+                lb = lower.get(cid, {}).get(cat)
+                entry['groupCosts'][cat] = lb
+        class_costs_out.append(entry)
+
+    costs_output = {
+        'version': app_ver,
+        'source': 'mogadil-lerntabellen',
+        'method': 'full_category_min',
+        'classes': class_costs_out,
+    }
+
+    skill_groups_out = []
+    for i, sk in enumerate(skills):
+        entry = {
+            'name': sk['name'],
+            'letter': sk['letter'],
+            'groupCostCats': '',
+            'certainty': 'unknown',
+        }
+        if i in assigned:
+            entry['groupCostCats'] = '+'.join(sorted(assigned[i]))
+            entry['certainty'] = 'assigned'
+        elif i in contradictions:
+            entry['certainty'] = 'contradiction'
+        elif i in ambiguous:
+            opt_strs = ['/'.join(sorted(s)) for s in ambiguous[i]]
+            entry['groupCostCats'] = opt_strs[0]
+            entry['certainty'] = 'ambiguous'
+
+        skill_groups_out.append(entry)
+
+    groups_output = {
+        'version': app_ver,
+        'source': 'mogadil-lerntabellen',
+        'method': 'full_category_min',
+        'skills': skill_groups_out,
+    }
+
+    return groups_output, costs_output
+
+
 def extract_weapon_skills(pdf_path: str) -> dict[str, list[str]]:
     """Parse the 'Lernen und Steigern von Waffenfertigkeiten' section on page 1.
 
@@ -918,7 +1590,8 @@ def extract_weapon_skills(pdf_path: str) -> dict[str, list[str]]:
 def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     """Parse the Mogadil Lerntabellen PDF and write the output JSON.
 
-    Returns the full output dict (skills, costColumns, costPatterns, metadata).
+    Returns the full output dict (skills with groupCostCats, types with
+    groupCosts, gradThresholds, metadata).
     """
     version = extract_version(pdf_path)
     log(f'Version: {version}')
@@ -997,21 +1670,38 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
         f'{sum(1 for t in types if t["category"] == "KampfZauberer")} KampfZauberer, '
         f'{sum(1 for t in types if t["category"] == "Zauberer")} Zauberer')
 
-    log('Finding unique cost patterns...')
-    cost_patterns, pattern_map = build_cost_patterns(all_rows, cost_columns)
-    log(f'  {len(cost_patterns)} unique patterns (vs {len(all_rows)} x {len(cost_columns)} = {len(all_rows) * len(cost_columns)} raw values)')
+    log('Deducing skill groups and category costs...')
+    class_skills = _build_class_skills(all_rows, cost_columns)
+    letter_groups_path = os.path.join(os.path.dirname(__file__),
+        'MogadilAnalyse', 'letter_groups.json')
+    with open(letter_groups_path, encoding='utf-8') as f:
+        letter_groups = json.load(f)
+
+    groups_output, costs_output = _deduce_skill_groups(class_skills, letter_groups, log)
+
+    # Lookups: skill name → groupCostCats, type id → groupCosts
+    skill_groups = {}
+    for s in groups_output['skills']:
+        skill_groups[s['name']] = s['groupCostCats']
+
+    class_costs = {}
+    for c in costs_output['classes']:
+        class_costs[c['id']] = c['groupCosts']
+
+    # Types mit deduzierten Kategorie-Kosten anreichern (Schritt 5).
+    for t in types:
+        t['groupCosts'] = class_costs.get(t['id'], {})
 
     log('Building skills...')
     skills = []
     skipped = 0
+    # Waffenfertigkeiten werden nicht deduziert und aktuell nicht ausgegeben
+    # (siehe PLAN_deduce_groups.md, Schritt 4). Kein costPatternId-Bezug mehr.
     waffen_pattern_id = None
     waffen_property = None  # default, overridden if "Waffen" entry exists
     for r in all_rows:
         if r['name'] == 'Waffen':
-            key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
-            waffen_pattern_id = pattern_map.get(key)
-            waffen_property = None  # r['property']
-            log(f'  Found "Waffen" entry, patternId={waffen_pattern_id}, property={waffen_property}')
+            log('  Found "Waffen" entry (weapons currently not emitted)')
             continue
 
         lookup = cost_lookup.get(r['letter'])
@@ -1019,9 +1709,6 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             log(f'  WARN: unknown cost category "{r["letter"]}" for skill "{r["name"]}", skipping')
             skipped += 1
             continue
-
-        key = tuple(int(v) if v.isdigit() else 0 for v in r['costs'])
-        pattern_id = pattern_map[key]
 
         skill_name = SKILL_NAME_CORRECTIONS.get(r['name'], r['name'])
         source_raw = r.get('source_raw', '')
@@ -1035,7 +1722,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'baseValue': lookup['baseValue'],
             'maxValue': 18,
             **({'linkedProperty': r['property']} if r['property'] else {}),
-            'costPatternId': pattern_id,
+            'groupCostCats': skill_groups.get(skill_name, ''),
             'source': source,
         })
 
@@ -1065,7 +1752,7 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
                         'costPatternId': waffen_pattern_id,
                     })
     else:
-        log('  WARN: no "Waffen" entry found, weapon skills will be skipped')
+        log('  INFO: weapon skills not emitted (handled separately, siehe PLAN_deduce_groups.md Schritt 4)')
 
     # Add grade-dependent skills (Abwehr, Resistenz, Zaubern) from the ES/Grad table
     bonus_key_map = {'Abwehr': 'AbB', 'Resistenz': None, 'Zaubern': 'ZauB'}
@@ -1096,8 +1783,6 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'priority': 0,
         },
         'gradThresholds': grad_thresholds,
-        'costColumns': cost_columns,
-        'costPatterns': cost_patterns,
         'types': types,
         'skills': skills,
         'universalRules': {
