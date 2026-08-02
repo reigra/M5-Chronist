@@ -130,6 +130,13 @@ Fallback zur Subset-Suche. Subset-Suche inkludiert jetzt auch das N-Set.
 
 ## 5. Integration in parse_Mogadil.py
 
+### Scope
+
+Der Plan deckt **nur die Python-Skripte** unter `tools/scripts/` ab. Die PWA
+(`src/`), die TS-Skripte (`scripts/verify-costs.ts`, `scripts/merge-sim.ts`) und
+`docs/data-schema.md` sind bewusst nicht enthalten — deren Umstellung auf das neue
+Datenformat ist ein separates Thema.
+
 ### Ziel
 
 Der Parser `tools/scripts/parse_Mogadil.py` soll direkt `groupCostCats` (Skills) und
@@ -138,17 +145,26 @@ Der Parser `tools/scripts/parse_Mogadil.py` soll direkt `groupCostCats` (Skills)
 Aktuelle Pipeline: PDF → parse_Mogadil → `mogadil.json` (mit costPatternId)
 
 Neue Pipeline: PDF → parse_Mogadil → `mogadil.json` (mit groupCostCats + groupCosts)
-  └─ intern: extrahieren → _build_class_skills → deduce_from_data → anreichern
+  └─ intern: extrahieren → _build_class_skills → _deduce_skill_groups → anreichern
 
 Kein externer Zwischenschritt mehr — alles in `parse_Mogadil.py`.
 
-### Schritt 1: `deduce_groups.deduce_from_data()` extrahieren
+**Design-Entscheidungen:**
+- **Keine Imports aus `MogadilAnalyse`.** Der Deduktions-Algorithmus wird als eigene
+  Kopie direkt in `parse_Mogadil.py` integriert. `deduce_groups.py` bleibt unverändert
+  als Standalone-Referenz (Duplikat akzeptiert; Konsistenz über Test nach Integration).
+- **Waffenfertigkeiten werden nicht deduziert.** Sie werden in `parse_Mogadil.py` über
+  `extract_weapon_skills()` + `waffen_pattern_id` an anderer Stelle gelesen und aktuell
+  gar nicht in `mogadil.json` ausgegeben. Ihre Behandlung wird später separat geklärt.
 
-In `deduce_groups.py`:
+### Schritt 1: Deduktions-Logik als Kopie in `parse_Mogadil.py` integrieren
+
+Der komplette Deduktions-Algorithmus aus `deduce_groups.py` wird als lokale Funktion
+direkt in `parse_Mogadil.py` übernommen. **Kein Import** aus `MogadilAnalyse`.
 
 ```python
-def deduce_from_data(skills_data: dict, groups_data: dict, log=print) -> tuple[dict, dict]:
-    """Wie deduce(), aber liest aus Parametern statt Dateien.
+def _deduce_skill_groups(skills_data: dict, groups_data: dict, log=print) -> tuple[dict, dict]:
+    """Deduziert Skill-Gruppen + Kategorie-Kosten (Kopie aus deduce_groups.deduce()).
 
     Args:
         skills_data: dict mit keys 'skills' und 'classColumns' (Format wie class_skills.json)
@@ -160,15 +176,20 @@ def deduce_from_data(skills_data: dict, groups_data: dict, log=print) -> tuple[d
     """
 ```
 
-Dazu:
-- `deduce()` umbenennen nach `deduce_from_data()` — da ist die ganze Logik drin
-- Neue `deduce()` schreiben, die Dateien lädt und `deduce_from_data()` aufruft
-- `load_data()` bleibt erhalten (wird von der neuen `deduce()` genutzt)
+Dazu (alle als lokale Helper übernehmen):
+- `check_full_set`, `evaluate_multicat_subsets`, `solve_2cat_letter`
+- lower/upper-Grenzen-Helper (`set_lower`, `set_upper`, `confirmed_cost`)
+- Konstanten `ALL_CATEGORIES`, `SINGLE_CAT_LETTERS`
+- `letter_categories()`, `skill_cost_vector()`
+- `get_app_version()` kommt aus `helpers` (in `parse_Mogadil.py` bereits importiert)
+
+`deduce_groups.py` bleibt unverändert als Standalone-Referenz für unabhängige Tests.
+`letter_groups.json` wird als Datei gelesen (kein Import).
 
 ### Schritt 2: `_build_class_skills()` in `parse_Mogadil.py`
 
 Neue Hilfsfunktion, die aus den bereits extrahierten Rohdaten das Format baut,
-das `deduce_from_data()` erwartet:
+das `_deduce_skill_groups()` erwartet:
 
 ```python
 def _build_class_skills(all_rows: list, cost_columns: list) -> dict:
@@ -184,12 +205,20 @@ def _build_class_skills(all_rows: list, cost_columns: list) -> dict:
     """
 ```
 
+Wichtig dabei:
+- `SKILL_NAME_CORRECTIONS` anwenden, damit die Namen mit den Deduktions-Keys
+  übereinstimmen (sonst fehlen `groupCostCats` für „Kampf ohne Waffen“,
+  „Schreiben“, „Sprechen“)
+- Nur numerische Kosten-Zellen ins `costs`-Dict übernehmen (nicht-numerische
+  Zellen überspringen)
+- Den synthetischen `Waffen`-Eintrag ausschließen (kein Skill in der Deduktion)
+
 Hinweis: Skills ohne gültige Letter (unbekannte Kategorie) werden wie heute
 übersprungen. Ihre Letter müssen in `letter_groups.json` vorhanden sein.
 
 ### Schritt 3: `build_cost_patterns` ersetzen
 
-Im `parse_mogadil_document()` (ca. Zeile 932–972):
+Im `parse_mogadil_document()` (ca. Zeile 1000–1002):
 
 ```python
 # ALT:
@@ -197,15 +226,13 @@ cost_patterns, pattern_map = build_cost_patterns(all_rows, cost_columns)
 # ... dann für jedes skill: pattern_id = pattern_map[key] → costPatternId
 
 # NEU:
-from deduce_groups import deduce_from_data
-
 class_skills = _build_class_skills(all_rows, cost_columns)
 letter_groups_path = os.path.join(os.path.dirname(__file__),
     'MogadilAnalyse', 'letter_groups.json')
 with open(letter_groups_path, encoding='utf-8') as f:
     letter_groups = json.load(f)
 
-groups_output, costs_output = deduce_from_data(class_skills, letter_groups, log)
+groups_output, costs_output = _deduce_skill_groups(class_skills, letter_groups, log)
 
 # Lookups
 skill_groups = {}
@@ -235,11 +262,18 @@ skills.append({
 })
 ```
 
-Für Waffenfertigkeiten analog: `'groupCostCats': skill_groups.get(wpn_name, '')`
+Für Waffenfertigkeiten: **keine Zuweisung** — Waffen werden nicht deduziert
+und aktuell gar nicht in `mogadil.json` ausgegeben. Ihre Behandlung (Gruppen,
+`costPatternId`) wird später separat geklärt. Der bestehende Waffen-Block in
+`parse_mogadil_document()` bleibt vorerst unverändert.
+
+Hinweis: Falls eine künftige PDF-Version Waffen liefert, würden diese an
+`costPatternId` hängen, das nach Schritt 6 aus dem Output entfernt wird —
+bekanntes, akzeptiertes Risiko (aktuell 0 Waffen im Output).
 
 ### Schritt 5: Types mit groupCosts anreichern
 
-Nach der Kategorie-Ableitung (ca. Zeile 915–925):
+Nach der Kategorie-Ableitung (ca. Zeile 981–993):
 
 ```python
 for t in types:
@@ -249,16 +283,21 @@ for t in types:
 
 ### Schritt 6: Output bereinigen
 
-Aus dem `output`-Dict (Zeile 1022–1038) entfernen:
+Aus dem `output`-Dict (ca. Zeile 1090–1106) entfernen:
 - `'costPatterns': cost_patterns,` → entfernen
-- `'costColumns': cost_columns,` → entfernen (optional — nur noch zum Debuggen)
+- `'costColumns': cost_columns,` → entfernen
 
 `build_cost_patterns()` und `_compact_arrays()` können bleiben (erstere
 wird nicht mehr aufgerufen, letztere wird nicht mehr benötigt — beides
 später aufräumbar).
 
+Zusätzlich den Modul-Docstring von `parse_Mogadil.py` (Zeilen 1–20) anpassen,
+der `costPatternId` / `costPatterns` / `costColumns` dokumentiert.
+
 ### Was unverändert bleibt
 
+- `deduce_groups.py` — unverändert als Standalone-Referenz (kein Import
+  aus `MogadilAnalyse` in `parse_Mogadil.py`)
 - `extract_class_skills.py` als Standalone-Skript (für unabhängige Tests)
 - `check_eva_groups.py` für Verifikation
 - `download_parse_rules_gui.py` (keine Änderung nötig — ruft nur
@@ -272,7 +311,9 @@ später aufräumbar).
 1. `python tools/scripts/parse_Mogadil.py`
 2. Prüfen: jedes Skill hat `groupCostCats` statt `costPatternId`
 3. Prüfen: jeder Type hat `groupCosts`-Dict
-4. Prüfen: `costPatterns` fehlt im Output
+4. Prüfen: `costPatterns` und `costColumns` fehlen im Output
 5. Stichprobe: Werte in `groupCostCats` + `groupCosts` mit `skill_groups_min.json`
    und `class_group_costs_min.json` abgleichen
-6. Zahlenabgleich: 504 Kategorie-Kosten + 8 Kategorien × 63 Typen = 504 bestätigt?
+6. Zahlenabgleich: 63 Typen × 8 Kategorien = 504 Kategorie-Kosten bestätigt
+7. Konsistenz-Check (Duplikat): `deduce_groups.py` standalone re-laufen und
+   sicherstellen, dass die integrierte Funktion dieselben Zuweisungen liefert
