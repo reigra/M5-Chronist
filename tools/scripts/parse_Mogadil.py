@@ -1697,13 +1697,14 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     log('Building skills...')
     skills = []
     skipped = 0
-    # Waffenfertigkeiten werden nicht deduziert und aktuell nicht ausgegeben
-    # (siehe PLAN_deduce_groups.md, Schritt 4). Kein costPatternId-Bezug mehr.
-    waffen_pattern_id = None
-    waffen_property = None  # default, overridden if "Waffen" entry exists
+    # Quelle der "Waffen"-Zeile gilt für alle Waffenfertigkeiten aus dem
+    # Abschnitt auf Seite 1. (Keine linkedProperty — Waffen haben keine,
+    # konsistent zu eva_kodex.)
+    waffen_source = ''
     for r in all_rows:
         if r['name'] == 'Waffen':
-            log('  Found "Waffen" entry (weapons currently not emitted)')
+            log('  Found "Waffen" entry (row itself not emitted)')
+            waffen_source = _resolve_source(r.get('source_raw', '')) if r.get('source_raw') else ''
             continue
 
         lookup = cost_lookup.get(r['letter'])
@@ -1728,33 +1729,34 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
             'source': source,
         })
 
-    # Add weapon skills from the "Lernen und Steigern von Waffenfertigkeiten" section
-    if waffen_pattern_id is not None:
-        wpn_skills = extract_weapon_skills(pdf_path)
-        if wpn_skills:
-            log(f'  Adding {sum(len(v) for v in wpn_skills.values())} weapon skills...')
-            for letter, names in sorted(wpn_skills.items()):
-                lookup = cost_lookup.get(letter)
-                if lookup is None:
-                    log(f'  WARN: no advancement costs for weapon letter "{letter}", skipping')
-                    skipped += len(names)
-                    continue
-                for name in names:
-                    wpn_name = SKILL_NAME_CORRECTIONS.get(name, name)
-                    max_val = lookup['baseValue'] + len(lookup['costs'])
-                    skills.append({
-                        'id': wpn_name,
-                        'name': wpn_name,
-                        'typ': 'Waffenfertigkeit',
-                        'learnCost': lookup['learnCost'],
-                        'advancementCosts': lookup['costs'],
-                        'baseValue': lookup['baseValue'],
-                        'maxValue': max_val,
-                        **({'linkedProperty': waffen_property} if waffen_property else {}),
-                        'costPatternId': waffen_pattern_id,
-                    })
+    # Add weapon skills from the "Lernen und Steigern von Waffenfertigkeiten" section.
+    # Die "Waffen"-Zeile selbst ist KEIN Skill (keine Zeile in der Fertigkeiten-Tabelle);
+    # ihre Quelle gilt für alle Waffenfertigkeiten.
+    wpn_skills = extract_weapon_skills(pdf_path)
+    if wpn_skills:
+        log(f'  Adding {sum(len(v) for v in wpn_skills.values())} weapon skills...')
+        for letter, names in sorted(wpn_skills.items()):
+            lookup = cost_lookup.get(letter)
+            if lookup is None:
+                log(f'  WARN: no advancement costs for weapon letter "{letter}", skipping')
+                skipped += len(names)
+                continue
+            for name in names:
+                wpn_name = SKILL_NAME_CORRECTIONS.get(name, name)
+                max_val = lookup['baseValue'] + len(lookup['costs'])
+                skills.append({
+                    'id': wpn_name,
+                    'name': wpn_name,
+                    'typ': 'Waffenfertigkeit',
+                    'learnCost': lookup['learnCost'],
+                    'advancementCosts': lookup['costs'],
+                    'baseValue': lookup['baseValue'],
+                    'maxValue': max_val,
+                    'groupCostCats': 'Waffen',
+                    **({'source': waffen_source} if waffen_source else {}),
+                })
     else:
-        log('  INFO: weapon skills not emitted (handled separately, siehe PLAN_deduce_groups.md Schritt 4)')
+        log('  WARN: no weapon skills extracted from page 1')
 
     # Add grade-dependent skills (Abwehr, Resistenz, Zaubern) from the ES/Grad table
     bonus_key_map = {'Abwehr': 'AbB', 'Resistenz': None, 'Zaubern': 'ZauB'}
