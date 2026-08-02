@@ -1691,6 +1691,8 @@ def parse_mogadil_document(pdf_path: str, out_path: str, log=print) -> dict:
     # Types mit deduzierten Kategorie-Kosten anreichern (Schritt 5).
     for t in types:
         t['groupCosts'] = class_costs.get(t['id'], {})
+        # Waffen-Kosten aus der "Waffen"-Zeile als zusätzliche Gruppe (alle Typen numerisch).
+        t['groupCosts']['Waffen'] = waffen_costs_by_type.get(t['id'], 0)
 
     log('Building skills...')
     skills = []
