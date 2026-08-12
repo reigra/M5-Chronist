@@ -72,7 +72,7 @@ Rules merge priority: houseRule → isCore → other (first-wins per field).
 - `master` branch builds and deploys to GitLab Pages (no version bump)
 - CI runs `npm version minor --no-git-tag-version`, then `npm ci && npm run build`
 - `.npmrc` sets `git-tag-version=false` — local `npm version` never creates git tags. CI overrides with `NPM_CONFIG_GIT_TAG_VERSION=true`
-- Version commits are pushed as `chore: release v${VERSION} [skip ci]` with a git tag
+- Version commits are pushed as `chore: release v${VERSION}` with a git tag; the release push skips its pipeline via `-o ci.skip`, so the merge-back push to `master` triggers a deploy
 - `tools/VERSION` file written during CI release build (for Python scripts)
 - CI merges `release` back to `master` after release
 

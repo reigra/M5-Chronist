@@ -59,12 +59,12 @@ release-build:
 
     # Alles in einem Commit + Tag
     - 'git add -A'
-    - 'git commit -m "chore: release v$NEW_VERSION [skip ci]"'
+    - 'git commit -m "chore: release v$NEW_VERSION"'
     - 'git tag "v$NEW_VERSION"'
 
-    # Version-Commit + Tag nach release pushen
+    # Version-Commit + Tag nach release pushen (Pipeline per Push-Option überspringen)
     - 'git remote set-url origin "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"'
-    - 'git push origin HEAD:release --tags'
+    - 'git push -o ci.skip origin HEAD:release --tags'
 
     # App bauen
     - 'npm run build'
