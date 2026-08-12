@@ -1,3 +1,10 @@
+### Rule Parse Scripte
+- Mogadil: Skill-Gruppen-Deduktion in den Parser integriert — Skills mit groupCostCats, Typen mit groupCosts (ersetzt costPatterns/costColumns)
+- Mogadil: Waffenfertigkeiten werden als eigene Skills ausgegeben (inkl. Waffen-Kosten pro Typ)
+- Mogadil: Download-Fix 
+- EVA: Fix Download
+- Book-Parser: gemeinsame Bibliothek für Parser
+
 ## [v0.16.0] - 2026-07-27
 
 
