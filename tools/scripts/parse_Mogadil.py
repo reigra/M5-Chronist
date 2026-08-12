@@ -108,12 +108,23 @@ CATEGORY_OVERRIDES: dict[str, str] = {
 }
 
 PDF_DIR = os.path.join(os.path.dirname(__file__), '..', 'Mogadil')
-_MOGADIL_FILES = [f for f in os.listdir(PDF_DIR) if f.startswith('Lerntabellen_') and f.endswith('.pdf')]
-if not _MOGADIL_FILES:
-    raise FileNotFoundError(f'No Lerntabellen_*.pdf found in {PDF_DIR}')
-_MOGADIL_FILES.sort(reverse=True)
-PDF_PATH = os.path.join(PDF_DIR, _MOGADIL_FILES[0])
 OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'rules', 'mogadil.json')
+
+
+def find_latest_pdf() -> str:
+    """Return the newest Lerntabellen_*.pdf in PDF_DIR.
+
+    Lazy lookup: called only when a PDF is actually needed (standalone main()),
+    so importing this module does not require the file to exist yet.
+    """
+    files = sorted(
+        (f for f in os.listdir(PDF_DIR)
+         if f.startswith('Lerntabellen_') and f.endswith('.pdf')),
+        reverse=True,
+    )
+    if not files:
+        raise FileNotFoundError(f'No Lerntabellen_*.pdf found in {PDF_DIR}')
+    return os.path.join(PDF_DIR, files[0])
 
 
 def extract_version(pdf_path: str) -> str:
@@ -1817,7 +1828,7 @@ def main():
         pdf_path = args[0]
         out_path = OUT_PATH
     else:
-        pdf_path = PDF_PATH
+        pdf_path = find_latest_pdf()
         out_path = OUT_PATH
     parse_mogadil_document(pdf_path, out_path)
 
