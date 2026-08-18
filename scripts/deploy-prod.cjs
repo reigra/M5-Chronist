@@ -5,7 +5,7 @@ const path = require('path')
 const ROOT = path.join(__dirname, '..')
 const DIST = path.join(ROOT, 'dist')
 const PROJECT = 'magus-ng'
-const BRANCH = 'main'
+const BRANCH = 'master'
 
 function requireGoogleEnv() {
   const required = ['VITE_GOOGLE_CLIENT_ID', 'VITE_GOOGLE_API_KEY', 'VITE_GOOGLE_APP_ID', 'VITE_GOOGLE_CLIENT_SECRET']
