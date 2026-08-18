@@ -3,9 +3,9 @@ const fs = require('fs')
 const path = require('path')
 
 const ROOT = path.join(__dirname, '..')
-const SERVER = 'ubuntu-server'
-const TARGET = '/var/www/html'
 const DIST = path.join(ROOT, 'dist')
+const PROJECT = 'magus-ng-dev'
+const BRANCH = 'dev'
 
 function requireGoogleEnv() {
   const required = ['VITE_GOOGLE_CLIENT_ID', 'VITE_GOOGLE_API_KEY', 'VITE_GOOGLE_APP_ID', 'VITE_GOOGLE_CLIENT_SECRET']
@@ -35,6 +35,20 @@ function requireGoogleEnv() {
   }
 }
 
+/**
+ * Returns trimmed stdout of a command.
+ */
+function capture(cmd) {
+  return execSync(cmd, { cwd: ROOT, encoding: 'utf-8' }).trim()
+}
+
+/**
+ * Runs a command and pipes its stdio to the parent process.
+ */
+function run(cmd) {
+  execSync(cmd, { cwd: ROOT, stdio: 'inherit' })
+}
+
 // 0. Check Google API credentials
 requireGoogleEnv()
 
@@ -42,19 +56,9 @@ requireGoogleEnv()
 console.log('Building dev version…')
 require('./build-dev.cjs')
 
-// 2. Clean old files on server
-console.log('Cleaning server…')
-execSync(`ssh ${SERVER} rm -rf ${TARGET}/*`, { stdio: 'inherit' })
+// 2. Deploy the dist/ directory to Cloudflare Pages
+console.log(`Deploying to Cloudflare Pages (${PROJECT})…`)
+const sha = capture('git rev-parse HEAD')
+run(`wrangler pages deploy dist --project-name ${PROJECT} --branch ${BRANCH} --commit-hash ${sha} --commit-dirty`)
 
-// 3. Upload dist/ contents (one by one for Windows compat)
-console.log('Uploading…')
-for (const item of fs.readdirSync(DIST)) {
-  const full = path.join(DIST, item)
-  execSync(`scp -r "${full}" ${SERVER}:${TARGET}/`, { stdio: 'inherit' })
-}
-
-// 4. Fix permissions
-console.log('Setting permissions…')
-execSync(`ssh ${SERVER} chmod -R a+rX ${TARGET}/`, { stdio: 'inherit' })
-
-console.log('✓ Dev build deployed')
+console.log(`✓ Dev build deployed to https://${PROJECT}.pages.dev`)

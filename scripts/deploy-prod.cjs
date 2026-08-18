@@ -3,9 +3,9 @@ const fs = require('fs')
 const path = require('path')
 
 const ROOT = path.join(__dirname, '..')
-const SERVER = 'ubuntu-server'
-const TARGET = '/var/www/html-prod'
 const DIST = path.join(ROOT, 'dist')
+const PROJECT = 'magus-ng'
+const BRANCH = 'main'
 
 function requireGoogleEnv() {
   const required = ['VITE_GOOGLE_CLIENT_ID', 'VITE_GOOGLE_API_KEY', 'VITE_GOOGLE_APP_ID', 'VITE_GOOGLE_CLIENT_SECRET']
@@ -74,23 +74,9 @@ if (trackedChanges.length > 0) {
 console.log('Building production version…')
 require('./build-prod.cjs')
 
-// 4. Create target directory on server (ignores existing)
-console.log('Ensuring target directory…')
-run(`ssh ${SERVER} mkdir -p ${TARGET}`)
+// 4. Deploy the dist/ directory to Cloudflare Pages
+console.log(`Deploying to Cloudflare Pages (${PROJECT})…`)
+const sha = capture('git rev-parse HEAD')
+run(`wrangler pages deploy dist --project-name ${PROJECT} --branch ${BRANCH} --commit-hash ${sha}`)
 
-// 5. Clean old files on server
-console.log('Cleaning server…')
-run(`ssh ${SERVER} rm -rf ${TARGET}/*`)
-
-// 6. Upload dist/ contents (one by one for Windows compat)
-console.log('Uploading…')
-for (const item of fs.readdirSync(DIST)) {
-  const full = path.join(DIST, item)
-  run(`scp -r "${full}" ${SERVER}:${TARGET}/`)
-}
-
-// 7. Fix permissions
-console.log('Setting permissions…')
-run(`ssh ${SERVER} chmod -R a+rX ${TARGET}/`)
-
-console.log('✓ Production build deployed')
+console.log(`✓ Production build deployed to https://${PROJECT}.pages.dev`)

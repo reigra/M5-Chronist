@@ -9,7 +9,8 @@ German PWA for Midgard M5 character management. All client-side — no backend.
 - `npm run preview` — Vite preview of production build
 - `npm run build:dev` — dev build with `VITE_APP_VERSION=<version>-dev.<sha>` + `VITE_PWA_NAME='Magus NG - DEV'`
 - `npm run build:prod` — production build (same as `npm run build`)
-- `npm run deploy:dev` / `npm run deploy:prod` — deploy via rsync
+- `npm run deploy:dev` — deploy to Cloudflare Pages project `magus-ng-dev` (`https://magus-ng-dev.pages.dev`)
+- `npm run deploy:prod` — deploy to Cloudflare Pages project `magus-ng` (`https://magus-ng.pages.dev`)
 
 No test/lint/formatter configured. No pre-commit hooks.
 
