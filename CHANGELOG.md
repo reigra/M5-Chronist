@@ -1,3 +1,6 @@
+## [v0.17.1] - 2026-08-18
+- Hosting jetzt auf Cloudflare (https://magusng.silber.de / https://magusng-dev.silbaer.de)
+
 ## [v0.17.0] - 2026-08-12
 
 ### Rule Parse Scripte
