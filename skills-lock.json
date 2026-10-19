@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "skills": {
+    "code-documenter": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-documenter/SKILL.md",
+      "computedHash": "67bce9252816a85b3a00d68bc200fb823d9db9387b7e8d622fdabb0b31872c72"
+    },
+    "code-reviewer": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-reviewer/SKILL.md",
+      "computedHash": "fc6facf2a998be2cf8b87d4a0b209d7dc69f233287b699baf44cbeaf6ea4087f"
+    },
+    "debugging-wizard": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/debugging-wizard/SKILL.md",
+      "computedHash": "8f15aa7a42a762eb2007fac4dfd26775b2bdc4857caac48fe992c7da0ed5a3ef"
+    },
+    "javascript-pro": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/javascript-pro/SKILL.md",
+      "computedHash": "56a5b700d1a755a90dcb6b5a53b748ed68e5f569238aaa1dd7b354504e54783c"
+    },
+    "python-pro": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/python-pro/SKILL.md",
+      "computedHash": "e1ab7c98670500555f2dff7efa3fd3b9c9a24c8cf8c071bffe445ff15d04dbf8"
+    },
+    "security-reviewer": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-reviewer/SKILL.md",
+      "computedHash": "3e7b25e4c400c33e2de06ebdd735ca40ce3b856b2007138da4e01bafffec2085"
+    },
+    "spec-miner": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/spec-miner/SKILL.md",
+      "computedHash": "7015f18f44df7bede7ac1751aff17453e66b42cdf46fbfb7b0ae7259f29af87c"
+    },
+    "typescript-pro": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/typescript-pro/SKILL.md",
+      "computedHash": "6751e2000c6359db46852d754d4bc246061ac05229e8a9b95a5ec0667a053834"
+    },
+    "vue-expert": {
+      "source": "Jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-expert/SKILL.md",
+      "computedHash": "6e4af47ca055fa4c4b76d6cb201593dccc52a40d00b6df1b643e875a1296a44e"
+    },
+    "wrangler": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "skillPath": "skills/wrangler/SKILL.md",
+      "computedHash": "9b410cfe14c41d3d4ace5d42e2e19f4eb96104c659b5ed45abf341db28d81029"
+    }
+  }
+}
