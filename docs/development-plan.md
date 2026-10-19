@@ -205,8 +205,6 @@ This reflects the actual current state of the repository.
 
 ```
 MagusNG-PWA/
-├── .github/
-│   └── copilot-instructions.md    ← Copilot AI assistant instructions
 ├── .gitignore
 ├── .gitlab-ci.yml                 ← GitLab CI/CD: Pages deploy + SAST + Secret Detection
 ├── docs/                          ← Documentation (this folder)
@@ -214,7 +212,8 @@ MagusNG-PWA/
 │   ├── character-creation.md
 │   ├── character-system.md
 │   ├── data-schema.md
-│   └── development-plan.md
+│   ├── development-plan.md
+│   └── specs/                     ← Archived behavior specs (plain Markdown)
 ├── index.html
 ├── package.json
 ├── public/

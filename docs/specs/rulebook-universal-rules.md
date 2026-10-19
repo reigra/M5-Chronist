@@ -1,6 +1,15 @@
-## ADDED Requirements
+# Regelwerk: Universal Rules
 
-### Requirement: UniversalRules-Schema in RulebookData
+> Archivierter Stand (OpenSpec, 2026). Maßgeblich ist der Code in `src/services/RulesStorage.ts`, `src/services/CharacterValidator.ts`, `src/types/Rules.ts`.
+
+## Purpose
+
+Defines the schema extensions to `RulebookData` for universal rules, including formulas and innate
+skills that apply across all characters, as well as race-specific skill bonuses.
+
+## Requirements
+
+### UniversalRules-Schema in RulebookData
 
 `RulebookData` SHALL ein optionales Feld `universalRules` erhalten mit folgender Struktur:
 
@@ -18,19 +27,17 @@ interface UniversalRules {
 
 Das Feld SHALL optional sein — Regelwerk-JSONs ohne `universalRules` bleiben gültig (Rückwärtskompatibilität).
 
-#### Scenario: Regelwerk ohne universalRules
+#### Regelwerk ohne universalRules
 
 - **WHEN** ein Rulebook-JSON kein `universalRules`-Feld enthält
 - **THEN** `loadActive()` merged das Feld nicht, autoFix und validate arbeiten mit leeren Default-Arrays
 
-#### Scenario: Regelwerk mit universalRules
+#### Regelwerk mit universalRules
 
 - **WHEN** ein Rulebook-JSON `universalRules` mit `formulas[]` und `innateSkills[]` enthält
 - **THEN** die Arrays werden via `mergeById` in das gemergte RulesData übernommen
 
----
-
-### Requirement: UniversalFormula-Schema
+### UniversalFormula-Schema
 
 Ein `UniversalFormula`-Eintrag SHALL folgende Felder haben:
 
@@ -49,19 +56,17 @@ interface UniversalFormula {
 
 Die `id` SHALL als Merge-Key dienen (first-wins pro id).
 
-#### Scenario: Formel mit ID definieren
+#### Formel mit ID definieren
 
-- **WHEN** ein Rulebook-JSON `{ id: "AnB", formula: "(St+Gw)/20", allowsDice: false }` enthält
+- **WHEN** ein Rulebook-JSON `{ id: "AnB", formula: "bonus(Gs)", allowsDice: false }` enthält
 - **THEN** der Eintrag wird mit `id: "AnB"` in das gemergte `formulas[]`-Array übernommen
 
-#### Scenario: House-Rule überschreibt einzelne Formel
+#### House-Rule überschreibt einzelne Formel
 
-- **WHEN** eine House-Rule `{ id: "AnB", formula: "(St+Gw)/10", allowsDice: false }` definiert und höhere Priority hat als die Core-Quelle
-- **THEN** im gemergten Ergebnis wird `formulas["AnB"]` die Formel `"(St+Gw)/10"` haben
+- **WHEN** eine House-Rule `{ id: "AnB", formula: "bonus(Gs)+1", allowsDice: false }` definiert und höhere Priority hat als die Core-Quelle
+- **THEN** im gemergten Ergebnis wird `formulas["AnB"]` die Formel `"bonus(Gs)+1"` haben
 
----
-
-### Requirement: InnateSkill-Schema
+### InnateSkill-Schema
 
 Ein `InnateSkill`-Eintrag SHALL folgende Felder haben:
 
@@ -92,34 +97,37 @@ Die FW-Berechnung folgt dieser Priorität:
 3. `gradValues` → lookupGradValue(skill, grad) aus `Skill.gradValues[]`
 4. `defaultFw` → einfacher Zahlenwert
 
-#### Scenario: InnateSkill mit direkter Formel
+#### InnateSkill mit direkter Formel
 
-- **WHEN** ein InnateSkill `{ id: "Trinken", formula: "Ko/10", defaultFw: 0 }` definiert ist
+- **WHEN** ein InnateSkill `{ id: "Trinken", formulaId: "trinken", defaultFw: 0 }` definiert ist
 - **THEN** autoFix() berechnet den FW via FormulaEngine: `evaluate("Ko/10", ctx)`
 
-#### Scenario: InnateSkill mit formulaId
+#### InnateSkill mit formulaId
 
 - **WHEN** ein InnateSkill `{ id: "Raufen", formulaId: "raufen", defaultFw: 0 }` definiert ist und `formulas` einen Eintrag `{ id: "raufen", formula: "(St+Gw)/20 + AnB" }` enthält
 - **THEN** autoFix() lookup't die Formel und evaluiert sie
 
-#### Scenario: InnateSkill mit gradValues
+#### InnateSkill mit gradValues
 
 - **WHEN** ein InnateSkill `{ id: "Abwehr", gradValues: true, defaultFw: 11 }` definiert ist
 - **THEN** autoFix() verwendet `lookupGradValue(skill, grad)` für den FW
 
-#### Scenario: InnateSkill mit condition hasSpells
+#### InnateSkill mit defaultFw
+
+- **WHEN** ein InnateSkill `{ id: "Wahrnehmung", defaultFw: 6 }` definiert ist
+- **THEN** autoFix() setzt den FW direkt auf 6
+
+#### InnateSkill mit condition hasSpells
 
 - **WHEN** ein InnateSkill `{ id: "Zaubern", gradValues: true, defaultFw: 11, condition: "hasSpells" }` definiert ist
 - **THEN** autoFix() legt den Skill nur an, wenn `character.spells.length > 0`
 
-#### Scenario: Gestapelter InnateSkill
+#### Gestapelter InnateSkill
 
-- **WHEN** ein InnateSkill `{ id: "Hören", formula: "0", defaultFw: 0, stacked: true, baseSkillId: "Wahrnehmung" }` definiert ist
+- **WHEN** ein InnateSkill `{ id: "Hören", defaultFw: 0, stacked: true, baseSkillId: "Wahrnehmung" }` definiert ist
 - **THEN** autoFix() legt den Skill mit FW 0 an und markiert ihn als gestapelt auf Wahrnehmung
 
----
-
-### Requirement: race.skillBonuses
+### race.skillBonuses
 
 Das `Race`-Interface SHALL ein optionales Feld `skillBonuses?: Record<string, number>` erhalten.
 
@@ -134,19 +142,17 @@ interface Race {
 
 Der Merge für `race` (via mergeById) SHALL bestehende Race-Einträge um `skillBonuses` ergänzen können — ein House-Rule-Race kann neue skillBonuses hinzufügen oder bestehende überschreiben.
 
-#### Scenario: Rasse mit skillBonuses definieren
+#### Rasse mit skillBonuses definieren
 
 - **WHEN** eine Race `{ id: "zwerg", name: "Zwerg", skillBonuses: { "Raufen": 1 } }` definiert
 - **THEN** `race.skillBonuses` enthält `{ "Raufen": 1 }`
 
-#### Scenario: autoFix berücksichtigt skillBonuses
+#### autoFix berücksichtigt skillBonuses
 
 - **WHEN** ein Zwerg-Character über autoFix läuft und Raufen angelegt wird
 - **THEN** zum berechneten FW wird `race.skillBonuses["Raufen"]` (1) addiert
 
----
-
-### Requirement: Merge-Logik in RulesStorage.loadActive()
+### Merge-Logik in RulesStorage.loadActive()
 
 `RulesStorage.loadActive()` SHALL um die Merge-Logik für `universalRules` erweitert werden:
 
@@ -164,17 +170,19 @@ for (const entry of active) {
 
 Die Merge-Reihenfolge ist identisch mit den existierenden Arrays: Hausregeln zuerst (höchste Priority = first-wins).
 
-#### Scenario: Zwei Quellen mit unterschiedlichen Formeln
+#### Zwei Quellen mit unterschiedlichen Formeln
 
-- **WHEN** Core-Quelle `{ id: "AnB", formula: "(St+Gw)/20" }` und House-Rule `{ id: "raufen", formula: "(St+Gw)/20 + AnB" }` definiert
+- **WHEN** Core-Quelle `{ id: "AnB", formula: "bonus(Gs)" }` und House-Rule `{ id: "raufen", formula: "(St+Gw)/20 + AnB" }` definiert
 - **THEN** das gemergte `formulas[]` enthält beide Einträge
 
-#### Scenario: House-Rule überschreibt Core-Formel
+#### House-Rule überschreibt Core-Formel
 
-- **WHEN** Core-Quelle `{ id: "AnB", formula: "(St+Gw)/20" }` und House-Rule `{ id: "AnB", formula: "(St+Gw)/10" }` definiert (House hat höhere Priority)
-- **THEN** das gemergte Ergebnis hat `formula: "(St+Gw)/10"` für id "AnB"
+- **WHEN** Core-Quelle `{ id: "AnB", formula: "bonus(Gs)" }` und House-Rule `{ id: "AnB", formula: "bonus(Gs)+1" }` definiert (House hat höhere Priority)
+- **THEN** das gemergte Ergebnis hat `formula: "bonus(Gs)+1"` für id "AnB"
 
-#### Scenario: Keine Quelle hat universalRules
+#### Keine Quelle hat universalRules
 
 - **WHEN** keine aktive Quelle `universalRules` definiert
 - **THEN** die Default-Initialisierung bleibt: `{ formulas: [], innateSkills: [] }`
+
+
