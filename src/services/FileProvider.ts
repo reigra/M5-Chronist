@@ -157,11 +157,13 @@ const TOKEN_EXPIRY_MARGIN_MS = 5 * 60 * 1000
  *
  * Tokens are persisted in localStorage and survive browser restarts.
  *
- * Note: PKCE (RFC 7636) is intentionally not used here.  The Google Cloud
- * Console OAuth client for this project is registered as "Web application",
- * which requires client_secret in the token exchange.  Switching to a
- * "Public" client type would allow PKCE, but that type does not support
- * the Drive API scopes used by this application.
+ * Note: PKCE (RFC 7636) is intentionally not used here.  Google requires a
+ * client_secret at the token endpoint for every client type, including
+ * "Public"/desktop clients, so switching the client type would not remove
+ * the secret from the bundle; "Public" clients do support the Drive API
+ * scopes used by this application.  The secret is treated as non-secret by
+ * Google for client apps.  Mitigate the exposure by restricting the
+ * authorized JavaScript origins and rotating the secret if needed.
  */
 export class GoogleDriveProvider implements FileProvider {
   readonly name = 'Google Drive'
