@@ -90,7 +90,7 @@ export class LatexExportService {
     push(`\\DefData{SG}{${pers?.sg ?? 0}}`)
     push(`\\DefData{Geburtsdatum}{}`)
     push(`\\DefData{Alter}{${pers?.alter ?? ''}}`)
-    push(`\\DefData{haendig}{${pers?.haendigkeit ?? '\\mgqquad'}}`)
+    push(`\\DefData{haendig}{${pers?.haendigkeit ? this.esc(pers.haendigkeit) : '\\mgqquad'}}`)
     push(`\\DefData{Groesse}{${pers?.groesse ?? '\\mgqquad'}}`)
     push(`\\DefData{Gestalt}{${this.esc(pers?.gestalt ?? '')}}`)
     push(`\\DefData{Gewicht}{${pers?.gewicht ?? ''}}`)
@@ -221,6 +221,7 @@ export class LatexExportService {
     //   [Modifikation] = itemspezifischer Bonus (anb + spezialwaffe)
     //   {AB}           = LaTeX addiert den Charakter-Angriffsbonus automatisch
     //   [Schaden]      = Würfel + \PlusSB{bonus} für Nahkampf (LaTeX addiert SchB)
+    let fallbackWeaponRef = 0
     for (const item of inventoryWeapons) {
       const refName = item.skillId ? this.toAsciiRef(item.skillId) : ''
       const hasRef = refName && weaponSkillIds.has(item.skillId!)
@@ -230,7 +231,16 @@ export class LatexExportService {
       const modStr = mod !== 0 ? `[${mod > 0 ? '+' : ''}${mod}]` : ''
 
       const dmgStr = this.formatWeaponDamage(item)
-      const ref = hasRef ? refName : this.esc(item.name)
+      let ref: string
+      if (hasRef) {
+        ref = refName
+      } else {
+        // No learned weapon skill owns this item: define an ASCII-only reference
+        // so LaTeX can resolve the entry. Item names with umlauts must not be
+        // used as reference keys.
+        ref = `WaffeInventar${++fallbackWeaponRef}`
+        push(`\\DefReferenz{${ref}}{${descName}}{0}{}`)
+      }
 
       push(`\\Waffe1[${descName}]{${ref}}${modStr}{AB}[${dmgStr}]`)
     }
@@ -280,12 +290,31 @@ export class LatexExportService {
 
   /**
    * Escape special LaTeX characters in a string.
+   *
+   * Text is normalized to NFC first (PDF-derived rules data may contain
+   * decomposed characters). German umlauts and ß become explicit LaTeX
+   * accent commands so they render correctly regardless of the input
+   * encoding used for compilation.
    */
   private esc(value: string | number | undefined | null): string {
     if (value === undefined || value === null) return ''
     return String(value)
-      .replace(/\\/g, '\\textbackslash{}')
-      .replace(/[{}$%&_#^~|]/g, (c) => `\\${c}`)
+      .normalize('NFC')
+      .replace(/[\\{}$%&_#^~|äöüÄÖÜß]/g, (c) => {
+        switch (c) {
+          case '\\': return '\\textbackslash{}'
+          case '^': return '\\textasciicircum{}'
+          case '~': return '\\textasciitilde{}'
+          case 'ä': return '\\"a'
+          case 'ö': return '\\"o'
+          case 'ü': return '\\"u'
+          case 'Ä': return '\\"A'
+          case 'Ö': return '\\"O'
+          case 'Ü': return '\\"U'
+          case 'ß': return '\\ss{}'
+          default: return `\\${c}`
+        }
+      })
   }
 
   /**
