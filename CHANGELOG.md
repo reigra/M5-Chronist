@@ -1,3 +1,5 @@
+- Umlaute in LaTeX robuster gemacht
+
 ## [v0.17.1] - 2026-08-18
 - Hosting jetzt auf Cloudflare (https://magusng.silber.de / https://magusng-dev.silbaer.de)
 
