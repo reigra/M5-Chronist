@@ -46,7 +46,7 @@ GROUP_MAP = {
 }
 
 CONFIG = SkillParseConfig(
-    pdf_path=str(SCRIPT_DIR / "../../books/Der Kodex_1402.pdf"),
+    pdf_path=str(SCRIPT_DIR / "../../books/Der Kodex_1703.pdf"),
     out_skills=str(SCRIPT_DIR / "../../kodex/skills.json"),
     start_page=158,  # book page number (1-based)
     end_page=162,
@@ -56,7 +56,7 @@ CONFIG = SkillParseConfig(
 
 # Type cost tables: S. 157, Tabelle 8 (groupCosts) und Tabelle 9 (spellCosts)
 TYPE_CONFIG = TypeParseConfig(
-    pdf_path=str(SCRIPT_DIR / "../../books/Der Kodex_1402.pdf"),
+    pdf_path=str(SCRIPT_DIR / "../../books/Der Kodex_1703.pdf"),
     out_types=str(SCRIPT_DIR / "../../kodex/types.json"),
     tables=[
         TypeTableConfig(page=157, header_map=SKILL_HEADER_MAP, field="groupCosts"),
