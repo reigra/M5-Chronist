@@ -1,6 +1,27 @@
 import type { Character } from '../types/Character'
 import type { Skill } from '../types/Skill'
 import type { CharacterType } from '../types/CharacterType'
+import type { Spell } from '../types/Spell'
+import type { AdvancementMode } from '../types/Advancement'
+
+/** Lehrgeld für das Lernen einer Fertigkeit (GS je LE). */
+const GOLD_PER_SKILL_LE = 200
+/** Lehrgeld für das Lernen eines Zaubers (GS je LE). */
+const GOLD_PER_SPELL_LE = 100
+/** Lehrgeld für das Steigern einer Fertigkeit (GS je TE). */
+const GOLD_PER_TE = 20
+
+/** Result of a spell learn cost calculation. */
+export interface SpellLearnCost {
+  /** EP to pay after PP reduction and reward halving. */
+  epCost: number
+  /** EP in the same mode without PP reduction (for the strikethrough display). */
+  originalEpCost: number
+  /** LE covered by PP of the spell group. */
+  ppUsed: number
+  /** Teacher's gold fee (0 in reward mode). */
+  goldCost: number
+}
 
 /**
  * AdvancementService — calculates EP costs and applies skill learning and advancement.
@@ -11,6 +32,10 @@ import type { CharacterType } from '../types/CharacterType'
  *
  * Gold may replace up to 50 % of the EP cost (epToPayWithGold).
  * Gold deduction is handled by the caller (view).
+ *
+ * Belohnungs-Ausbildung (mode = 'reward'): kein Lehrgeld, kein EP-Ersatz durch Gold.
+ * Steigern und Zauber lernen kosten die Hälfte an EP; PP werden zuerst abgezogen,
+ * danach wird die Summe halbiert und aufgerundet. Fertigkeiten lernen kostet volle EP.
  *
  * The "cheapest group cost" is the lowest value in the character type's groupCosts
  * map that matches any of the skill's groups. This allows the player to learn a skill
@@ -62,6 +87,72 @@ export class AdvancementService {
   }
 
   /**
+   * Apply the reward halving to an EP amount (after PP reduction).
+   *
+   * @param ep   - EP cost in normal mode.
+   * @param mode - Cost mode.
+   * @returns The EP cost for the given mode (halved and rounded up in reward mode).
+   */
+  private applyMode(ep: number, mode: AdvancementMode): number {
+    return mode === 'reward' ? Math.ceil(ep / 2) : ep
+  }
+
+  /**
+   * Teacher's gold fee for learning a skill (200 GS per LE, 0 in reward mode).
+   *
+   * @param skill - The skill to learn.
+   * @param mode  - Cost mode.
+   */
+  learnGoldCost(skill: Skill, mode: AdvancementMode = 'normal'): number {
+    return mode === 'reward' ? 0 : skill.learnCost * GOLD_PER_SKILL_LE
+  }
+
+  /**
+   * Teacher's gold fee for advancing a skill (20 GS per TE, 0 in reward mode).
+   *
+   * @param teAfterPp - TE still to pay after PP reduction.
+   * @param mode      - Cost mode.
+   */
+  advanceGoldCost(teAfterPp: number, mode: AdvancementMode = 'normal'): number {
+    return mode === 'reward' ? 0 : teAfterPp * GOLD_PER_TE
+  }
+
+  /**
+   * Maximum EP that may be paid with gold (50 % of the cost, 0 in reward mode).
+   *
+   * @param cost - EP cost of the action.
+   * @param mode - Cost mode.
+   */
+  maxGoldEp(cost: number, mode: AdvancementMode = 'normal'): number {
+    return mode === 'reward' ? 0 : Math.floor(cost / 2)
+  }
+
+  /**
+   * Calculate EP and gold cost to learn a spell.
+   *
+   * PP of the spell group reduce the LE first; in reward mode the remaining EP
+   * are halved (rounded up) and no gold is due.
+   *
+   * @param spell       - The spell to learn.
+   * @param group       - Normalized spell group key into type.spellCosts.
+   * @param type        - The character's type.
+   * @param ppAvailable - PP available in the spell group.
+   * @param mode        - Cost mode.
+   * @returns EP cost, EP cost without PP, PP used, and gold fee.
+   */
+  spellLearnCost(spell: Spell, group: string, type: CharacterType, ppAvailable: number, mode: AdvancementMode = 'normal'): SpellLearnCost {
+    const le = spell.learnCost ?? 0
+    const epPerLe = type.spellCosts?.[group] ?? 0
+    const ppUsed = Math.min(le, ppAvailable)
+    return {
+      epCost: this.applyMode((le - ppUsed) * epPerLe, mode),
+      originalEpCost: this.applyMode(le * epPerLe, mode),
+      ppUsed,
+      goldCost: mode === 'reward' ? 0 : (le - ppUsed) * GOLD_PER_SPELL_LE,
+    }
+  }
+
+  /**
    * Calculate the EP cost to learn a skill from scratch (Lernen).
    *
    * @param skill        - The skill to learn.
@@ -85,9 +176,10 @@ export class AdvancementService {
    * @param currentValue - The character's current FW for this skill.
    * @param type         - The character's type.
    * @param pp           - Power Points available on this skill (reduce TE cost).
+   * @param mode         - Cost mode; reward halves the EP after PP reduction.
    * @returns EP cost, or null if no further advancement is possible.
    */
-  advanceCost(skill: Skill, currentValue: number, type: CharacterType, costPatterns?: number[][], costColumns?: string[], pp: number = 0): number | null {
+  advanceCost(skill: Skill, currentValue: number, type: CharacterType, costPatterns?: number[][], costColumns?: string[], pp: number = 0, mode: AdvancementMode = 'normal'): number | null {
     // Angeborene Fertigkeiten (z.B. Raufen, Trinken) haben keine Steigerungstabelle.
     if (!skill.advancementCosts?.length) return null
     if (currentValue >= skill.maxValue) return null
@@ -95,7 +187,7 @@ export class AdvancementService {
     const teCost = skill.advancementCosts[stepIndex]
     if (teCost === undefined) return null
     const teAfterPp = Math.max(0, teCost - pp)
-    return teAfterPp * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
+    return this.applyMode(teAfterPp * this.cheapestGroupCost(skill, type, costPatterns, costColumns), mode)
   }
 
   /**
@@ -168,10 +260,11 @@ export class AdvancementService {
    * @param character      - The current character.
    * @param skill          - The skill to advance.
    * @param type           - The character's type.
-   * @param epToPayWithGold - EP cost to cover with gold (max 50% of total).
+   * @param epToPayWithGold - EP cost to cover with gold (max 50% of total, ignored in reward mode).
+   * @param mode           - Cost mode; reward halves the EP after PP reduction.
    * @throws Error if EP is insufficient, the skill is not learned, or it is at max.
    */
-  advanceSkill(character: Character, skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[], epToPayWithGold: number = 0): Character {
+  advanceSkill(character: Character, skill: Skill, type: CharacterType, costPatterns?: number[][], costColumns?: string[], epToPayWithGold: number = 0, mode: AdvancementMode = 'normal'): Character {
     const charSkill = character.skills.find(s => s.skillId === skill.id)
     if (!charSkill) {
       throw new Error(`${skill.name} has not been learned yet.`)
@@ -191,9 +284,9 @@ export class AdvancementService {
 
     const pp = charSkill.pp ?? 0
     const ppUsed = Math.min(teCost, pp)
-    const cost = (teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
+    const cost = this.applyMode((teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns), mode)
 
-    const maxGoldEp = Math.floor(cost / 2)
+    const maxGoldEp = this.maxGoldEp(cost, mode)
     const effectiveEpGold = Math.min(Math.max(0, epToPayWithGold), maxGoldEp)
     const epToDeduct = cost - effectiveEpGold
 
@@ -220,9 +313,10 @@ export class AdvancementService {
    * @param skill      - Der Basis-Skill (z. B. "Sprache") für die Kostenberechnung.
    * @param instanceId - Die vollständige Instanz-ID (z. B. "Sprache:Albisch").
    * @param type       - Der Charaktertyp.
-   * @param epToPayWithGold - EP cost to cover with gold (max 50% of total).
+   * @param epToPayWithGold - EP cost to cover with gold (max 50% of total, ignored in reward mode).
+   * @param mode       - Cost mode; reward halves the EP after PP reduction.
    */
-  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType, costPatterns?: number[][], costColumns?: string[], epToPayWithGold: number = 0): Character {
+  advanceSkillInstance(character: Character, skill: Skill, instanceId: string, type: CharacterType, costPatterns?: number[][], costColumns?: string[], epToPayWithGold: number = 0, mode: AdvancementMode = 'normal'): Character {
     const charSkill = character.skills.find(s => s.skillId === instanceId)
     if (!charSkill) {
       throw new Error(`${instanceId} has not been learned yet.`)
@@ -242,9 +336,9 @@ export class AdvancementService {
 
     const pp = charSkill.pp ?? 0
     const ppUsed = Math.min(teCost, pp)
-    const cost = (teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns)
+    const cost = this.applyMode((teCost - ppUsed) * this.cheapestGroupCost(skill, type, costPatterns, costColumns), mode)
 
-    const maxGoldEp = Math.floor(cost / 2)
+    const maxGoldEp = this.maxGoldEp(cost, mode)
     const effectiveEpGold = Math.min(Math.max(0, epToPayWithGold), maxGoldEp)
     const epToDeduct = cost - effectiveEpGold
 

@@ -57,6 +57,15 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 > - Waffenfertigkeiten benötigen eine Spezialisierung (z. B. „Schwert“ oder „Axt“).
 > - Du kannst EP auch gegen Gold ersetzen, falls nicht genug EP vorhanden sind.
 
+> [!TIP] Ausbildung als Belohnung
+> Bietet ein Auftraggeber als Belohnung kostenlose Ausbildung durch einen Lehrmeister an, stelle die **Kostenart** oben rechts (neben „EP verfügbar“) auf **Belohnung**. Alle angezeigten Kosten werden dann so berechnet:
+> - **Fertigkeit lernen:** volle EP, kein Gold.
+> - **Fertigkeit steigern** und **Zauber lernen:** halbe EP (aufgerundet), kein Gold.
+> - Praxispunkte (PP) werden wie gewohnt zuerst abgezogen, danach wird halbiert.
+> - EP können in diesem Modus nicht durch Gold ersetzt werden.
+>
+> Die Einstellung gilt für die Seiten **Steigern** und **Zauber** gleichermaßen. Im Bestätigungsdialog kannst du die Kostenart für die einzelne Aktion noch einmal umstellen.
+
 Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
 ---

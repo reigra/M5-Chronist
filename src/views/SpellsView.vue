@@ -5,9 +5,13 @@ import { characterLoadService } from '../services/CharacterLoadService'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
 import { isCaster as checkCaster } from '../services/CharacterService'
+import { advancementService } from '../services/AdvancementService'
+import AdvancementModeToggle from '../components/AdvancementModeToggle.vue'
 import { UI } from '../constants/ui'
 import { useNotifications } from '../composables/useNotifications'
+import { useAdvancementMode } from '../composables/useAdvancementMode'
 import { houseRulesService } from '../services/HouseRulesService'
+import type { AdvancementMode } from '../types/Advancement'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Spell } from '../types/Spell'
@@ -34,10 +38,16 @@ const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
 const { error, ok } = useNotifications()
+/** Page-level cost mode (Normal / Belohnung), shared with AdvancementView. */
+const { advancementMode: pageMode } = useAdvancementMode()
 
-/** The spell the player wants to learn — awaiting confirmation. */
+/**
+ * The spell the player wants to learn — awaiting confirmation.
+ * mode starts with the page mode and can be switched in the modal without affecting the page.
+ */
 interface PendingSpellAction {
   spell: Spell
+  mode: AdvancementMode
   epCost: number
   originalEpCost: number
   goldCost: number
@@ -110,6 +120,7 @@ const learnableSpellRows = computed(() => {
   const c = character.value
   const r = rules.value
   const type = charType.value
+  const mode = pageMode.value
   if (!c || !r || !type?.spellCosts) return []
 
   const groups = new Set(Object.keys(type.spellCosts))
@@ -118,20 +129,19 @@ const learnableSpellRows = computed(() => {
   return r.spells
     .filter(s => groups.has(normalizeGroup(s.spellGroup)) && !learned.has(s.id))
     .map(s => {
-      const lc = s.learnCost ?? 0
-      const ppAvailable = groupPp.value[normalizeGroup(s.spellGroup)] ?? 0
-      const ppUsed = Math.min(lc, ppAvailable)
-      const epCost = lc * (type.spellCosts![normalizeGroup(s.spellGroup)] ?? 0)
-      const ppDiscount = ppUsed * (type.spellCosts![normalizeGroup(s.spellGroup)] ?? 0)
-      const netCost = epCost - ppDiscount
+      const group = normalizeGroup(s.spellGroup)
+      const ppAvailable = groupPp.value[group] ?? 0
+      const { epCost, originalEpCost, ppUsed, goldCost } = advancementService.spellLearnCost(s, group, type, ppAvailable, mode)
       return {
         spell: s,
-        originalCost: epCost,
+        originalCost: originalEpCost,
         ppUsed,
-        cost: netCost,
-        canAfford: c.availableEp >= netCost || (
-          c.availableEp >= Math.ceil(netCost / 2) &&
-          (c.gold ?? 0) >= (lc - ppUsed) * 100
+        cost: epCost,
+        // Belohnung: kein EP-Ersatz durch Gold, daher nur EP prüfen
+        canAfford: c.availableEp >= epCost || (
+          mode === 'normal' &&
+          c.availableEp >= Math.ceil(epCost / 2) &&
+          (c.gold ?? 0) >= goldCost
         ),
       }
     })
@@ -140,27 +150,48 @@ const learnableSpellRows = computed(() => {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
-/**
- * Stage a spell to learn — shows the confirmation modal.
- * @param spell - The spell the player selected.
- */
+/** Limit the EP-to-gold replacement to the allowed maximum. */
 function clampEpGold(action: PendingSpellAction): void {
   if (action.epToPayWithGold > action.maxGoldEp) {
     action.epToPayWithGold = action.maxGoldEp
   }
 }
 
-function requestLearn(spell: Spell): void {
+/**
+ * Build a "learn spell" action for the given cost mode.
+ * @param spell - The spell the player selected.
+ * @param mode  - Cost mode (Normal / Belohnung).
+ * @returns The pending action, or null if the type cannot learn spells.
+ */
+function buildLearnAction(spell: Spell, mode: AdvancementMode): PendingSpellAction | null {
   const type = charType.value
-  if (!type?.spellCosts) return
-  const lc = spell.learnCost ?? 0
-  const ppAvailable = groupPp.value[normalizeGroup(spell.spellGroup)] ?? 0
-  const ppUsed = Math.min(lc, ppAvailable)
-  const epCost = (lc - ppUsed) * (type.spellCosts[normalizeGroup(spell.spellGroup)] ?? 0)
-  const originalEpCost = lc * (type.spellCosts[normalizeGroup(spell.spellGroup)] ?? 0)
-  const goldCost = (lc - ppUsed) * 100
-  const maxGoldEp = Math.floor(epCost / 2)
-  pendingAction.value = { spell, epCost, originalEpCost, goldCost, epToPayWithGold: 0, maxGoldEp, ppUsed }
+  if (!type?.spellCosts) return null
+  const group = normalizeGroup(spell.spellGroup)
+  const ppAvailable = groupPp.value[group] ?? 0
+  const { epCost, originalEpCost, ppUsed, goldCost } = advancementService.spellLearnCost(spell, group, type, ppAvailable, mode)
+  const maxGoldEp = advancementService.maxGoldEp(epCost, mode)
+  return { spell, mode, epCost, originalEpCost, goldCost, epToPayWithGold: 0, maxGoldEp, ppUsed }
+}
+
+/**
+ * Stage a spell to learn with the page mode — shows the confirmation modal.
+ * @param spell - The spell the player selected.
+ */
+function requestLearn(spell: Spell): void {
+  const action = buildLearnAction(spell, pageMode.value)
+  if (action) pendingAction.value = action
+}
+
+/**
+ * Switch the cost mode of the staged spell (modal toggle) and recalculate it.
+ * The page mode stays unchanged; gold inputs reset to the new defaults.
+ * @param mode - The new cost mode for this action.
+ */
+function switchPendingMode(mode: AdvancementMode): void {
+  const action = pendingAction.value
+  if (!action || action.mode === mode) return
+  const rebuilt = buildLearnAction(action.spell, mode)
+  if (rebuilt) pendingAction.value = rebuilt
 }
 
 /** Discard the staged learn without any changes. */
@@ -176,7 +207,8 @@ async function confirmLearn(): Promise<void> {
   const char = character.value
   if (!action || !char) return
 
-  const epToDeduct = action.epCost - action.epToPayWithGold
+  const epToPayWithGold = action.mode === 'reward' ? 0 : action.epToPayWithGold
+  const epToDeduct = action.epCost - epToPayWithGold
 
   if (char.availableEp < epToDeduct) {
     error('Not enough EP.')
@@ -184,7 +216,7 @@ async function confirmLearn(): Promise<void> {
     return
   }
 
-  const epReplacementGold = action.epToPayWithGold * 10
+  const epReplacementGold = epToPayWithGold * 10
   if ((char.gold ?? 0) < action.goldCost + epReplacementGold) {
     error('Not enough gold.')
     pendingAction.value = null
@@ -294,11 +326,14 @@ onMounted(async () => {
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>
-        <p class="ep-balance">
-          {{ UI.epAvailable }} <strong>{{ character.availableEp }}</strong>
-          / {{ character.totalEs }} {{ UI.esTotal }}
-          &nbsp;| {{ UI.labelGold }} <strong>{{ character.gold ?? 0 }}</strong>
-        </p>
+        <div class="ep-balance-row">
+          <p class="ep-balance">
+            {{ UI.epAvailable }} <strong>{{ character.availableEp }}</strong>
+            / {{ character.totalEs }} {{ UI.esTotal }}
+            &nbsp;| {{ UI.labelGold }} <strong>{{ character.gold ?? 0 }}</strong>
+          </p>
+          <AdvancementModeToggle v-if="isCaster" v-model="pageMode" />
+        </div>
       </header>
 
       <!-- ── Not a caster ── -->
@@ -311,6 +346,9 @@ onMounted(async () => {
         <!-- ── Confirmation modal ── -->
         <div v-if="pendingAction !== null" class="modal-overlay" @click.self="cancelLearn">
           <div class="modal-box">
+            <div class="modal-mode-row">
+              <AdvancementModeToggle :model-value="pendingAction.mode" @update:model-value="switchPendingMode" />
+            </div>
             <p>
               {{ UI.confirmLearnPfx }} <strong>{{ pendingAction.spell.name }}</strong>
               ({{ UI.colLevel }} {{ pendingAction.spell.level }}, {{ normalizeGroup(pendingAction.spell.spellGroup) }})
@@ -323,15 +361,20 @@ onMounted(async () => {
               {{ UI.advGoldLearnCost }}
               <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
             </label>
-            <label class="gold-cost-row">
-              {{ UI.advGoldEpReplacement }}
-               <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
-              <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
-            </label>
-            <p class="ep-breakdown">
-              {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
-              &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
-              {{ UI.spellsEpAfter }} {{ character.availableEp - (pendingAction.epCost - pendingAction.epToPayWithGold) }} {{ UI.unitEp }}
+            <template v-if="pendingAction.mode === 'normal'">
+              <label class="gold-cost-row">
+                {{ UI.advGoldEpReplacement }}
+                 <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
+                <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
+              </label>
+              <p class="ep-breakdown">
+                {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+                &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
+                {{ UI.spellsEpAfter }} {{ character.availableEp - (pendingAction.epCost - pendingAction.epToPayWithGold) }} {{ UI.unitEp }}
+              </p>
+            </template>
+            <p v-else class="ep-breakdown">
+              {{ UI.spellsEpAfter }} {{ character.availableEp - pendingAction.epCost }} {{ UI.unitEp }}
             </p>
             <div class="confirmation-buttons">
               <button
@@ -422,7 +465,7 @@ onMounted(async () => {
                 <th></th>
                 <th>{{ UI.colGroup }}</th>
                 <th>{{ UI.colPp }}</th>
-                <th>{{ UI.colCost }}</th>
+                <th>{{ UI.colCost }}<span v-if="pageMode === 'reward'" class="reward-marker"> {{ UI.advCostRewardMarker }}</span></th>
                 <th></th>
               </tr>
             </thead>
@@ -510,9 +553,31 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
+.ep-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
 .ep-balance {
-  margin: 0.4rem 0 0;
+  margin: 0;
   color: #444;
+}
+
+.modal-mode-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.reward-marker {
+  color: #8a7400;
+  font-size: 0.85em;
+  font-weight: 400;
+  text-transform: none;
 }
 
 .not-caster {

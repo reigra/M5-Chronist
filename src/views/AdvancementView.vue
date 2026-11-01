@@ -9,8 +9,11 @@ import { computeGrad } from '../services/GradUtils'
 import { gradUpService } from '../services/GradUpService'
 import type { GradStepInput } from '../services/GradUpService'
 import GradUpPopup from '../components/GradUpPopup.vue'
+import AdvancementModeToggle from '../components/AdvancementModeToggle.vue'
 import { UI } from '../constants/ui'
 import { useNotifications } from '../composables/useNotifications'
+import { useAdvancementMode } from '../composables/useAdvancementMode'
+import type { AdvancementMode } from '../types/Advancement'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
 import type { Skill } from '../types/Skill'
@@ -30,6 +33,8 @@ const rules = ref<RulesData | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
 const { error, ok } = useNotifications()
+/** Page-level cost mode (Normal / Belohnung), shared with SpellsView. */
+const { advancementMode: pageMode } = useAdvancementMode()
 const validationResult = ref<ValidationResult | null>(null)
 const validationExpanded = ref(false)
 const autoFixing = ref(false)
@@ -45,9 +50,12 @@ const hasAutoFixableIssues = computed(() => {
  * instanceId carries the full instance key (e.g. "Sprache:Albisch") for advances.
  * ppUsed records how many PP were consumed to reduce the cost.
  * teCost is the raw TE cost before PP reduction.
+ * mode is the cost mode of this action; it starts with the page mode and can be
+ * switched in the modal without affecting the page.
  */
 interface PendingAction {
   type: 'learn' | 'advance'
+  mode: AdvancementMode
   skill: Skill
   cost: number
   originalCost?: number
@@ -110,6 +118,7 @@ const knownSkillRows = computed(() => {
   const r = rules.value
   const type = charType.value
   const currentGrad = grad.value
+  const mode = pageMode.value
   if (!char || !r || !type || !r.skillRules) return []
   const sr = r.skillRules as SkillRulesConfig
   return char.skills
@@ -148,11 +157,11 @@ const knownSkillRows = computed(() => {
 
       const pp = cs.pp ?? 0
       const teCost = (!isGradBased && !isNotAdvanceable && skill.advancementCosts) ? (skill.advancementCosts[cs.value - skill.baseValue] ?? 0) : 0
-      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
-      const costWithoutPp = (isGradBased || isNotAdvanceable || pp === 0 || cost === null) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
+      const cost = (isGradBased || isNotAdvanceable) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, pp, mode)
+      const costWithoutPp = (isGradBased || isNotAdvanceable || pp === 0 || cost === null) ? null : advancementService.advanceCost(skill, cs.value, type, rules.value?.costPatterns, rules.value?.costColumns, 0, mode)
       const maxValue = skill.maxValue ?? null
       const ppUsed = Math.min(teCost, pp)
-      const fixedGoldCost = (teCost - ppUsed) * 20
+      const fixedGoldCost = advancementService.advanceGoldCost(teCost - ppUsed, mode)
       return {
         skillId: cs.skillId,
         name: displayName ?? skill.name,
@@ -164,9 +173,10 @@ const knownSkillRows = computed(() => {
         teCost,
         fixedGoldCost,
         costWithoutPp,
+        // Belohnung: kein EP-Ersatz durch Gold, daher nur EP prüfen
         canAdvance: cost !== null && (
           char.availableEp >= cost ||
-          (char.availableEp >= Math.ceil(cost / 2) && (char.gold ?? 0) >= fixedGoldCost)
+          (mode === 'normal' && char.availableEp >= Math.ceil(cost / 2) && (char.gold ?? 0) >= fixedGoldCost)
         ),
         isGradBased,
         isNotAdvanceable,
@@ -266,46 +276,86 @@ const pendingInstanceOptions = computed(() => {
 })
 
 /**
- * Stage a "learn skill" action for confirmation.
- * Bei Multi-Instanz-Skills wird zusätzlich die Instanz-Combobox eingeblendet.
+ * Build a "learn skill" action for the given cost mode.
  * @param skill - The skill the player wants to learn.
+ * @param mode  - Cost mode (Normal / Belohnung).
+ * @returns The pending action, or null if type or rules are missing.
  */
-function requestLearn(skill: Skill): void {
+function buildLearnAction(skill: Skill, mode: AdvancementMode): PendingAction | null {
   const type = charType.value
-  if (!type || !rules.value || !rules.value.skillRules) return
+  if (!type || !rules.value || !rules.value.skillRules) return null
   const cost = advancementService.learnCost(skill, type, rules.value?.costPatterns, rules.value?.costColumns)
-  const goldCost = skill.learnCost * 200
+  const goldCost = advancementService.learnGoldCost(skill, mode)
   const isMultiInstance = rules.value.skillRules.multiInstanceSkills.some(m => m.baseSkillId === skill.id)
-  selectedInstance.value = ''
-  pendingAction.value = { type: 'learn', skill, cost, goldCost, epToPayWithGold: 0, maxGoldEp: 0, isMultiInstance }
+  return { type: 'learn', mode, skill, cost, goldCost, epToPayWithGold: 0, maxGoldEp: 0, isMultiInstance }
 }
 
 /**
- * Stage an "advance skill" action for confirmation.
+ * Build an "advance skill" action for the given cost mode.
  * @param skill        - The skill to advance.
  * @param currentValue - The character's current FW for this skill.
  * @param instanceId   - Optional: die vollständige Instanz-ID bei Multi-Instanz-Skills.
+ * @param mode         - Cost mode (Normal / Belohnung).
+ * @returns The pending action, or null if the skill cannot be advanced.
  */
-function clampEpGold(action: PendingAction): void {
-  if (action.epToPayWithGold > action.maxGoldEp) {
-    action.epToPayWithGold = action.maxGoldEp
-  }
-}
-
-function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
+function buildAdvanceAction(skill: Skill, currentValue: number, instanceId: string | undefined, mode: AdvancementMode): PendingAction | null {
   const type = charType.value
-  if (!type) return
+  if (!type) return null
   const charSkill = character.value?.skills.find(s => s.skillId === (instanceId ?? skill.id))
   const pp = charSkill?.pp ?? 0
   const stepIndex = currentValue - skill.baseValue
   const teCost = skill.advancementCosts[stepIndex] ?? 0
   const ppUsed = Math.min(teCost, pp)
-  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, pp)
-  if (cost === null) return
-  const originalCost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, 0)
-  const goldCost = (teCost - ppUsed) * 20
-  const maxGoldEp = Math.floor(cost / 2)
-  pendingAction.value = { type: 'advance', skill, cost, originalCost: originalCost ?? cost, goldCost, epToPayWithGold: 0, maxGoldEp, currentValue, instanceId, ppUsed, teCost }
+  const cost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, pp, mode)
+  if (cost === null) return null
+  const originalCost = advancementService.advanceCost(skill, currentValue, type, rules.value?.costPatterns, rules.value?.costColumns, 0, mode)
+  const goldCost = advancementService.advanceGoldCost(teCost - ppUsed, mode)
+  const maxGoldEp = advancementService.maxGoldEp(cost, mode)
+  return { type: 'advance', mode, skill, cost, originalCost: originalCost ?? cost, goldCost, epToPayWithGold: 0, maxGoldEp, currentValue, instanceId, ppUsed, teCost }
+}
+
+/**
+ * Stage a "learn skill" action for confirmation, using the page mode.
+ * Bei Multi-Instanz-Skills wird zusätzlich die Instanz-Combobox eingeblendet.
+ * @param skill - The skill the player wants to learn.
+ */
+function requestLearn(skill: Skill): void {
+  const action = buildLearnAction(skill, pageMode.value)
+  if (!action) return
+  selectedInstance.value = ''
+  pendingAction.value = action
+}
+
+/**
+ * Stage an "advance skill" action for confirmation, using the page mode.
+ * @param skill        - The skill to advance.
+ * @param currentValue - The character's current FW for this skill.
+ * @param instanceId   - Optional: die vollständige Instanz-ID bei Multi-Instanz-Skills.
+ */
+function requestAdvance(skill: Skill, currentValue: number, instanceId?: string): void {
+  const action = buildAdvanceAction(skill, currentValue, instanceId, pageMode.value)
+  if (action) pendingAction.value = action
+}
+
+/**
+ * Switch the cost mode of the staged action (modal toggle) and recalculate it.
+ * The page mode and the selected instance stay unchanged; gold inputs reset to the new defaults.
+ * @param mode - The new cost mode for this action.
+ */
+function switchPendingMode(mode: AdvancementMode): void {
+  const action = pendingAction.value
+  if (!action || action.mode === mode) return
+  const rebuilt = action.type === 'learn'
+    ? buildLearnAction(action.skill, mode)
+    : buildAdvanceAction(action.skill, action.currentValue ?? 0, action.instanceId, mode)
+  if (rebuilt) pendingAction.value = rebuilt
+}
+
+/** Limit the EP-to-gold replacement to the allowed maximum. */
+function clampEpGold(action: PendingAction): void {
+  if (action.epToPayWithGold > action.maxGoldEp) {
+    action.epToPayWithGold = action.maxGoldEp
+  }
 }
 
 /** Discard the staged action without making any changes. */
@@ -414,13 +464,13 @@ async function confirmAction(): Promise<void> {
         }
       } else {
         if (action.instanceId) {
-          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold)
+          updated = advancementService.advanceSkillInstance(char, action.skill, action.instanceId, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold, action.mode)
         } else {
-          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold)
+          updated = advancementService.advanceSkill(char, action.skill, type, rules.value?.costPatterns, rules.value?.costColumns, action.epToPayWithGold, action.mode)
         }
       }
 
-    const epReplacementGold = action.epToPayWithGold * 10
+    const epReplacementGold = action.mode === 'reward' ? 0 : action.epToPayWithGold * 10
     updated = { ...updated, gold: (updated.gold ?? 0) - action.goldCost - epReplacementGold }
 
     await characterStorage.save(updated)
@@ -540,11 +590,14 @@ onMounted(async () => {
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>
-        <p class="ep-balance">
-          {{ UI.epAvailable }} <strong>{{ character.availableEp }}</strong>
-          / {{ character.totalEs }} {{ UI.esTotal }}
-          &nbsp;| {{ UI.labelGold }} <strong>{{ character.gold ?? 0 }}</strong>
-        </p>
+        <div class="ep-balance-row">
+          <p class="ep-balance">
+            {{ UI.epAvailable }} <strong>{{ character.availableEp }}</strong>
+            / {{ character.totalEs }} {{ UI.esTotal }}
+            &nbsp;| {{ UI.labelGold }} <strong>{{ character.gold ?? 0 }}</strong>
+          </p>
+          <AdvancementModeToggle v-model="pageMode" />
+        </div>
       </header>
 
       <!-- ── Add EP ── -->
@@ -580,6 +633,9 @@ onMounted(async () => {
       <!-- ── Confirmation modal ── -->
       <div v-if="pendingAction !== null" class="modal-overlay" @click.self="cancelAction">
         <div class="modal-box">
+          <div class="modal-mode-row">
+            <AdvancementModeToggle :model-value="pendingAction.mode" @update:model-value="switchPendingMode" />
+          </div>
           <template v-if="pendingAction.type === 'learn'">
             <p>
               {{ UI.confirmLearnPfx }}
@@ -621,16 +677,18 @@ onMounted(async () => {
               {{ UI.advGoldAdvanceCost }}
               <input v-model.number="pendingAction.goldCost" type="number" min="0" class="gs-input" />
             </label>
-            <label class="gold-cost-row">
-              {{ UI.advGoldEpReplacement }}
-               <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
-              <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
-            </label>
-            <p class="ep-breakdown">
-              {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
-              &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
-              {{ UI.advEpAfterDeduction }} {{ pendingAction.cost - pendingAction.epToPayWithGold }} {{ UI.unitEp }}
-            </p>
+            <template v-if="pendingAction.mode === 'normal'">
+              <label class="gold-cost-row">
+                {{ UI.advGoldEpReplacement }}
+                 <input v-model.number="pendingAction.epToPayWithGold" type="number" min="0" :max="pendingAction.maxGoldEp" class="gs-input" @input="clampEpGold(pendingAction)" />
+                <span class="gold-hint">(max. {{ pendingAction.maxGoldEp * 10 }} GS = {{ pendingAction.maxGoldEp }} EP)</span>
+              </label>
+              <p class="ep-breakdown">
+                {{ UI.advGoldEpReplaced }} {{ pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+                &nbsp;({{ pendingAction.epToPayWithGold * 10 }} GS) &nbsp;|&nbsp;
+                {{ UI.advEpAfterDeduction }} {{ pendingAction.cost - pendingAction.epToPayWithGold }} {{ UI.unitEp }}
+              </p>
+            </template>
           </template>
           <div class="confirmation-buttons">
             <button
@@ -652,7 +710,7 @@ onMounted(async () => {
               <th>{{ UI.colSkill }}</th>
               <th>{{ UI.colFw }}</th>
               <th>{{ UI.colPp }}</th>
-              <th>{{ UI.colNextCost }}</th>
+              <th>{{ UI.colNextCost }}<span v-if="pageMode === 'reward'" class="reward-marker"> {{ UI.advCostRewardMarker }}</span></th>
               <th></th>
             </tr>
           </thead>
@@ -714,7 +772,7 @@ onMounted(async () => {
             <tr>
               <th>{{ UI.colSkill }}</th>
               <th>{{ UI.colBaseFw }}</th>
-              <th>{{ UI.colCost }}</th>
+              <th>{{ UI.colCost }}<span v-if="pageMode === 'reward'" class="reward-marker"> {{ UI.advCostRewardMarker }}</span></th>
               <th></th>
             </tr>
           </thead>
@@ -744,7 +802,7 @@ onMounted(async () => {
             <tr>
               <th>{{ UI.colSkill }}</th>
               <th>{{ UI.colBaseFw }}</th>
-              <th>{{ UI.colCost }}</th>
+              <th>{{ UI.colCost }}<span v-if="pageMode === 'reward'" class="reward-marker"> {{ UI.advCostRewardMarker }}</span></th>
               <th></th>
             </tr>
           </thead>
@@ -843,9 +901,29 @@ onMounted(async () => {
   font-size: 1rem;
 }
 
+.ep-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+}
+
 .ep-balance {
   margin: 0;
   color: #444;
+}
+
+.modal-mode-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.reward-marker {
+  color: #8a7400;
+  font-size: 0.85em;
+  font-weight: 400;
 }
 
 .modal-overlay {

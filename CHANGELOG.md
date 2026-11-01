@@ -1,4 +1,5 @@
 - Umlaute in LaTeX robuster gemacht
+- Ausbildung als Belohnung: Umschalter Normal/Belohnung auf den Seiten Steigern und Zauber sowie in den Bestätigungsdialogen (kein Lehrgeld, halbe EP für Steigern und Zauber, PP werden zuerst abgezogen)
 
 ## [v0.17.1] - 2026-08-18
 - Hosting jetzt auf Cloudflare (https://magusng.silber.de / https://magusng-dev.silbaer.de)
