@@ -9,22 +9,32 @@ echo === MagusNG EVA-Parser (GUI) ===
 echo.
 echo Bitte warten....
 
-REM Python check
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo Python ist nicht installiert.
-    echo Bitte Python installieren oder ueber den Windows Store beziehen...
-    start python
-    pause
-    exit /b 1
+REM Python check: uv bevorzugen, sonst globales Python
+uv --version >nul 2>&1
+if not errorlevel 1 (
+    set "PY=uv run --no-project python"
+    goto :python_found
 )
 
-python --version
+python --version >nul 2>&1
+if not errorlevel 1 (
+    set "PY=python"
+    goto :python_found
+)
+
+echo Python ist nicht installiert.
+echo Bitte Python installieren oder ueber den Windows Store beziehen...
+start python
+pause
+exit /b 1
+
+:python_found
+%PY% --version
 echo.
 
 REM GUI-Wrapper starten
-rem python "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%" --notes-file "%ScriptDir%Installationsanleitung.txt"
-python "%ScriptDir%scripts\download_parse_rules_gui.py" --notes-file "%ScriptDir%Installationsanleitung.txt"
+rem %PY% "%ScriptDir%scripts\run_parse_EVA_gui.py" --xml-dir "%SourceDir%" --json-dir "%ResultDir%" --notes-file "%ScriptDir%Installationsanleitung.txt"
+%PY% "%ScriptDir%scripts\download_parse_rules_gui.py" --notes-file "%ScriptDir%Installationsanleitung.txt"
 if errorlevel 1 (
     echo.
     echo Fehler beim Parsen.
