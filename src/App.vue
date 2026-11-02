@@ -27,12 +27,12 @@ async function updateDriveStatus(): Promise<void> {
 }
 
 onMounted(() => {
-      window.addEventListener('magusng:drive-changed', updateDriveStatus)
+      window.addEventListener('m5chronist:drive-changed', updateDriveStatus)
   updateDriveStatus()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('magusng:drive-changed', updateDriveStatus)
+  window.removeEventListener('m5chronist:drive-changed', updateDriveStatus)
 })
 
 async function handleDriveConnect(): Promise<void> {

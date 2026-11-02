@@ -19,10 +19,10 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'prompt',
-      // Name via VITE_PWA_NAME überschreibbar (für dev-Builds: "Magus NG - DEV")
+      // Name via VITE_PWA_NAME überschreibbar (für dev-Builds: "M5 - Chronist - DEV")
       manifest: {
-        name: process.env.VITE_PWA_NAME || 'Magus NG',
-        short_name: process.env.VITE_PWA_NAME || 'Magus NG',
+        name: process.env.VITE_PWA_NAME || 'M5 - Chronist',
+        short_name: process.env.VITE_PWA_NAME || 'M5 - Chronist',
         description: 'RPG character management app',
         start_url: '/',
         display: 'standalone',

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { rulesStorage } from '../services/RulesStorage'
-import { UI } from '../constants/ui'
+import { UI, SOURCE_REPO_URL } from '../constants/ui'
 import { isDriveAvailable } from '../services/FileProvider'
 import { useNotifications } from '../composables/useNotifications'
 import type { SourceSummary, AssetLink } from '../services/RulesStorage'
@@ -246,11 +246,11 @@ onMounted(loadList)
       </div>
 
       <p class="import-hint">
-        Regelwerkdateien werden als JSON-Dateien im MagusNG-Format erstellt.
+        Regelwerkdateien werden als JSON-Dateien im M5-Chronist-Format erstellt.
         Anleitungen und
         vorgefertigte Dateien findest du auf der
         <a
-          href="https://gitlab.com/silbaer/magusng-pwa"
+          :href="SOURCE_REPO_URL"
           target="_blank"
           rel="noopener noreferrer"
         >Projektseite</a>.

@@ -6,7 +6,7 @@ import type { Spell } from '../types/Spell'
 /**
  * HouseRulesService — manages per-character house rule sources in IndexedDB.
  *
- * Each character gets one source entry in the MagusNG-Rules database with
+ * Each character gets one source entry in the M5-Chronist-Rules database with
  * priority 0 (highest), so its fields win during mergeById.
  */
 export class HouseRulesService {

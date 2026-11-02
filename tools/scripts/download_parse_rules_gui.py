@@ -41,7 +41,7 @@ from parse_Mogadil import parse_mogadil_document
 class OutputDialog:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("MagusNG \u2013 Rules-Parser")
+        self.root.title("M5 - Chronist \u2013 Rules-Parser")
         self.root.geometry("800x600")
         self.root.minsize(600, 400)
 

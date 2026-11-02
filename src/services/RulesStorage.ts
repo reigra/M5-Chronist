@@ -2,7 +2,7 @@ import type { RulebookData, RulesData } from '../types/Rules'
 import type { CharacterType } from '../types/CharacterType'
 import { GoogleDriveProvider, formatDate, sanitizeFileName } from './FileProvider'
 
-const DB_NAME = 'MagusNG-Rules'
+const DB_NAME = 'M5-Chronist-Rules'
 const DB_VERSION = 1
 const STORE = 'sources'
 

@@ -5,7 +5,7 @@ import { computeGrad } from './GradUtils'
 
 /**
  * LatexExportService — generates a LaTeX character sheet for Martin Väth's
- * m5figur-magusng document class and optionally compiles it via the TeXLive.net API.
+ * m5figur-chronist document class and optionally compiles it via the TeXLive.net API.
  *
  * @usage
  *   const tex = latexExportService.generate(character, rules)
@@ -27,7 +27,7 @@ export class LatexExportService {
 
     // ── Preamble ──────────────────────────────────────────────────────────────
 //    push('\\documentclass{m5figur-mv}[2026/07/07]')
-    push('\\documentclass{m5figur-magusng}[2026/07/07]')
+    push('\\documentclass{m5figur-chronist}[2026/07/07]')
     push('')
     push('\\begin{document}')
     push('')

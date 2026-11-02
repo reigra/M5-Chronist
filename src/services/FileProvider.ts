@@ -138,9 +138,9 @@ let cachedRefreshToken: string | null = null
 let gisApiLoaded = false
 let pickerApiLoaded = false
 
-const STORAGE_TOKEN_KEY = 'magusng_gdrive_token'
-const STORAGE_EXPIRY_KEY = 'magusng_gdrive_token_exp'
-const STORAGE_REFRESH_KEY = 'magusng_gdrive_refresh_token'
+const STORAGE_TOKEN_KEY = 'm5chronist_gdrive_token'
+const STORAGE_EXPIRY_KEY = 'm5chronist_gdrive_token_exp'
+const STORAGE_REFRESH_KEY = 'm5chronist_gdrive_refresh_token'
 /** Margin in ms: request a new token 5 minutes before it actually expires. */
 const TOKEN_EXPIRY_MARGIN_MS = 5 * 60 * 1000
 
@@ -148,7 +148,7 @@ const TOKEN_EXPIRY_MARGIN_MS = 5 * 60 * 1000
  * GoogleDriveProvider — uses Google Picker API for file selection and Drive API v3
  * for download (files.get?alt=media) and upload (multipart).
  *
- * Manages a folder tree: MagusNG/characters or MagusNG/rules.
+ * Manages a folder tree: M5-Chronist/characters or M5-Chronist/rules.
  *
  * Authentication uses the Authorization Code flow with client_secret
  * (Google Cloud Console client type: "Web application").  The access token
@@ -435,14 +435,14 @@ export class GoogleDriveProvider implements FileProvider {
   }
 
   /**
-   * Ensure the MagusNG/{folder} tree exists and return the folder ID.
-   * For 'backup', the backup ZIP goes directly into MagusNG (no subfolder).
+   * Ensure the M5-Chronist/{folder} tree exists and return the folder ID.
+   * For 'backup', the backup ZIP goes directly into M5-Chronist (no subfolder).
    * For 'characters' and 'rules', a subfolder is created.
    */
   async ensureFolderTree(): Promise<string> {
     if (this.folderId) return this.folderId
 
-    const rootId = await this.findOrCreateFolder(null, 'MagusNG')
+    const rootId = await this.findOrCreateFolder(null, 'M5-Chronist')
     if (this.folder === 'backup') {
       this.folderId = rootId
       return rootId
@@ -551,7 +551,7 @@ function persistTokens(): void {
     localStorage.setItem(STORAGE_EXPIRY_KEY, (cachedTokenExpiry ?? 0).toString())
     localStorage.setItem(STORAGE_REFRESH_KEY, cachedRefreshToken ?? '')
   } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent('magusng:drive-changed'))
+  window.dispatchEvent(new CustomEvent('m5chronist:drive-changed'))
 }
 
 function clearTokens(): void {
@@ -563,7 +563,7 @@ function clearTokens(): void {
     localStorage.removeItem(STORAGE_EXPIRY_KEY)
     localStorage.removeItem(STORAGE_REFRESH_KEY)
   } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent('magusng:drive-changed'))
+  window.dispatchEvent(new CustomEvent('m5chronist:drive-changed'))
 }
 
 /**
@@ -582,8 +582,8 @@ export function hasDriveTokens(): boolean {
  * Initiate Google Drive authentication and create the folder structure.
  *
  * Calling this triggers the OAuth flow (account picker) if no valid
- * token is cached. After successful auth the MagusNG/, MagusNG/characters/
- * and MagusNG/rules/ folders are created eagerly and sequentially
+ * token is cached. After successful auth the M5-Chronist/, M5-Chronist/characters/
+ * and M5-Chronist/rules/ folders are created eagerly and sequentially
  * to avoid Drive API race conditions.
  *
  * Safe to call when already authenticated — returns immediately.

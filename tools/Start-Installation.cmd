@@ -5,7 +5,7 @@ set "ScriptDir=%~dp0"
 set "SourceDir=%ScriptDir%EVA"
 set "ResultDir=%ScriptDir%rules"
 
-echo === MagusNG EVA-Parser (GUI) ===
+echo === M5-Chronist EVA-Parser (GUI) ===
 echo.
 echo Bitte warten....
 

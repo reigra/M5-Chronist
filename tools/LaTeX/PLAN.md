@@ -1,4 +1,4 @@
-# LaTeX-Export für MagusNG
+# LaTeX-Export für M5-Chronist
 
 ## Ziel
 

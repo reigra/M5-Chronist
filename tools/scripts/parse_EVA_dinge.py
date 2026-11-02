@@ -62,7 +62,7 @@ def parse_dinge_document(xml_path: str) -> dict:
     return {'metadata': metadata, 'equipment': equipment}
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Parse dinge.xml und erzeuge Ausrüstungs- & Waffen-JSON für MagusNG")
+    parser = argparse.ArgumentParser(description="Parse dinge.xml und erzeuge Ausrüstungs- & Waffen-JSON für M5-Chronist")
     parser.add_argument("input", help="Pfad zur Eingabe dinge.xml")
     parser.add_argument("output", help="Pfad zur Ausgabe JSON-Datei")
     args = parser.parse_args()

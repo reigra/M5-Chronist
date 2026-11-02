@@ -15,7 +15,7 @@ import { latexExportService } from '../services/LatexExportService'
 import { sanitizeFileName, saveFileAs, isDriveAvailable } from '../services/FileProvider'
 import { useNotifications } from '../composables/useNotifications'
 //import clsContent from '../../tools/LaTeX/m5figur-mv.cls?raw'
-import clsContent from '../../tools/LaTeX/m5figur-magusng.cls?raw'
+import clsContent from '../../tools/LaTeX/m5figur-chronist.cls?raw'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -375,7 +375,7 @@ function exportLatexPdf(): void {
 
   addField('filename[]', 'document.tex')
   addField('filecontents[]', tex)
-  addField('filename[]', 'm5figur-magusng.cls')
+  addField('filename[]', 'm5figur-chronist.cls')
 //  addField('filename[]', 'm5figur-mv.cls')
   addField('filecontents[]', clsContent)
   addField('return', 'pdf')

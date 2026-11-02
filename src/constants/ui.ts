@@ -3,6 +3,10 @@
  * Zentrale Quelle für Konsistenz und einfache Übersetzung (i18n).
  * Verwendung: import { UI } from '../constants/ui'
  */
+
+/** Public source repository of this fork (GPL-3.0 requires the source to be available). */
+export const SOURCE_REPO_URL = 'https://github.com/reigra/M5-Chronist'
+
 export const UI = {
 
   // ── Allgemein ────────────────────────────────────────────────────────────────
@@ -21,7 +25,7 @@ export const UI = {
   selectPlaceholder: 'Bitte auswählen …',
 
   // ── App-Navigation ───────────────────────────────────────────────────────────
-  appBrand:   'MagusNG',
+  appBrand:   'M5 - Chronist',
   appNewChar: '+ Neuer Charakter',
 
   // ── Charakter-Navigation (Blatt, Fortschritt, Zaubersprüche) ─────────────────
@@ -180,7 +184,7 @@ export const UI = {
     'Noch keine Charaktere gespeichert. Importiere eine Charakter-Datei, um zu beginnen.',
 
   // ── Startseite (HomeView) ────────────────────────────────────────────────────
-  homeTitle:          'Magus NG',
+  homeTitle:          'M5 - Chronist',
   homeImportBtn:      'Charakter von Festplatte importieren',
   homeIsAlreadySaved: 'ist bereits gespeichert.',
   homeOverwriteTitle: 'Bestehenden Charakter überschreiben?',

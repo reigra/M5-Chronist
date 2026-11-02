@@ -96,7 +96,7 @@ async function buildBackupZip(): Promise<{ blob: Blob; backupName: string }> {
 
   // ── Generate ──────────────────────────────────────────────────────────────────
   const blob = await zip.generateAsync({ type: 'blob' })
-  const backupName = `MagusNG_V${__APP_VERSION__}_backup_${formatDate()}.zip`
+  const backupName = `M5-Chronist_V${__APP_VERSION__}_backup_${formatDate()}.zip`
   return { blob, backupName }
 }
 
@@ -125,7 +125,7 @@ export async function createBackup(): Promise<boolean> {
  * Upload a backup ZIP to Google Drive.
  *
  * Builds the same ZIP archive as createBackup() and uploads it directly
- * to the MagusNG/ folder in the user's Google Drive.
+ * to the M5-Chronist/ folder in the user's Google Drive.
  *
  * @throws Error if Google Drive access fails or credentials are missing.
  */
@@ -207,7 +207,7 @@ export async function restoreFromBackup(): Promise<RestoreInfo> {
 }
 
 /**
- * Open a Google Drive picker for the MagusNG/ folder, read the selected
+ * Open a Google Drive picker for the M5-Chronist/ folder, read the selected
  * file as a Blob, parse the backup archive and return the parsed data.
  * Does NOT write to IndexedDB.
  */

@@ -2,7 +2,7 @@ import type { Character } from '../types/Character'
 import { migrate } from './CharacterService'
 import { GoogleDriveProvider, formatDate, sanitizeFileName, saveFileAs } from './FileProvider'
 
-const DB_NAME = 'MagusNG'
+const DB_NAME = 'M5-Chronist'
 const DB_VERSION = 1
 const STORE = 'characters'
 

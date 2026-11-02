@@ -63,10 +63,10 @@ Services:
 
 ## Data and rules
 
-| Database        | Store        | Key  |
-|-----------------|--------------|------|
-| `MagusNG`       | `characters` | `id` |
-| `MagusNG-Rules` | `sources`    | `id` |
+| Database            | Store        | Key  |
+|---------------------|--------------|------|
+| `M5-Chronist`       | `characters` | `id` |
+| `M5-Chronist-Rules` | `sources`    | `id` |
 
 - `loadActive()` sorts enabled sources by ascending `priority` (lower number wins), then merges by `id` with first-wins per field. House rules are stored at priority 0; imported sources use `metadata.priority` (or 999 when absent), while legacy entries without priority fall back to houseRule 0 / core 1 / other 999. `skillRules`, `costColumns`, `costPatterns`, and `gradThresholds` are whole-object first-wins.
 - The README's `MagusM5` database names are stale; the code above is authoritative.

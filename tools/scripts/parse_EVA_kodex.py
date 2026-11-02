@@ -578,7 +578,7 @@ def parse_kodex_document(xml_path: str) -> dict:
     return {k: v for k, v in result.items() if v != [] and v != {} or isinstance(v, (bool, int, float))}
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Parse m5kodex.xml und wandle es in MagusNG RulebookData-JSON um")
+    parser = argparse.ArgumentParser(description="Parse m5kodex.xml und wandle es in M5-Chronist RulebookData-JSON um")
     parser.add_argument("input", help="Pfad zur Eingabe m5kodex.xml")
     parser.add_argument("output", help="Pfad zur Ausgabe JSON-Datei")
     args = parser.parse_args()

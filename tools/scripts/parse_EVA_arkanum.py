@@ -68,7 +68,7 @@ def parse_arkanum_document(xml_path: str) -> dict:
     }
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Parse m5arkanum.xml und wandle es in MagusNG RulebookData-JSON um")
+    parser = argparse.ArgumentParser(description="Parse m5arkanum.xml und wandle es in M5-Chronist RulebookData-JSON um")
     parser.add_argument("input", help="Pfad zur Eingabe m5arkanum.xml")
     parser.add_argument("output", help="Pfad zur Ausgabe JSON-Datei")
     args = parser.parse_args()

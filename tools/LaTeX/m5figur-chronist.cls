@@ -1,5 +1,5 @@
 %
-% m5figur-magusng.cls
+% m5figur-chronist.cls
 %
 % Abgeleitet von m5figur-mv.cls
 % Martin V"ath <martin at mvath.de>
@@ -11,7 +11,7 @@
 % SPDX-License-Identifier: LPPL-1.3c
 
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{m5figur-magusng}[2026/07/07]
+\ProvidesClass{m5figur-chronist}[2026/07/07]
 
 \PassOptionsToClass{11pt,a4paper,oneside,landscape}{article}
 
@@ -769,7 +769,7 @@
 \newcommand*{\mg@WertMod}{}
 \newcommand*{\mg@continue}{}
 \newcommand{\mg@calcLeit}[1]{\toolboxIfEmpty{#1}{\def\mg@WertLeit{0}%
-	\ClassError{m5figur-magusng}{Leiteigenschaft nicht initialisiert}{Bei
+	\ClassError{m5figur-chronist}{Leiteigenschaft nicht initialisiert}{Bei
 	\protect\Fertig, \protect\Waffe\space oder ungelernten Fertigkeiten
 	wurde eine Leiteigenschaft\MessageBreak
 	referenziert, die nicht zuvor mit einem Wert initialisiert wurde.}}{%

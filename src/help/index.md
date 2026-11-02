@@ -10,12 +10,13 @@
 - [Wie steigere ich Fertigkeiten?](#wie-steigere-ich-fertigkeiten)
 - [Wie verwalte ich Regelwerke?](#wie-verwalte-ich-regelwerke)
 - [Wie kann ich meine Daten sichern?](#wie-kann-ich-meine-daten-sichern)
+- [Lizenz und Quellcode](#lizenz-und-quellcode)
 
 ---
 
 ## Wie funktioniert die App?
 
-MagusNG ist eine **Offline-first PWA** – sie läuft komplett im Browser, ohne Server.
+M5 - Chronist ist eine **Offline-first PWA** – sie läuft komplett im Browser, ohne Server.
 
 - Alle Daten werden lokal in deinem Browser gespeichert (IndexedDB).
 - Du kannst die App auf deinem Rechner installieren und dann auch **offline** nutzen.
@@ -110,12 +111,26 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
 **Backup erstellen:** Scrolle auf der Startseite nach unten zum Bereich **Backup**.
 
-- **Download Backup** — Lädt alle Charaktere und Regelwerke als ZIP-Datei herunter (`MagusNG-Backup_YYYY-MM-DD.zip`).
+- **Download Backup** — Lädt alle Charaktere und Regelwerke als ZIP-Datei herunter (`M5-Chronist_V<Version>_backup_YYYY-MM-DD.zip`).
 - **Backup to Drive** — Lädt dasselbe Backup in dein Google Drive hoch (erfordert Verbindung).
 
 **Backup wiederherstellen:** Klicke auf **Restore Backup** oder **Restore from Drive**, um eine zuvor erstellte ZIP-Datei auszuwählen.
 
 - Bestehende Charaktere können überschrieben, einzeln abgefragt oder übersprungen werden.
 - Alle Regelwerke werden mit ihren Prioritäten und Aktivierungsstatus wiederhergestellt.
+
+Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
+
+---
+
+## Lizenz und Quellcode
+
+M5 - Chronist ist freie Software unter der **GNU General Public License v3.0 (GPL-3.0)**. Du darfst die App nutzen, weitergeben und verändern, solange abgeleitete Versionen ebenfalls unter der GPL-3.0 stehen.
+
+- **Quellcode:** [github.com/reigra/M5-Chronist](https://github.com/reigra/M5-Chronist)
+- **Herkunft:** M5 - Chronist ist ein Fork von **MagusNG** ([gitlab.com/silbaer/magusng-pwa](https://gitlab.com/silbaer/magusng-pwa)) und wird seit November 2026 eigenständig weiterentwickelt.
+- **LaTeX-Charakterbogen:** Die Dokumentklasse `m5figur-chronist` ist abgeleitet von [m5figur-mv](https://github.com/vaeth/m5figur-mv) von Martin Väth und steht unter der LaTeX Project Public License (LPPL 1.3c).
+
+Diese Software ist ein reines Fanprojekt. Die Rechte an Midgard und dem Midgard-Regelwerk liegen beim Verlag für F&SF-Spiele GbR, Stelzenberg.
 
 Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
