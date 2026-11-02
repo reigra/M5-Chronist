@@ -1,0 +1,18 @@
+node_modules
+dist
+.git
+.idea
+.vscode
+.agents
+.gitlab
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+# tools/LaTeX is imported by the app (?raw); everything else in tools/ is not needed
+tools/*
+!tools/LaTeX
+docs
+Dockerfile
+.dockerignore
+compose.yaml

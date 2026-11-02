@@ -188,6 +188,14 @@ docker build -t m5-chronist \
 
 Optional: `--build-arg VITE_APP_VERSION=...` und `--build-arg VITE_PWA_NAME=...`.
 
+#### Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+Die Variablen werden aus der Shell oder aus der `.env` im Projektordner gelesen. Neben den Build-Args oben gibt es `M5_PORT` für den Host-Port (Standard `8080`).
+
 ---
 
 ## Datenspeicherung
