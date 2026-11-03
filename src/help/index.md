@@ -20,7 +20,7 @@ M5 - Chronist ist eine **Offline-first PWA** – sie läuft komplett im Browser,
 
 - Alle Daten werden lokal in deinem Browser gespeichert (IndexedDB).
 - Du kannst die App auf deinem Rechner installieren und dann auch **offline** nutzen.
-- Es gibt keinen Login, keine Cloud-Synchronisation (außer optionalem Google Drive Export).
+- Es gibt keinen Login, keine Cloud-Synchronisation<!-- (außer optionalem Google Drive Export)-->.
 - Unterstützt werden Chromium-Browser (Chrome, Edge, Opera). Firefox und Safari haben noch keine vollständige Unterstützung für die Dateisystem-API.
 
 Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
@@ -81,7 +81,9 @@ Unter **Regeln** kannst du Regelwerke importieren, aktivieren/deaktivieren und p
 4. Über **Priorität ändern** kannst du die Reihenfolge festlegen – weiter oben = höhere Priorität.
 5. Bei Konflikten gewinnt: Hausregel → Kernregel → sonstige (erster Treffer pro Feld).
 
+<!--
 Regelwerke kannst du auch aus Google Drive importieren oder exportieren.
+-->
 
 Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
@@ -93,8 +95,9 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
 **Charaktere importieren:** Auf der Startseite klicke auf **Charakter von Festplatte importieren** und wähle die JSON-Datei aus.
 
-**Regelwerke sichern:** Unter **Regeln** kannst du Regeldateien exportieren (Google Drive) oder lokal speichern.
+**Regelwerke sichern:** Unter **Regeln** kannst du Regeldateien exportieren<!-- (Google Drive)--> oder lokal speichern.
 
+<!--
 **Google Drive:** Du kannst Charaktere und Regeln mit Google Drive synchronisieren.
 
 1. Klicke in der Titelleiste auf das Google Drive Symbol, um dich zu verbinden.
@@ -105,6 +108,7 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
 > [!WARNING] Zugriffsrechte
 > Du musst der App die Berechtigung erteilen, auf dein Google Drive zuzugreifen. Ohne diese Bestätigung kann keine Synchronisation stattfinden.
+-->
 
 > [!TIP]
 > Neben dem Export einzelner Charaktere kannst du auch ein **vollständiges Backup** aller Daten erstellen.
@@ -112,9 +116,11 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 **Backup erstellen:** Scrolle auf der Startseite nach unten zum Bereich **Backup**.
 
 - **Download Backup** — Lädt alle Charaktere und Regelwerke als ZIP-Datei herunter (`M5-Chronist_V<Version>_backup_YYYY-MM-DD.zip`).
+<!--
 - **Backup to Drive** — Lädt dasselbe Backup in dein Google Drive hoch (erfordert Verbindung).
+-->
 
-**Backup wiederherstellen:** Klicke auf **Restore Backup** oder **Restore from Drive**, um eine zuvor erstellte ZIP-Datei auszuwählen.
+**Backup wiederherstellen:** Klicke auf **Restore Backup**<!-- oder **Restore from Drive**-->, um eine zuvor erstellte ZIP-Datei auszuwählen.
 
 - Bestehende Charaktere können überschrieben, einzeln abgefragt oder übersprungen werden.
 - Alle Regelwerke werden mit ihren Prioritäten und Aktivierungsstatus wiederhergestellt.

@@ -74,7 +74,8 @@ async function loadHelp(topic: string) {
   }
 
   try {
-    const raw = String(await loader())
+    // HTML-Kommentare entfernen: markdown-it läuft ohne html-Option und würde sie als Text ausgeben
+    const raw = String(await loader()).replace(/<!--[\s\S]*?-->/g, '')
     content.value = md.render(raw)
   } catch {
     notFound.value = true
