@@ -199,6 +199,26 @@ def main():
                 dialog.append("\u2713 tools/rules/arkanum.json\n")
             dialog.append("\n")
 
+            # --- Ars Armorum PDF Parsing ---
+            dialog.append("=== Schritt 6b/7: Ars Armorum PDF parsen ===\n\n")
+            armorum_script = os.path.join(TOOLS_DIR, "scripts", "RuleBookParser", "parse_armorum.py")
+            armorum_pdf = os.path.join(TOOLS_DIR, "books", "Ars Armorum.pdf")
+            armorum_ok = False
+            if os.path.isfile(armorum_pdf):
+                armorum_result = subprocess.run(
+                    [sys.executable, armorum_script],
+                    capture_output=True, text=True, cwd=project_dir,
+                )
+                armorum_ok = armorum_result.returncode == 0
+                dialog.append(armorum_result.stdout[-4000:])
+                if not armorum_ok and armorum_result.stderr.strip():
+                    dialog.append(f"  Details: {armorum_result.stderr.strip()}\n")
+            if armorum_ok:
+                dialog.append("\u2713 tools/rules/armorum.json\n")
+            else:
+                dialog.append("! Ars-Armorum-PDF nicht gefunden oder Fehler im Parser \u2013 \u00fcbersprungen\n")
+            dialog.append("\n")
+
             # --- Ausgabe ---
             dialog.append("=== Schritt 7/7: Fertig ===\n\n")
 
@@ -210,6 +230,8 @@ def main():
             dialog.append(f"  - mogadil.json\n")
             if result.returncode == 0:
                 dialog.append(f"  - arkanum.json\n")
+            if armorum_ok:
+                dialog.append(f"  - armorum.json\n")
 
             if args.notes_file:
                 notes_path = os.path.abspath(args.notes_file)
