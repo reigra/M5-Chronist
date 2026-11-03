@@ -115,11 +115,11 @@ const isCaster = computed(() => {
   return checkCaster(t)
 })
 
-/** True if the character's type has fightCosts (can learn Kampftechniken). */
+/** True if the type has fightCosts and matching techniques are loaded. */
 const hasTechniques = computed(() => {
   const c = character.value; const r = rules.value
   if (!c || !r) return false
-  return canLearnTechniques(r.types.find(x => x.id === c.typeId))
+  return canLearnTechniques(r.types.find(x => x.id === c.typeId), r.techniques)
 })
 
 /** Learned Kampftechniken for the sheet, sorted by discipline, level, name. */

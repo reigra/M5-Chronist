@@ -1,6 +1,7 @@
 import type { Character } from '../types/Character'
 import type { CharacterType } from '../types/CharacterType'
 import type { EquipmentItem } from '../types/Equipment'
+import type { Technique } from '../types/Technique'
 
 /**
  * One changed field shown in the diff view during import.
@@ -128,14 +129,17 @@ export function isCaster(type: CharacterType | undefined): boolean {
 }
 
 /**
- * Check whether a character type has costs for techniques (fightCosts).
+ * Check whether a character type can learn techniques: the type has fightCosts
+ * AND at least one loaded technique belongs to a discipline in those fightCosts.
  *
  * @param type - The character type to check (or undefined).
- * @returns True if the type has at least one fightCosts entry.
+ * @param techniques - The loaded techniques from the rules (or undefined).
+ * @returns True if the type has fightCosts and a matching technique exists.
  */
-export function canLearnTechniques(type: CharacterType | undefined): boolean {
+export function canLearnTechniques(type: CharacterType | undefined, techniques: Technique[] | undefined): boolean {
   const fc = type?.fightCosts
-  return !!fc && Object.keys(fc).length > 0
+  if (!fc || Object.keys(fc).length === 0) return false
+  return !!techniques && techniques.some(t => t.discipline in fc)
 }
 
 /**

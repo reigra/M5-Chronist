@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { characterLoadService } from '../services/CharacterLoadService'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
-import { isCaster as checkCaster } from '../services/CharacterService'
+import { isCaster as checkCaster, canLearnTechniques } from '../services/CharacterService'
 import { advancementService } from '../services/AdvancementService'
 import AdvancementModeToggle from '../components/AdvancementModeToggle.vue'
 import { UI } from '../constants/ui'
@@ -79,6 +79,9 @@ const charType = computed(() => {
 
 /** True if the character type has spellCosts (can learn spells). */
 const isCaster = computed(() => checkCaster(charType.value ?? undefined))
+
+/** True if the type has fightCosts and matching techniques are loaded. */
+const canLearnTech = computed(() => canLearnTechniques(charType.value ?? undefined, rules.value?.techniques))
 
 /** Sum of PP per spellGroup across all learned spells. */
 const groupPp = computed(() => {
@@ -323,7 +326,7 @@ onMounted(async () => {
           <nav class="sheet-nav">
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-sheet', params: { id: character.id } })">{{ UI.navSheet }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'advancement', params: { id: character.id } })">{{ UI.navAdvancement }}</button>
-            <button v-if="charType?.fightCosts && Object.keys(charType.fightCosts).length > 0" type="button" class="btn-nav" @click="router.push({ name: 'techniques', params: { id: character.id } })">{{ UI.techniques }}</button>
+            <button v-if="canLearnTech" type="button" class="btn-nav" @click="router.push({ name: 'techniques', params: { id: character.id } })">{{ UI.techniques }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>

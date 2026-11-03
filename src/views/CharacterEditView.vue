@@ -450,6 +450,25 @@ function onRaceOrTypeChanged(): void {
   validationResult.value = characterValidator.validate(temp, rules.value)
 }
 
+/**
+ * Copy fields not managed by the form (createdAt, inventory, techniques) from the stored
+ * character when editing.
+ *
+ * @param character - Character built from the form.
+ * @returns A new character with the preserved fields (or the input when creating).
+ */
+async function withPreservedFields(character: Character): Promise<Character> {
+  if (!isEdit.value) return character
+  const existing = await characterStorage.load(character.id)
+  if (!existing) return character
+  return {
+    ...character,
+    createdAt: existing.createdAt,
+    inventory: existing.inventory,
+    techniques: existing.techniques,
+  }
+}
+
 /** Save the character to IndexedDB and navigate to the character sheet. */
 async function saveCharacter(): Promise<void> {
   const validationError = validate()
@@ -458,16 +477,8 @@ async function saveCharacter(): Promise<void> {
   saving.value = true
 
   try {
-    const character = buildCharacter()
     // Preserve data not managed by this form when editing
-    if (isEdit.value) {
-      const existing = await characterStorage.load(character.id)
-      if (existing) {
-        character.createdAt = existing.createdAt
-        character.inventory = existing.inventory
-        character.techniques = existing.techniques
-      }
-    }
+    const character = await withPreservedFields(buildCharacter())
 
     // Validate against rules and show issues
     if (rules.value) {
@@ -494,7 +505,7 @@ const runCorrection = async (): Promise<void> => {
   if (!rules.value) return
   autoFixing.value = true
   try {
-    const character = buildCharacter()
+    const character = await withPreservedFields(buildCharacter())
     const result = characterValidator.correctIssues(character, rules.value)
     if (isEdit.value) {
       await characterStorage.save(result.fixed)

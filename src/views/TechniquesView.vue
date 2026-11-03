@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { characterLoadService } from '../services/CharacterLoadService'
 import { characterStorage } from '../services/CharacterStorage'
 import { computeGrad } from '../services/GradUtils'
-import { canLearnTechniques } from '../services/CharacterService'
+import { canLearnTechniques, isCaster } from '../services/CharacterService'
 import { advancementService } from '../services/AdvancementService'
 import { techniqueService } from '../services/TechniqueService'
 import AdvancementModeToggle from '../components/AdvancementModeToggle.vue'
@@ -59,8 +59,11 @@ const charType = computed(() => {
 
 const techniqueRules = computed(() => rules.value?.techniqueRules)
 
-/** True if the type has fightCosts (can learn techniques). */
-const canLearn = computed(() => canLearnTechniques(charType.value ?? undefined))
+/** True if the type has fightCosts and matching techniques are loaded. */
+const canLearn = computed(() => canLearnTechniques(charType.value ?? undefined, rules.value?.techniques))
+
+/** True if the character type is a caster (shows the Zaubersprüche nav button). */
+const isCasterType = computed(() => isCaster(charType.value ?? undefined))
 
 /** Disciplines with a cost for the type: rule order first, then remaining fightCosts keys. */
 const disciplines = computed<string[]>(() => {
@@ -283,6 +286,7 @@ onMounted(async () => {
           <nav class="sheet-nav">
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-sheet', params: { id: character.id } })">{{ UI.navSheet }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'advancement', params: { id: character.id } })">{{ UI.navAdvancement }}</button>
+            <button v-if="isCasterType" type="button" class="btn-nav" @click="router.push({ name: 'spells', params: { id: character.id } })">{{ UI.spells }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>

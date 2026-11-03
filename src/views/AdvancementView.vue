@@ -7,6 +7,7 @@ import { characterValidator } from '../services/CharacterValidator'
 import { advancementService } from '../services/AdvancementService'
 import { computeGrad } from '../services/GradUtils'
 import { gradUpService } from '../services/GradUpService'
+import { canLearnTechniques } from '../services/CharacterService'
 import type { GradStepInput } from '../services/GradUpService'
 import GradUpPopup from '../components/GradUpPopup.vue'
 import AdvancementModeToggle from '../components/AdvancementModeToggle.vue'
@@ -105,6 +106,9 @@ const charType = computed(() => {
   if (!char || !r) return null
   return r.types.find(t => t.id === char.typeId) ?? null
 })
+
+/** True if the type has fightCosts and matching techniques are loaded. */
+const canLearnTech = computed(() => canLearnTechniques(charType.value ?? undefined, rules.value?.techniques))
 
 /**
  * Known skills — each rule Skill paired with the character's current FW
@@ -587,7 +591,7 @@ onMounted(async () => {
           <nav class="sheet-nav">
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-sheet', params: { id: character.id } })">{{ UI.navSheet }}</button>
             <button v-if="charType?.spellCosts && Object.keys(charType.spellCosts).length > 0" type="button" class="btn-nav" @click="router.push({ name: 'spells', params: { id: character.id } })">{{ UI.spells }}</button>
-            <button v-if="charType?.fightCosts && Object.keys(charType.fightCosts).length > 0" type="button" class="btn-nav" @click="router.push({ name: 'techniques', params: { id: character.id } })">{{ UI.techniques }}</button>
+            <button v-if="canLearnTech" type="button" class="btn-nav" @click="router.push({ name: 'techniques', params: { id: character.id } })">{{ UI.techniques }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>
