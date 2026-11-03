@@ -18,7 +18,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 # Force UTF-8 output
@@ -47,6 +47,7 @@ class SkillParseConfig:
         end_page:    last book page (1-based) with skill tables
         group_map:   PDF heading text → JSON group abbreviation
         description: argparse description for this book
+        name_fixes:   skill id corrections (printed name → canonical id)
     """
     pdf_path: str
     out_skills: str
@@ -54,6 +55,8 @@ class SkillParseConfig:
     end_page: int
     group_map: dict
     description: str
+    # Skill id/name corrections applied after parsing (book typo → canonical id)
+    name_fixes: dict = field(default_factory=dict)
 
 # Font size thresholds
 SIZE_HEADING = 18.0   # group heading (Halbwelt, Kampf, …)
@@ -612,6 +615,10 @@ def run(config: SkillParseConfig):
             print(f"  [Schilde/Parierwaffen] advancementCosts: {shield_parry_costs}")
 
         skill_list = build_skill_list(instances, adv_map, spell_level_costs, shield_parry_costs)
+        for sk in skill_list:
+            fixed = config.name_fixes.get(sk["id"])
+            if fixed:
+                sk["id"] = sk["name"] = fixed
 
         print(f"\n=== Stage 3b: Deduplicated skills ({len(skill_list)}) ===")
         for sk in skill_list:

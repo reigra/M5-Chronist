@@ -54,6 +54,8 @@ CONFIG = SkillParseConfig(
     end_page=50,
     group_map=GROUP_MAP,
     description="Parse Ars Armorum PDF skill tables into JSON.",
+    # S. 47 druckt "Kido"; kanonisch (S. 17, Mogadil) ist "KiDo"
+    name_fixes={"Kido": "KiDo"},
 )
 
 # Type cost tables:
@@ -76,6 +78,8 @@ TYPE_CONFIG = TypeParseConfig(
     default_category="Kämpfer",
     spell_category="KampfZauberer",
     description="Parse Ars Armorum PDF type cost tables into JSON.",
+    # Tabelle 3, Zeile ZAU: gilt für alle Zauberer (RulesStorage wendet Meta-Typen per Kategorie an)
+    meta_types={"ZAU": {"isMeta": True, "category": "Zauberer"}},
 )
 
 if __name__ == "__main__":

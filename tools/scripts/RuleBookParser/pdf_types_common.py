@@ -91,6 +91,7 @@ class TypeParseConfig:
             Zauberer with spellCosts).
         category_overrides: type-id → category, highest priority. Applied
             last, so it wins over column headers and default/spell rules.
+        meta_types: type-id → extra fields (e.g. {"ZAU": {"isMeta": True, "category": "Zauberer"}}); applied last.
         description: argparse description for this book
     """
     pdf_path: str
@@ -101,6 +102,8 @@ class TypeParseConfig:
     default_category: str | None = None
     spell_category: str | None = None
     category_overrides: dict = field(default_factory=dict)
+    # type-id → fields merged into that entry (e.g. mark ZAU as meta type)
+    meta_types: dict = field(default_factory=dict)
     description: str = ""
 
 
@@ -543,6 +546,11 @@ def run_types(config: TypeParseConfig):
                     category = tid_override
                 if category:
                     t["category"] = category
+
+    for t in types:
+        extra = config.meta_types.get(t["id"])
+        if extra:
+            t.update(extra)
 
     print(f"=== Types: {len(types)} entries after merge ===")
 
