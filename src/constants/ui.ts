@@ -36,6 +36,7 @@ export const UI = {
 
   // ── Zaubersprüche (Navigationsbutton und Abschnittsüberschrift) ───────────────
   spells: 'Zaubersprüche',
+  techniques: 'Kampftechniken',
 
   // ── Browser-Kompatibilitätshinweis ───────────────────────────────────────────
   browserUnsupportedHint:
@@ -257,6 +258,36 @@ export const UI = {
   spellsLearnNew:  'Neuen Zauberspruch lernen',
   spellDetailView:  'Details',
   spellOverviewView: 'Übersicht',
+  spellTargetGroup:  'Zielgruppe:',
+  sourceLabel:       'Quelle:',
+
+  // ── Kampftechniken-Ansicht (TechniquesView) ───────────────────────────────────
+  techNoCosts:           'Für diesen Charaktertyp sind keine Lernkosten für Kampftechniken hinterlegt (Regelwerk importieren).',
+  techKnown:             'Bekannte Kampftechniken',
+  techLearnNew:          'Neue Kampftechnik lernen',
+  techEmptyLearned:      'Noch keine Kampftechniken gelernt.',
+  techEmptyLearnable:    'Keine weiteren Techniken dieser Kampfkunst verfügbar.',
+  techColDiscipline:     'Kampfkunst',
+  techColForm:           'Form',
+  techColAp:             'AP',
+  techColRank:           'Rang',
+  techReqMissing:        'Voraussetzung fehlt:',
+  techEpPerLe:           'EP je LE:',
+  techCurrentRank:       'Rang:',
+  techRankNeeds:         'benötigt',
+  techRankTechniques:    'Techniken des Rangs',
+  techRemove:            'Entfernen',
+  techRemoveConfirm:     'Technik entfernen? EP und Gold werden nicht erstattet.',
+  techEp0:               'EP0 – keine eigenen EP für den Einsatz',
+  techWeapons:           'Waffen:',
+  techRestrictions:      'Einschränkungen:',
+  techVariant:           'Variante:',
+  techColors:            'Farben:',
+  techKind:              'Art:',
+  techParseWarning:      'Eintrag unvollständig – bitte im Regelwerk nachschlagen.',
+  techErrEp:             'Nicht genug EP.',
+  techErrGold:           'Nicht genug Gold.',
+  techErrSave:           'Speichern fehlgeschlagen.',
   houseRulesShortDescription: 'Kurzbeschreibung (Hausregel)',
   houseRulesSaveBtn:          'Als Hausregel speichern',
   houseRulesSaved:            'Kurzbeschreibung gesichert.',
@@ -307,6 +338,7 @@ export const UI = {
     'Lied':         'Lied',
     'Zauberlieder': 'Zauberlieder',
     'Dweom.':    'Dweomer',
+    'Kampfverse': 'Kampfverse',
   } as Record<string, string>,
 
 
