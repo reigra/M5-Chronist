@@ -34,6 +34,8 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
   "scripts": [...],
   "spells": [...],
   "spellDescriptions": [...],
+  "techniques": [...],
+  "techniqueDescriptions": [...],
   "equipment": [...],
   "skillRules": {...},
   "costColumns": [...],
@@ -293,9 +295,12 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 | `targetType` | `string` | Zieltyp (z.B. `"Körper"`, `"Umgebung"`) |
 | `effectArea` | `string` | Wirkungsbereich (z.B. `"Zauberer"`, `"bis zu 6 Wesen"`) |
 | `duration` | `string` | Wirkungsdauer |
+| `targetGroup` | `string` *(optional)* | Kampfverse: betroffene Personen (`Gefährten` / `Verbündete` / `Gegner`) |
 | `origin` | `string` | Zaubertradition (z.B. `"druidisch"`, `"arkane Magie"`) |
 | `shortDescription` | `string` | Kurzbeschreibung für Listen und Charakterbogen |
 | `source` | `string` | Regelbuchreferenz (z.B. `"Arkanum S. 142"`) |
+
+Kampfverse (Ars Armorum) sind Zaubersprüche mit `spellGroup: "Kampfverse"`, `effectArea: "15 m Umkreis"` und `origin: "göttlich"`. Sie werden wie normale Zauber gelernt.
 
 ---
 
@@ -312,6 +317,102 @@ Jede Quelldatei enthält einen Metadaten-Block und beliebig viele der folgenden 
 |------|-----|--------------|
 | `id` | `string` | Entspricht `Spell.id` |
 | `description` | `string` | Vollständiger Regeltext |
+
+---
+
+### `techniques` — Kampftechniken (`Technique`)
+
+Kampftechniken aus dem Ars Armorum. Alle Regelwerte (Kosten, Voraussetzungen, Ränge) stammen aus den importierten Regeldaten, die App enthält keine eigenen Regeln dazu.
+
+```json
+{
+  "id": "KiDo:AraschiTe",
+  "name": "AraschiTe",
+  "discipline": "KiDo",
+  "form": "Angriff",
+  "variant": "Attackieren",
+  "level": 8,
+  "learnCost": 20,
+  "apCost": "4",
+  "ep0": true,
+  "restrictions": ["G"],
+  "translation": "Sturmhand",
+  "rank": "M",
+  "colors": ["rot"],
+  "kind": "beide",
+  "source": "Ars Armorum S. 90"
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `id` | `string` | `"<discipline>:<name>"` — Namen wiederholen sich zwischen Kampfkünsten |
+| `name` | `string` | Anzeigename (KiDo: kanthanischer Name) |
+| `discipline` | `string` | z.B. `Kampfkunst`, `Fechtkunst`, `Schießkunst`, `KiDo` — Schlüssel in `type.fightCosts` und `techniqueRules.disciplines` |
+| `form` | `string` | `Angriff`, `Verteidigung`, `Finte`, `Geist`, `Schuss`, `Fecht`, `Leib` |
+| `variant` | `string` *(optional)* | z.B. `Attackieren`, `Anstürmen`, `Ausweichen` |
+| `level` | `number` | Stufe der Technik (1–10) |
+| `learnCost` | `number` | Lerneinheiten (LE) |
+| `apCost` | `string` | AP-Verbrauch |
+| `ep0` | `boolean` | EP0-Kennzeichnung |
+| `restrictions` | `string[]` | Gegner-Einschränkungen (Codes, Bezeichnungen in `techniqueRules.restrictionNames`) |
+| `weapons` | `string` *(optional)* | Waffengruppen (Kampfkunst, Schießkunst) |
+| `translation` | `string` *(optional)* | KiDo: Übersetzung des Namens |
+| `rank` | `string` *(optional)* | Rang-ID innerhalb der Kampfkunst (KiDo: `S`/`E`/`M`), siehe `techniqueRules` |
+| `colors` | `string[]` *(optional)* | KiDo: erlaubte Schulfarben |
+| `kind` | `string` *(optional)* | KiDo: `sanft` \| `hart` \| `beide` |
+| `source` | `string` | Regelbuchreferenz (z.B. `"Ars Armorum S. 90"`) |
+| `parseWarning` | `boolean` *(optional)* | Eintrag unvollständig geparst |
+
+Die Lernkosten in EP ergeben sich aus `learnCost` × `type.fightCosts[discipline]` (EP je LE) zuzüglich Lehrgeld (`techniqueRules.goldPerLe` je LE). Techniken haben keine PP.
+
+---
+
+### `techniqueDescriptions` — Volltext-Beschreibungen (`TechniqueDescription`)
+
+```json
+{
+  "id": "KiDo:AraschiTe",
+  "description": "..."
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `id` | `string` | Entspricht `Technique.id` |
+| `description` | `string` | Vollständiger Regeltext |
+
+---
+
+### `techniqueRules` — Lernregeln für Techniken (`TechniqueRules`)
+
+Whole-Object First-Wins (wie `skillRules`). Die App enthält keine dieser Regeln selbst, sie wertet sie nur generisch aus.
+
+```json
+{
+  "goldPerLe": 100,
+  "restrictionNames": { "G": "Größe", "H": "humanoider Körperbau" },
+  "disciplines": [
+    { "id": "Fechtkunst", "skillId": "Fechten", "minValue": 12 },
+    { "id": "KiDo", "skillId": "KiDo", "minValue": 0, "ranks": [
+      { "id": "S", "name": "Schüler" },
+      { "id": "E", "name": "Eingeweihter", "minSkillValue": 14, "includeBonus": true, "requiredTechniques": { "rank": "S", "count": 6 } }
+    ] }
+  ]
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `goldPerLe` | `number` | Lehrgeld je LE |
+| `restrictionNames` | `object` *(optional)* | Code → Bezeichnung der Gegner-Einschränkungen |
+| `disciplines[].id` | `string` | Entspricht `Technique.discipline` |
+| `disciplines[].skillId` | `string` | Fertigkeit, die gelernt sein muss |
+| `disciplines[].minValue` | `number` | Mindestwert dieser Fertigkeit (ohne Leiteigenschaftsbonus; `0` = gelernt genügt) |
+| `disciplines[].ranks` | `array` *(optional)* | Geordnete Ränge; ein Rang gilt, wenn er und alle vorherigen erfüllt sind. Techniken höherer Ränge sind erst dann lernbar |
+| `ranks[].id` / `name` | `string` | Rang-ID (entspricht `Technique.rank`) und Anzeigename |
+| `ranks[].minSkillValue` | `number` *(optional)* | Mindestwert der Fertigkeit; mit `includeBonus: true` inklusive Fertigkeitsbonus der Leiteigenschaft |
+| `ranks[].requiredTechniques` | `{rank, count}` *(optional)* | Anzahl gelernter Techniken eines bestimmten Rangs |
 
 ---
 
@@ -446,14 +547,17 @@ Beim Laden werden alle aktiven Quellen nach Priorität sortiert und zu einem ein
   "scripts": [...],
   "spells": [...],
   "spellDescriptions": [...],
+  "techniques": [...],
+  "techniqueDescriptions": [...],
   "equipment": [...],
   "skillRules": {...},
+  "techniqueRules": {...},
   "costColumns": [...],
   "costPatterns": [...]
 }
 ```
 
-Das `RulesData`-Objekt entspricht in seiner Struktur dem `RulebookData`-Schema, jedoch sind alle List-Felder (außer `skillRules`, `costColumns`, `costPatterns`) immer vorhanden — ggf. als leere Arrays.
+Das `RulesData`-Objekt entspricht in seiner Struktur dem `RulebookData`-Schema, jedoch sind alle List-Felder (außer `skillRules`, `techniqueRules`, `costColumns`, `costPatterns`) immer vorhanden — ggf. als leere Arrays.
 
 ---
 
@@ -487,6 +591,9 @@ Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
   ],
   "spells": [
     { "spellId": "Laufen wie der Wind", "pp": 0 }
+  ],
+  "techniques": [
+    { "techniqueId": "Kampfkunst:Aderlasser" }
   ],
   "weaponSpecializations": ["Langschwert"],
   "inventory": [],
@@ -577,6 +684,12 @@ Ein Charakter wird vollständig in einer einzigen Struktur gespeichert.
 |------|-----|--------------|
 | `spellId` | `string` | Referenz auf `Spell.id` |
 | `pp` | `number` *(optional)* | Praktikapunkte (Power Points) für diesen Zauber |
+
+### `techniques` — Erlernte Kampftechniken *(optional)*
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `techniqueId` | `string` | Referenz auf `Technique.id`. Techniken haben keine PP. |
 
 ### `personalia` — Beschreibende Eigenschaften *(optional)*
 

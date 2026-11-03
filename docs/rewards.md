@@ -8,6 +8,7 @@ M5 lets the GM pay for a job with free teacher support instead of gold:
 |---|---|---|
 | Learn skill (Fertigkeit/Waffenfertigkeit) | full EP + 200 GS per LE | full EP, **0 GS** |
 | Learn spell (Zauber) | full EP + 100 GS per LE | **½ EP**, **0 GS** |
+| Learn Kampftechnik (Ars Armorum) | full EP + Lehrgeld per LE (`techniqueRules.goldPerLe`) | **½ EP**, **0 GS** |
 | Advance skill (Steigern) | full EP + 20 GS per TE | **½ EP**, **0 GS** |
 
 PP (Praxispunkte) still apply as usual in both modes: they first reduce the TE/LE count, and only then is the reward halving applied.

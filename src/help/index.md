@@ -8,6 +8,7 @@
 - [Wie funktioniert die App?](#wie-funktioniert-die-app)
 - [Wie erstelle ich einen Charakter?](#wie-erstelle-ich-einen-charakter)
 - [Wie steigere ich Fertigkeiten?](#wie-steigere-ich-fertigkeiten)
+- [Wie lerne ich Kampftechniken?](#wie-lerne-ich-kampftechniken)
 - [Wie verwalte ich Regelwerke?](#wie-verwalte-ich-regelwerke)
 - [Wie kann ich meine Daten sichern?](#wie-kann-ich-meine-daten-sichern)
 - [Lizenz und Quellcode](#lizenz-und-quellcode)
@@ -66,6 +67,20 @@ Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 > - EP können in diesem Modus nicht durch Gold ersetzt werden.
 >
 > Die Einstellung gilt für die Seiten **Steigern** und **Zauber** gleichermaßen. Im Bestätigungsdialog kannst du die Kostenart für die einzelne Aktion noch einmal umstellen.
+
+Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
+
+---
+
+## Wie lerne ich Kampftechniken?
+
+Mit dem Regelwerk **Ars Armorum** erscheint für Typen mit Lernkosten für Kampftechniken der Button **Kampftechniken**.
+
+- Wähle oben die Kampfkunst (z. B. Kampfkunst, Fechtkunst, Schießkunst, KiDo). Angezeigt werden die EP je LE deines Typs.
+- Voraussetzungen (z. B. welche Fertigkeit gelernt sein muss) kommen aus dem importierten Regelwerk und werden über der Tabelle angezeigt, wenn sie fehlen.
+- Hat eine Kampfkunst Ränge (z. B. KiDo), siehst du deinen aktuellen Rang und was für den nächsten Rang nötig ist. Techniken höherer Ränge sind ausgegraut.
+- Die Kosten: LE der Technik × EP je LE deines Typs, dazu das Lehrgeld laut Regelwerk. Mit **Belohnung** zahlst du die halben EP und kein Gold.
+- **Kampfverse** der Skalden und Barden lernst du wie Zaubersprüche auf der Seite **Zaubersprüche**.
 
 Zurück zum [Inhaltsverzeichnis](#inhaltsverzeichnis)
 
