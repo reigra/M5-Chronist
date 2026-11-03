@@ -323,6 +323,7 @@ onMounted(async () => {
           <nav class="sheet-nav">
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-sheet', params: { id: character.id } })">{{ UI.navSheet }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'advancement', params: { id: character.id } })">{{ UI.navAdvancement }}</button>
+            <button v-if="charType?.fightCosts && Object.keys(charType.fightCosts).length > 0" type="button" class="btn-nav" @click="router.push({ name: 'techniques', params: { id: character.id } })">{{ UI.techniques }}</button>
             <button type="button" class="btn-nav" @click="router.push({ name: 'character-edit', params: { id: character.id } })">{{ UI.navEdit }}</button>
           </nav>
         </div>
@@ -399,11 +400,12 @@ onMounted(async () => {
                 <div class="spell-info-details">
                   <p><span class="detail-label">AP:</span> {{ infoSpellRow.spell.apCost }}</p>
                   <p><span class="detail-label">Zauberdauer:</span> {{ infoSpellRow.spell.castingTime }}</p>
-                  <p><span class="detail-label">Reichweite:</span> {{ infoSpellRow.spell.range }}</p>
+                  <p v-if="infoSpellRow.spell.range"><span class="detail-label">Reichweite:</span> {{ infoSpellRow.spell.range }}</p>
                   <p><span class="detail-label">Wirkungsziel:</span> {{ infoSpellRow.spell.targetType }}</p>
-                  <p><span class="detail-label">Wirkungsbereich:</span> {{ infoSpellRow.spell.effectArea }}</p>
+                  <p v-if="infoSpellRow.spell.effectArea"><span class="detail-label">Wirkungsbereich:</span> {{ infoSpellRow.spell.effectArea }}</p>
+                  <p v-if="infoSpellRow.spell.targetGroup"><span class="detail-label">{{ UI.spellTargetGroup }}</span> {{ infoSpellRow.spell.targetGroup }}</p>
                   <p><span class="detail-label">Wirkungsdauer:</span> {{ infoSpellRow.spell.duration }}</p>
-                  <p><span class="detail-label">Ursprung:</span> {{ infoSpellRow.spell.origin }}</p>
+                  <p v-if="infoSpellRow.spell.origin"><span class="detail-label">Ursprung:</span> {{ infoSpellRow.spell.origin }}</p>
                   <p><span class="detail-label">Quelle:</span> {{ infoSpellRow.spell.source ?? '—' }}</p>
                 </div>
               </div>

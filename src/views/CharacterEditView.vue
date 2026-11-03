@@ -465,6 +465,7 @@ async function saveCharacter(): Promise<void> {
       if (existing) {
         character.createdAt = existing.createdAt
         character.inventory = existing.inventory
+        character.techniques = existing.techniques
       }
     }
 

@@ -7,7 +7,7 @@ import { characterStorage } from '../services/CharacterStorage'
 import type { ValidationResult } from '../types/CharacterValidation'
 import { computeGrad, esForNextGrad } from '../services/GradUtils'
 import { sheetSkillService } from '../services/SheetSkillService'
-import { isCaster as checkCaster, resolveName } from '../services/CharacterService'
+import { isCaster as checkCaster, canLearnTechniques, resolveName } from '../services/CharacterService'
 import { UI } from '../constants/ui'
 import type { Character } from '../types/Character'
 import type { RulesData } from '../types/Rules'
@@ -113,6 +113,25 @@ const isCaster = computed(() => {
   if (!c || !r) return false
   const t = r.types.find(x => x.id === c.typeId)
   return checkCaster(t)
+})
+
+/** True if the character's type has fightCosts (can learn Kampftechniken). */
+const hasTechniques = computed(() => {
+  const c = character.value; const r = rules.value
+  if (!c || !r) return false
+  return canLearnTechniques(r.types.find(x => x.id === c.typeId))
+})
+
+/** Learned Kampftechniken for the sheet, sorted by discipline, level, name. */
+const techniqueRows = computed(() => {
+  const c = character.value; const r = rules.value
+  if (!c || !r) return []
+  return (c.techniques ?? [])
+    .map(ct => {
+      const t = r.techniques.find(x => x.id === ct.techniqueId)
+      return { id: ct.techniqueId, name: t?.name ?? ct.techniqueId, level: t?.level ?? 0, discipline: t?.discipline ?? '—', apCost: t?.apCost ?? '' }
+    })
+    .sort((a, b) => a.discipline.localeCompare(b.discipline, 'de') || a.level - b.level || a.name.localeCompare(b.name, 'de'))
 })
 
 /**
@@ -460,6 +479,11 @@ onMounted(async () => {
             :to="{ name: 'spells', params: { id: character.id } }"
             class="btn-nav"
           >{{ UI.spells }}</router-link>
+          <router-link
+            v-if="hasTechniques && !isUnsupportedType"
+            :to="{ name: 'techniques', params: { id: character.id } }"
+            class="btn-nav"
+          >{{ UI.techniques }}</router-link>
           <router-link :to="{ name: 'character-edit', params: { id: character.id } }" class="btn-nav">{{ UI.navEdit }}</router-link>
           <router-link :to="{ name: 'equipment', params: { id: character.id } }" class="btn-nav">{{ UI.navEquipment }}</router-link>
         </nav>
@@ -771,6 +795,31 @@ onMounted(async () => {
           </div>
         </div>
         <p v-else class="empty-hint">{{ UI.emptySpellsLearned }}</p>
+      </section>
+
+      <!-- ── Kampftechniken ── -->
+      <section v-if="techniqueRows.length > 0" class="card">
+        <div class="section-header">
+          <h2>{{ UI.techniques }}</h2>
+        </div>
+        <table class="skill-table">
+          <thead>
+            <tr>
+              <th>{{ UI.colLevel }}</th>
+              <th>{{ UI.labelName }}</th>
+              <th>{{ UI.techColDiscipline }}</th>
+              <th>{{ UI.techColAp }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in techniqueRows" :key="row.id">
+              <td>{{ row.level }}</td>
+              <td>{{ row.name }}</td>
+              <td>{{ row.discipline }}</td>
+              <td>{{ row.apCost }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <!-- ── Footer ── -->

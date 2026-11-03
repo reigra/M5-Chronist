@@ -32,6 +32,9 @@ export class CharacterValidator {
     // Kategorie D: Zauber
     this.validateCategoryD(character, rules, issues)
 
+    // Kampftechniken
+    this.validateTechniques(character, rules, issues)
+
     // Kategorie E: EP/Gold
     this.validateCategoryE(character, issues)
 
@@ -737,6 +740,22 @@ export class CharacterValidator {
           code: 'UNKNOWN_SPELL',
           message: `Zauber "${spellId}" nicht im Regelwerk gefunden`,
           actual: spellId,
+        })
+      }
+    }
+  }
+
+  // ── Kampftechniken ─────────────────────────────────────────────────────────
+
+  private validateTechniques(character: Character, rules: RulesData, issues: ValidationIssue[]): void {
+    for (const ct of character.techniques ?? []) {
+      if (!rules.techniques.some(t => t.id === ct.techniqueId)) {
+        issues.push({
+          path: `techniques.${ct.techniqueId}`,
+          severity: 'warning',
+          code: 'UNKNOWN_TECHNIQUE',
+          message: `Kampftechnik "${ct.techniqueId}" nicht im Regelwerk gefunden`,
+          actual: ct.techniqueId,
         })
       }
     }
