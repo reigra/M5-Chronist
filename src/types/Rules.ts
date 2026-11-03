@@ -4,6 +4,7 @@ import type { Race, Origin, SocialStatus } from './Race'
 import type { Spell, SpellDescription } from './Spell'
 import type { SkillRulesConfig } from './SkillRules'
 import type { EquipmentItem } from './Equipment'
+import type { Technique, TechniqueDescription, TechniqueRules } from './Technique'
 
 /**
  * GradUpRules — Regeln für den Gradaufstieg.
@@ -132,6 +133,9 @@ export interface RulebookData {
   scripts?: Script[]
   spells?: Spell[]
   spellDescriptions?: SpellDescription[]
+  techniques?: Technique[]
+  techniqueDescriptions?: TechniqueDescription[]
+  techniqueRules?: TechniqueRules
   skillRules?: SkillRulesConfig
   equipment?: EquipmentItem[]
   gradThresholds?: GradThreshold[]
@@ -154,6 +158,9 @@ export interface RulesData {
   scripts: Script[]
   spells: Spell[]
   spellDescriptions: SpellDescription[]
+  techniques: Technique[]
+  techniqueDescriptions: TechniqueDescription[]
+  techniqueRules?: TechniqueRules
   skillRules?: SkillRulesConfig
   equipment: EquipmentItem[]
   gradThresholds?: GradThreshold[]

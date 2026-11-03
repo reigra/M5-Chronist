@@ -28,6 +28,8 @@ export interface Spell {
   targetType: string
   /** Area of effect */
   effectArea: string
+  /** Kampfverse: betroffene Personen (Gefährten | Verbündete | Gegner) */
+  targetGroup?: string
   /** Duration description */
   duration: string
   /** Spell tradition: "druidisch" | "magisch" | "priesterlich" | etc. */

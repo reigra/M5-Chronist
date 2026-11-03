@@ -553,6 +553,8 @@ export class RulesStorage {
       scripts:           [],
       spells:            [],
       spellDescriptions: [],
+      techniques:            [],
+      techniqueDescriptions: [],
       equipment:         [],
       universalRules:    { formulas: [], innateSkills: [] },
     }
@@ -567,6 +569,8 @@ export class RulesStorage {
       if (src.scripts)           this.mergeById(rules.scripts,           src.scripts)
       if (src.spells)            this.mergeById(rules.spells,            src.spells)
       if (src.spellDescriptions) this.mergeById(rules.spellDescriptions, src.spellDescriptions)
+      if (src.techniques)            this.mergeById(rules.techniques,            src.techniques)
+      if (src.techniqueDescriptions) this.mergeById(rules.techniqueDescriptions, src.techniqueDescriptions)
       if (src.equipment)         this.mergeById(rules.equipment,         src.equipment)
       if (src.universalRules?.formulas)
         this.mergeById(rules.universalRules.formulas, src.universalRules.formulas)
@@ -578,6 +582,13 @@ export class RulesStorage {
     for (const entry of active) {
       if (entry.data.skillRules && !rules.skillRules) {
         rules.skillRules = entry.data.skillRules
+      }
+    }
+
+    // Merge techniqueRules: take the first (highest priority) techniqueRules found
+    for (const entry of active) {
+      if (entry.data.techniqueRules && !rules.techniqueRules) {
+        rules.techniqueRules = entry.data.techniqueRules
       }
     }
 
