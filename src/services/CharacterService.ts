@@ -128,6 +128,17 @@ export function isCaster(type: CharacterType | undefined): boolean {
 }
 
 /**
+ * Check whether a character type has costs for techniques (fightCosts).
+ *
+ * @param type - The character type to check (or undefined).
+ * @returns True if the type has at least one fightCosts entry.
+ */
+export function canLearnTechniques(type: CharacterType | undefined): boolean {
+  const fc = type?.fightCosts
+  return !!fc && Object.keys(fc).length > 0
+}
+
+/**
  * Look up the display name for an ID in a rules array.
  * Falls back to the ID itself (or a custom fallback) if not found.
  *

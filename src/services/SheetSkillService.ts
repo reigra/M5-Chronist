@@ -17,7 +17,7 @@ export interface SheetSkillRow {
 /**
  * Returns the Fertigkeitsbonus for a given property value.
  */
-function fertigkeitsbonus(v: number): number {
+export function fertigkeitsbonus(v: number): number {
   if (v <= 5) return -2
   if (v <= 20) return -1
   if (v <= 80) return 0

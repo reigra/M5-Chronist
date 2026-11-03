@@ -3,6 +3,7 @@ import type { Skill } from '../types/Skill'
 import type { CharacterType } from '../types/CharacterType'
 import type { Spell } from '../types/Spell'
 import type { AdvancementMode } from '../types/Advancement'
+import type { Technique, TechniqueRules } from '../types/Technique'
 
 /** Lehrgeld für das Lernen einer Fertigkeit (GS je LE). */
 const GOLD_PER_SKILL_LE = 200
@@ -23,6 +24,16 @@ export interface SpellLearnCost {
   goldCost: number
 }
 
+/** Result of a technique learn cost calculation. */
+export interface TechniqueLearnCost {
+  /** EP to pay (halved and rounded up in reward mode). */
+  epCost: number
+  /** Teacher's gold fee (0 in reward mode). */
+  goldCost: number
+  /** EP per LE from type.fightCosts. */
+  epPerLe: number
+}
+
 /**
  * AdvancementService — calculates EP costs and applies skill learning and advancement.
  *
@@ -34,7 +45,7 @@ export interface SpellLearnCost {
  * Gold deduction is handled by the caller (view).
  *
  * Belohnungs-Ausbildung (mode = 'reward'): kein Lehrgeld, kein EP-Ersatz durch Gold.
- * Steigern und Zauber lernen kosten die Hälfte an EP; PP werden zuerst abgezogen,
+ * Steigern, Zauber und Techniken lernen kosten die Hälfte an EP; PP werden zuerst abgezogen,
  * danach wird die Summe halbiert und aufgerundet. Fertigkeiten lernen kostet volle EP.
  *
  * The "cheapest group cost" is the lowest value in the character type's groupCosts
@@ -149,6 +160,29 @@ export class AdvancementService {
       originalEpCost: this.applyMode(le * epPerLe, mode),
       ppUsed,
       goldCost: mode === 'reward' ? 0 : (le - ppUsed) * GOLD_PER_SPELL_LE,
+    }
+  }
+
+  /**
+   * Calculate EP and gold cost to learn a technique.
+   *
+   * EP = LE × type.fightCosts[discipline]; gold = LE × techniqueRules.goldPerLe
+   * (0 if no rule data). Reward mode halves the EP and waives gold.
+   *
+   * @param technique - The technique to learn.
+   * @param type      - The character's type.
+   * @param rules     - Technique rule data from the loaded rules (optional).
+   * @param mode      - Cost mode.
+   * @returns The costs, or null if the type has no cost for the discipline.
+   */
+  techniqueLearnCost(technique: Technique, type: CharacterType, rules: TechniqueRules | undefined, mode: AdvancementMode = 'normal'): TechniqueLearnCost | null {
+    const epPerLe = type.fightCosts?.[technique.discipline]
+    if (epPerLe === undefined) return null
+    const le = technique.learnCost
+    return {
+      epCost: this.applyMode(le * epPerLe, mode),
+      goldCost: mode === 'reward' ? 0 : le * (rules?.goldPerLe ?? 0),
+      epPerLe,
     }
   }
 
