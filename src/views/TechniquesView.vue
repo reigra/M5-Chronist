@@ -200,17 +200,20 @@ async function confirmLearn(): Promise<void> {
   pendingAction.value = null
   if (!action || !char) return
 
-  const epToPayWithGold = action.mode === 'reward' ? 0 : action.epToPayWithGold
+  const goldCost = Math.max(0, Number(action.goldCost) || 0)
+  const epToPayWithGold = action.mode === 'reward'
+    ? 0
+    : Math.min(action.maxGoldEp, Math.max(0, Number(action.epToPayWithGold) || 0))
   const epToDeduct = action.epCost - epToPayWithGold
   if (char.availableEp < epToDeduct) { error(UI.techErrEp); return }
   const epReplacementGold = epToPayWithGold * 10
-  if ((char.gold ?? 0) < action.goldCost + epReplacementGold) { error(UI.techErrGold); return }
+  if ((char.gold ?? 0) < goldCost + epReplacementGold) { error(UI.techErrGold); return }
 
   await persist({
     ...char,
     techniques: [...(char.techniques ?? []), { techniqueId: action.technique.id }],
     availableEp: char.availableEp - epToDeduct,
-    gold: (char.gold ?? 0) - action.goldCost - epReplacementGold,
+    gold: (char.gold ?? 0) - goldCost - epReplacementGold,
     updatedAt: new Date().toISOString(),
   })
 }
@@ -329,7 +332,7 @@ onMounted(async () => {
             <div class="confirmation-buttons">
               <button
                 class="btn-confirm"
-                :disabled="(character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10"
+                :disabled="(character.gold ?? 0) < pendingAction.goldCost + pendingAction.epToPayWithGold * 10 || pendingAction.epToPayWithGold > pendingAction.maxGoldEp"
                 @click="confirmLearn"
               >{{ UI.confirm }}</button>
               <button class="btn-cancel" @click="pendingAction = null">{{ UI.cancel }}</button>
@@ -452,7 +455,7 @@ onMounted(async () => {
             <tbody>
               <tr v-for="row in learnableRows" :key="row.technique.id" :class="{ 'row-locked': !row.rankOk }">
                 <td class="col-level">{{ row.technique.level }}</td>
-                <td v-if="reachedRank">{{ row.technique.rank ?? '' }}</td>
+                <td v-if="reachedRank">{{ rankName(row.technique.discipline, row.technique.rank) }}</td>
                 <td>{{ row.technique.name }}</td>
                 <td><button class="btn-info" @click="showInfo(row.technique.id)">{{ UI.spellDetailView }}</button></td>
                 <td>{{ row.technique.form }}<template v-if="row.technique.variant"> ({{ row.technique.variant }})</template></td>
