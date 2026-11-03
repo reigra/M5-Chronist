@@ -8,7 +8,7 @@ Used by the Ars Armorum technique and Kampfvers parsers.
 
 from dataclasses import dataclass
 
-from pdf_skills_common import fix_ligatures
+from pdf_skills_common import _UNICODE_LIGATURES
 
 COL_SPLIT = 290.0    # x boundary between the two text columns
 Y_TOLERANCE = 3.0    # words whose top differs less than this form one line
@@ -36,7 +36,9 @@ def _make_line(page_no: int, column: int, words: list[dict]) -> StreamLine:
         column=column,
         top=float(words[0]["top"]),
         x0=float(words[0]["x0"]),
-        text=fix_ligatures(" ".join(w["text"] for w in words)).strip(),
+        # Only the unicode ligature glyphs are expanded; the shared fi/fl split repair would
+        # glue "Angriff" + next word together (words are intact in this book).
+        text=" ".join(w["text"] for w in words).translate(_UNICODE_LIGATURES).strip(),
         size=max(float(w.get("size", 0.0)) for w in words),
         bold="Bold" in font,
         italic="Italic" in font,

@@ -26,6 +26,11 @@ KV_MAP = {
 SPELL_SCHOOLS = {"Beherrschen", "Bewegen", "Erkennen", "Erschaffen", "Formen", "Verändern", "Zerstören"}
 ELEMENT_SEPARATOR = "l"   # ornament glyph between the two elements
 
+# Book errors verified by hand: the index (S. 52) lists these verses with another Stufe
+# than their entries (entry wins): Trotzes 3 (entry only at 7), heilende Vers 5 (entry 8).
+KNOWN_INDEX_ONLY = {("Der Vers des Trotzes", 3), ("Der heilende Vers", 5)}
+KNOWN_UNLISTED = {("Der heilende Vers", 8)}
+
 
 def parse_verses(pdf) -> list[dict]:
     """Parse all Kampfverse into raw dicts (name, level, page, fields, desc lines)."""
@@ -109,5 +114,11 @@ def cross_check_verses(spells: list[dict], index: list[IndexEntry]) -> None:
     listed = {(e.name, e.level) for e in index if e.discipline == "Kampfverse"}
     parsed = {(s["name"], s["level"]) for s in spells}
     print(f"  Kampfverse: {len(spells)} parsed, {len(listed)} index rows")
-    print(f"  Index only: {sorted(listed - parsed)}")
-    print(f"  Not in index: {sorted(parsed - listed)}")
+    index_only, unlisted = sorted(listed - parsed), sorted(parsed - listed)
+    print(f"  Index only: {index_only}")
+    print(f"  Not in index: {unlisted}")
+    unexpected = (set(index_only) - KNOWN_INDEX_ONLY) | (set(unlisted) - KNOWN_UNLISTED)
+    if unexpected:
+        print(f"  UNEXPECTED Kampfverse deviations: {sorted(unexpected)}")
+    else:
+        print("  (all deviations are known book errors)")

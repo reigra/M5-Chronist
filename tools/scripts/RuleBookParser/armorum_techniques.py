@@ -13,6 +13,7 @@ from armorum_index import IndexEntry, LEARN_COST_BY_LEVEL
 from pdf_entry_stream import StreamLine, join_lines, stream
 
 FIRST_PAGE, LAST_PAGE = 54, 108
+WRAP_GAP = 15.0   # max line distance (pt) inside one paragraph; 10pt text has 12pt leading
 SOURCE = "Ars Armorum"
 
 # 18pt section heading → (discipline, form). Any other heading ends a section.
@@ -43,9 +44,13 @@ TITLE_RE = re.compile(
     r"^(?P<name>.+?)(?:\s+\((?P<translation>[^)]*)\))?(?P<ep0>\s+EP0)?"
     r"(?:\s+(?P<variant>" + "|".join(VARIANTS) + r"))?$"
 )
-KIDO_COLOR_RE = re.compile(r"^(?P<colors>[^\s/]+/[^\s/]+/[^\s/]+)\s+(?P<kind>sanft|hart|beide)$")
+# "rot/gelb/weiß sanft", "- beide" (Kontrollieren), "rot/gelb/weiß" (DageIki, no kind)
+KIDO_COLOR_RE = re.compile(
+    r"^(?P<colors>[^\s/]+/[^\s/]+/[^\s/]+|[-–])(?:\s+(?P<kind>sanft|hart|beide))?$")
+# Typos in the colour line (KubetsuTeki: "–/–weiß beide")
+KIDO_COLOR_FIXES = {"–/–weiß": "–/–/weiß"}
 # Lines of the KiDo summary boxes, e.g. "S DokujaOschi Stoß der Giftschlange rot/gelb/weiß"
-KIDO_BOX_RE = re.compile(r"^[SEM]\s+\S+\s.*\b(rot|gelb|weiß)(/(rot|gelb|weiß|–))*$")
+KIDO_BOX_RE = re.compile(r"^[SEM]\s+\S+\s.*(\b(rot|gelb|weiß)(/(rot|gelb|weiß|–))*|\s[-–])$")
 
 
 def _is_noise(line: StreamLine) -> bool:
@@ -122,12 +127,24 @@ def _build_entry(section: tuple[str, str], title: str, stufe: re.Match,
 
     texts = [l.text for l in body]
     if texts and discipline in ("Kampfkunst", "Schießkunst") and body[0].italic:
-        tech["weapons"] = texts.pop(0)
+        # The weapon list may wrap over several lines (continuations are not always
+        # italic); the description starts after a paragraph gap (> WRAP_GAP).
+        n = 1
+        while (n < len(body) and body[n].page == body[n - 1].page
+               and body[n].column == body[n - 1].column
+               and body[n].top - body[n - 1].top <= WRAP_GAP):
+            n += 1
+        tech["weapons"] = re.sub(r"(^|\s)- (?=\w)", r"\1-", join_lines(texts[:n]))
+        texts = texts[n:]
     if texts and discipline == "KiDo":
-        cm = KIDO_COLOR_RE.match(texts[0])
+        first = texts[0]
+        for wrong, right in KIDO_COLOR_FIXES.items():
+            first = first.replace(wrong, right)
+        cm = KIDO_COLOR_RE.match(first)
         if cm:
             tech["colors"] = [c for c in cm["colors"].split("/") if c not in ("–", "-")]
-            tech["kind"] = cm["kind"]
+            if cm["kind"]:
+                tech["kind"] = cm["kind"]
             texts.pop(0)
     return tech, {"id": tech["id"], "description": join_lines(texts)}
 
@@ -156,6 +173,14 @@ def parse_technique_entries(pdf) -> tuple[list[dict], list[dict]]:
         techniques.append(tech)
         descriptions.append(desc)
     return techniques, descriptions
+
+
+# Book errors verified by hand (see plan 2026-11-03-ars-armorum-kampftechniken.md)
+KNOWN_DEVIATIONS = {
+    "index_only": {("Kampfkunst", "Schwingenkeule")},
+    "unlisted":   {("KiDo", "TiKen")},
+    "level":      {("Kampfkunst", "Kampf im Dunkeln")},
+}
 
 
 def complete_from_index(techniques: list[dict], descriptions: list[dict],
@@ -200,11 +225,3 @@ def complete_from_index(techniques: list[dict], descriptions: list[dict],
     if unexpected:
         print(f"  UNEXPECTED deviations: {sorted(unexpected)}")
     return not unexpected
-
-
-# Book errors verified by hand (see plan 2026-11-03-ars-armorum-kampftechniken.md)
-KNOWN_DEVIATIONS = {
-    "index_only": {("Kampfkunst", "Schwingenkeule")},
-    "unlisted":   {("KiDo", "TiKen")},
-    "level":      {("Kampfkunst", "Kampf im Dunkeln")},
-}
