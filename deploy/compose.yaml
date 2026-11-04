@@ -1,0 +1,32 @@
+# Production stack on the VPS: the app behind Caddy (automatic HTTPS).
+# Uploaded to /opt/m5-chronist by .github/workflows/deploy.yml.
+# M5_IMAGE is written to .env by the workflow (image pinned by digest).
+
+name: m5-chronist
+
+services:
+  app:
+    image: ${M5_IMAGE:-ghcr.io/reigra/m5-chronist:latest}
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-chronist.eu}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

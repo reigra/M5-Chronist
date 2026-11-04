@@ -5,6 +5,8 @@ dist
 .vscode
 .agents
 .gitlab
+.github
+deploy
 *.tsbuildinfo
 .env
 .env.*
