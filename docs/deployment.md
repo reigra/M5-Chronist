@@ -3,8 +3,9 @@
 `.github/workflows/deploy.yml` builds the Docker image on every push to `master`
 (and on `v*` tags or a manual run), pushes it to `ghcr.io/reigra/m5-chronist`
 and deploys it to the VPS over SSH. On the server, Caddy terminates HTTPS for
-`chronist.eu` and proxies to the nginx container. `www.chronist.eu` redirects
-permanently to `chronist.eu` (both need A/AAAA records for the certificates).
+`www.chronist.eu` (the canonical origin) and proxies to the nginx container.
+`chronist.eu` redirects permanently to `www.chronist.eu` (both need A/AAAA
+records for the certificates).
 
 ```
 GitHub Actions ──push──▶ ghcr.io ◀──pull── VPS: caddy :80/:443 ──▶ app (nginx :80)
@@ -82,7 +83,7 @@ ssh-keyscan -t ed25519 chronist.eu | gh secret set DEPLOY_KNOWN_HOSTS --env prod
 
 Optional repository secrets for Google Drive (baked into the client bundle):
 `VITE_GOOGLE_API_KEY`, `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_APP_ID`,
-`VITE_GOOGLE_CLIENT_SECRET`. Add `https://chronist.eu` as an authorized
+`VITE_GOOGLE_CLIENT_SECRET`. Add `https://www.chronist.eu` as an authorized
 JavaScript origin of the OAuth client in the Google Cloud console.
 
 After the secrets are stored, delete the private key locally or keep it in a

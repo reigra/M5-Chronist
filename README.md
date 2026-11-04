@@ -167,7 +167,7 @@ npm run preview
 
 ### Docker
 
-Multi-Stage-Build (`node:20-alpine` → `nginx:alpine-slim`, ca. 22 MB):
+Multi-Stage-Build (`node:24-alpine` → `nginx:alpine-slim`, ca. 22 MB):
 
 ```bash
 docker build -t m5-chronist .

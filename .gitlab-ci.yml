@@ -14,7 +14,7 @@ variables:
 # Master: nur bauen + pages deployen (kein version bump)
 build-pwa:
   stage: build
-  image: node:20
+  image: node:24
   script:
     - npm ci
     - npm run build
@@ -28,7 +28,7 @@ build-pwa:
 
 release-build:
   stage: build
-  image: node:20
+  image: node:24
   script:
     # Dependencies installieren (vor Version-Bump, damit lockfile stabil)
     - 'npm ci'
@@ -125,7 +125,7 @@ release:
 
 merge-back:
   stage: merge
-  image: node:20
+  image: node:24
   script:
     - 'git config user.email "ci-bot@gitlab.com"'
     - 'git config user.name "GitLab CI Bot"'

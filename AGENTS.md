@@ -4,7 +4,7 @@ German PWA for Midgard M5 character management. Fully client-side — Vue 3 + Vi
 
 ## Commands
 
-- Node 20+ (CI uses `node:20`; `.node-version` is v20.20.2), npm. Install with `npm install`.
+- Node 24 LTS (CI and the Docker build use `node:24`; `.node-version` is v24.22.2), npm. Install with `npm install`.
 - `npm run dev` — Vite dev server.
 - `npm run build` — `vue-tsc -b && vite build`. **Only verification gate**: no tests, lint, or formatter. Use `npx vue-tsc -b` for a typecheck-only run.
 - `npm run preview` — serve the production build.

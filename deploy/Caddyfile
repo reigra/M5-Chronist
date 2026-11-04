@@ -1,5 +1,7 @@
-# Caddy obtains and renews the Let's Encrypt certificate automatically.
-{$DOMAIN} {
+# Caddy obtains and renews the Let's Encrypt certificates automatically.
+# Canonical origin is www.{$DOMAIN}: the PWA's storage (IndexedDB) is bound
+# to exactly one origin, so the bare domain only redirects.
+www.{$DOMAIN} {
 	encode zstd gzip
 
 	header {
@@ -12,7 +14,6 @@
 	reverse_proxy app:80
 }
 
-# Single canonical origin: the PWA's storage (IndexedDB) is bound to it.
-www.{$DOMAIN} {
-	redir https://{$DOMAIN}{uri} permanent
+{$DOMAIN} {
+	redir https://www.{$DOMAIN}{uri} permanent
 }

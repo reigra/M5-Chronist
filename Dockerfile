@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Build stage -------------------------------------------------------------
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 # Google Drive integration is baked into the client bundle at build time.
